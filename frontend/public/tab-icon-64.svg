@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="32" cy="32" r="30" fill="#6366f1" stroke="#4f46e5" stroke-width="1.5"/>
+  <rect x="15" y="12" width="34" height="40" rx="2" fill="#ffffff" stroke="#e5e7eb" stroke-width="0.8"/>
+  <line x1="20" y1="12" x2="20" y2="52" stroke="#d1d5db" stroke-width="0.8"/>
+  <line x1="24" y1="20" x2="40" y2="20" stroke="#9ca3af" stroke-width="1.5"/>
+  <line x1="24" y1="26" x2="38" y2="26" stroke="#9ca3af" stroke-width="1.5"/>
+  <line x1="24" y1="32" x2="39" y2="32" stroke="#9ca3af" stroke-width="1.5"/>
+  <line x1="24" y1="38" x2="36" y2="38" stroke="#9ca3af" stroke-width="1.5"/>
+  <line x1="24" y1="44" x2="37.5" y2="44" stroke="#9ca3af" stroke-width="1.5"/>
+  <rect x="40" y="16" width="8" height="4" rx="0.8" fill="#10b981"/>
+  <rect x="40" y="24" width="7" height="4" rx="0.8" fill="#f59e0b"/>
+  <rect x="40" y="32" width="9" height="4" rx="0.8" fill="#ef4444"/>
+  <path d="M42 44 Q45 46, 42 48" stroke="#6366f1" stroke-width="2" fill="none"/>
+  <circle cx="42" cy="48" r="1" fill="#6366f1"/>
+  <g transform="translate(26, 48)">
+    <rect x="0" y="0" width="12" height="9" rx="1" fill="#f3f4f6" stroke="#d1d5db" stroke-width="0.5"/>
+    <path d="M4 4 L6 2 L8 4 L6 6 Z" fill="#6366f1"/>
+  </g>
+</svg>

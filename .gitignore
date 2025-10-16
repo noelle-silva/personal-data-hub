@@ -1,0 +1,24 @@
+# Node.js 依赖目录
+backend/node_modules/
+frontend/node_modules/
+
+# React 构建输出目录
+frontend/build/
+
+# 锁定文件
+backend/package-lock.json
+frontend/package-lock.json
+
+# 环境变量文件
+backend/.env
+frontend/.env
+backend/db.env
+port.env
+file.env
+login.env
+
+# 测试数据目录
+frontend/src/testdata
+
+# 开发文档
+docs/
