@@ -32,6 +32,16 @@ module.exports = {
       kill_timeout: 5000,
       wait_ready: true,
       listen_timeout: 10000
+    },
+    {
+      name: 'tab-frontend',
+      script: 'npm',
+      args: 'start',
+      cwd: './frontend',
+      instances: 1,
+      exec_mode: 'fork',
+      watch: false,
+      autorestart: false
     }
   ]
 };
