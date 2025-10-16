@@ -13,7 +13,7 @@ module.exports = {
         'backend/logs/*',
         'backend/tmp/*'
       ],
-      max_memory_restart: '2.5G',
+      max_memory_restart: '2560M',
       env: {
         NODE_ENV: 'development'
       },
