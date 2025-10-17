@@ -1,0 +1,23 @@
+# 这是一个示例docker-compose.yml文件，用于配置MongoDB的环境变量
+# 请根据实际情况修改数据库的端口和数据库数据的主机实际卷挂载路径
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-server
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "27017:27017"
+    volumes:
+      - 数据库数据的主机实际路径:/data/db
+    networks:
+      - mongodb-network
+
+networks:
+  mongodb-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+    driver: local
