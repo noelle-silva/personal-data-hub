@@ -199,20 +199,7 @@ JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 ```
 
-### 4. 创建必要的目录
-
-```bash
-# 在项目根目录执行
-mkdir -p backend/attachments/images
-mkdir -p backend/attachments/videos
-mkdir -p backend/attachments/document-file
-mkdir -p backend/attachments/scripts
-mkdir -p backend/attachments/previews
-mkdir -p backend/attachments/tmp
-mkdir -p logs
-```
-
-### 5. 启动应用
+### 4. 启动应用
 
 #### 开发环境
 
