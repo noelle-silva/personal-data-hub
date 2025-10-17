@@ -1,6 +1,30 @@
 # 个人数据中心 (Personal Data Hub)
 
-一个功能丰富的个人数据管理系统，支持文档管理、引用记录、附件存储和自定义页面等功能。
+一个基于"原子化笔记 + 引用体 + 标签 + 数据库优先 + MD/HTML 混合内容 + 窗口化引用"设计哲学的个人知识管理系统，旨在降低心智负担、放大表达与连接的上限。
+
+## 设计哲学
+
+本系统围绕以下核心理念构建：
+
+- **原子化笔记**：每条笔记是最小知识单元，彼此的引用与组织就像原子之间的键合，构成更高阶的知识结构
+- **连接优先**：笔记之间可相互引用；引入"引用体"来以某个角度聚合若干笔记与素材，实现多维度的自由组织
+- **数据库优于手工归档**：不依赖文件夹层级管理，改以数据库与索引来供需两端解耦，减少人为分类的开销与错位
+- **标签多视角**：标签为轻量的多属性标注，支持并存的视角与语义，驱动检索与筛选
+- **内容多形态**：同时支持 Markdown 与 HTML。Markdown关注易写易读；HTML承担更强表现力与交互，适配 AI 时代由模型生成丰富交互内容的趋势
+- **窗口化引用**：在笔记内容中渲染"打开窗口"的动作，直达目标笔记或引用体，现场联动，增强关联说明上限
+- **附件即一等公民**：图片、视频、文档、脚本等外部资料通过安全签名与引用被纳入知识网络，增强语义上下文
+
+> 详细设计哲学说明请参考 [`docs/design-philosophy.md`](docs/design-philosophy.md)
+
+## 功能特性
+
+- 📚 **文档管理**: 支持Markdown、HTML文档的创建、编辑和管理，支持原子化笔记和相互引用
+- 💬 **引用记录**: 记录和管理有价值的引用、语录和想法，支持多维度聚合组织
+- 📎 **附件系统**: 支持图片、视频、文档和脚本文件的上传和管理，作为一等公民纳入知识网络
+- 🖥️ **自定义页面**: 创建和展示自定义内容页面，混合排序与编排展示各类内容
+- 🔐 **安全认证**: 基于JWT的用户认证系统
+- 🌙 **主题切换**: 支持明暗主题切换
+- 🔍 **全局搜索**: 跨文档、引用和附件的全局搜索功能
 
 ## 功能特性
 
@@ -34,7 +58,42 @@ git clone <repository-url>
 cd personal-data-hub
 ```
 
-### 2. 安装依赖
+### 2. 启动MongoDB数据库（使用Docker）
+
+本项目使用Docker运行MongoDB数据库实例：
+
+```bash
+# 进入MongoDB配置目录
+cd backend/mongodb-compose
+
+# 复制环境变量文件
+cp .env.example .env
+
+# 编辑环境变量文件，设置用户名和密码
+# 在Windows系统中
+notepad .env
+# 在Linux/Mac系统中
+nano .env
+
+# 复制Docker Compose配置文件
+cp docker-compose.yml.example docker-compose.yml
+
+# 编辑docker-compose.yml文件，修改数据卷挂载路径
+# 将"数据库数据的主机实际路径"替换为您希望存储数据的实际路径
+# 例如: "C:/data/mongodb:/data/db" (Windows)
+# 或 "/home/username/data/mongodb:/data/db" (Linux/Mac)
+
+# 启动MongoDB容器
+docker-compose up -d
+
+# 检查容器状态
+docker-compose ps
+
+# 返回项目根目录
+cd ../..
+```
+
+### 3. 安装依赖
 
 ```bash
 # 安装后端依赖
@@ -113,6 +172,14 @@ ATTACHMENTS_BEARER_TOKEN=your-attachment-bearer-token-change-this-in-production
 
 #### 3.4 登录认证配置
 
+首先，生成密码哈希值（在backend目录运行）：
+```bash
+cd backend
+node -e "const bcrypt = require('bcrypt'); bcrypt.hash('你的密码', 10).then(console.log)"
+cd ..
+```
+
+复制并配置登录认证文件：
 ```bash
 # 在项目根目录执行
 cp login.env.example login.env
@@ -122,20 +189,14 @@ cp login.env.example login.env
 
 ```
 # 登录用户名
-LOGIN_USERNAME=
+LOGIN_USERNAME=你的用户名
 
-# 登录密码（bcrypt散列值）
-LOGIN_PASSWORD_HASH=
+# 登录密码（bcrypt散列值）- 使用上一步生成的哈希值
+LOGIN_PASSWORD_HASH=生成的哈希值
 
 # JWT配置
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
-```
-
-**生成密码哈希**:
-在backend目录运行：
-```bash
-node -e "const bcrypt = require('bcrypt'); bcrypt.hash('你的密码', 10).then(console.log)"
 ```
 
 ### 4. 创建必要的目录
@@ -176,8 +237,8 @@ chmod +x start-dev.sh
 # 安装PM2
 npm install -g pm2
 
-# 启动应用
-pm2 start ecosystem.config.js
+# 启动应用（推荐方式）
+node start-pm2.js
 
 # 查看状态
 pm2 status
@@ -188,6 +249,8 @@ pm2 logs
 # 重启应用
 pm2 restart tab-backend
 ```
+
+**注意**: 请使用 `node start-pm2.js` 而不是 `pm2 start ecosystem.config.js`，因为前者会先读取端口配置并动态生成适合的配置文件。
 
 #### 手动启动（生产环境）
 
@@ -215,7 +278,7 @@ npm run init-attachments # 初始化附件数据
 
 ### 登录系统
 
-1. 启动应用后，访问 `http://localhost:3000`
+1. 启动应用后，访问 `http://localhost:你前面设定的端口号`
 2. 使用配置的用户名和密码登录
 3. 登录成功后会跳转到主页面
 
@@ -245,7 +308,7 @@ npm run init-attachments # 初始化附件数据
 ### 自定义页面
 
 1. 在设置中创建自定义页面
-2. 支持HTML、Markdown和富文本内容
+2. 支持HTML、Markdown内容
 3. 可以创建多个自定义页面用于展示特定内容
 
 ### 全局搜索
@@ -313,13 +376,7 @@ ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
 - 开发环境：控制台输出
 - 生产环境：查看 `logs/` 目录下的日志文件
 
-## 贡献指南
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
 
 ## 许可证
 
