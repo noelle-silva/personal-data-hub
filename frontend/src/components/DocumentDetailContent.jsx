@@ -734,6 +734,8 @@ const DocumentDetailContent = ({
   onViewDocument,
   selectedDocumentStatus,
   isSidebarCollapsed,
+  onEditModeChange,
+  externalTitle,
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -754,6 +756,7 @@ const DocumentDetailContent = ({
     tags: [],
     source: '',
   });
+  
   const [tagInput, setTagInput] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
@@ -806,6 +809,7 @@ const DocumentDetailContent = ({
         tags: document.tags || [],
         source: document.source || '',
       });
+      setIsEditing(false);
       setTagInput('');
       setIsEditing(false);
       
@@ -953,6 +957,16 @@ const DocumentDetailContent = ({
       [name]: value
     }));
   };
+  
+  // 同步外部标题到表单数据（编辑模式下）
+  useEffect(() => {
+    if (isEditing && externalTitle !== undefined && externalTitle !== formData.title) {
+      setFormData(prev => ({
+        ...prev,
+        title: externalTitle
+      }));
+    }
+  }, [externalTitle, isEditing, formData.title]);
 
   // 切换编辑模式
   const toggleEditMode = () => {
@@ -1000,7 +1014,13 @@ const DocumentDetailContent = ({
         setTimeout(resizeTextarea, 0);
       }
     }
-    setIsEditing(!isEditing);
+    const newIsEditing = !isEditing;
+    setIsEditing(newIsEditing);
+    
+    // 通知父组件编辑模式变化
+    if (onEditModeChange) {
+      onEditModeChange(newIsEditing);
+    }
   };
 
   // 保存编辑

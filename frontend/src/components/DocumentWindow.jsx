@@ -6,6 +6,7 @@ import {
   Typography,
   Box,
   CircularProgress,
+  TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
@@ -70,6 +71,35 @@ const WindowTitle = styled(Typography)(({ theme }) => ({
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
   marginLeft: theme.spacing(1),
+}));
+
+// 可编辑标题输入框
+const EditableTitleInput = styled(TextField)(({ theme, isActive }) => ({
+  flexGrow: 1,
+  marginLeft: theme.spacing(1),
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: 'transparent',
+    padding: theme.spacing(0.5, 0.75),
+    '& fieldset': {
+      border: 'none',
+    },
+    '&:hover fieldset': {
+      border: 'none',
+    },
+    '&.Mui-focused fieldset': {
+      border: 'none',
+    },
+  },
+  '& .MuiOutlinedInput-input': {
+    color: isActive
+      ? theme.palette.primary.contrastText
+      : theme.palette.text.primary,
+    fontWeight: 'bold',
+    fontSize: '1rem',
+    padding: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
 }));
 
 // 窗口控制按钮组
@@ -146,6 +176,10 @@ const DocumentWindow = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  
+  // 标题编辑相关状态
+  const [headerIsEditing, setHeaderIsEditing] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(windowData.title || '');
   
   const windowRef = useRef(null);
   const headerRef = useRef(null);
@@ -272,6 +306,61 @@ const DocumentWindow = ({
     }
   }, [isActive, onClose]);
   
+  // 同步 windowData.title 到 editableTitle（非编辑模式时）
+  useEffect(() => {
+    if (!headerIsEditing && windowData.title !== editableTitle) {
+      setEditableTitle(windowData.title || '');
+    }
+  }, [windowData.title, headerIsEditing, editableTitle]);
+  
+  // 包装 onSave 函数，合并编辑的标题
+  const handleSave = useCallback(async (id, documentData) => {
+    // 合并编辑的标题，并做 trim 处理
+    const trimmedTitle = editableTitle.trim();
+    
+    // 空标题校验
+    if (!trimmedTitle) {
+      alert('标题不能为空');
+      return Promise.reject(new Error('标题不能为空'));
+    }
+    
+    // 合并标题到保存数据
+    const updatedData = {
+      ...documentData,
+      title: trimmedTitle,
+    };
+    
+    // 调用原始 onSave
+    return onSave(id, updatedData);
+  }, [editableTitle, onSave]);
+  
+  // 处理编辑模式变化
+  const handleEditModeChange = useCallback((isEditing) => {
+    setHeaderIsEditing(isEditing);
+    // 进入编辑模式时，确保 editableTitle 与当前标题同步
+    if (isEditing) {
+      setEditableTitle(windowData.title || '');
+    }
+  }, [windowData.title]);
+  
+  // 处理标题输入框变化
+  const handleTitleChange = useCallback((e) => {
+    setEditableTitle(e.target.value);
+  }, []);
+  
+  // 处理标题输入框回车（仅失焦，不保存）
+  const handleTitleKeyPress = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.target.blur();
+    }
+  }, []);
+  
+  // 阻止输入框的鼠标事件冒泡，避免触发拖拽
+  const handleInputMouseDown = useCallback((e) => {
+    e.stopPropagation();
+  }, []);
+  
   // 渲染加载状态
   const renderLoading = () => (
     <LoadingContainer>
@@ -323,7 +412,7 @@ const DocumentWindow = ({
         return (
           <DocumentDetailContent
             document={windowData.document}
-            onSave={onSave}
+            onSave={handleSave}
             onDelete={onDelete}
             onSaveReferences={onSaveReferences || handleSaveReferences}
             onSaveAttachmentReferences={onSaveAttachmentReferences || handleSaveAttachmentReferences}
@@ -331,6 +420,8 @@ const DocumentWindow = ({
             onViewDocument={onViewDocument}
             selectedDocumentStatus="loaded"
             isSidebarCollapsed={isSidebarCollapsed}
+            onEditModeChange={handleEditModeChange}
+            externalTitle={headerIsEditing ? editableTitle : undefined}
           />
         );
       default:
@@ -360,9 +451,24 @@ const DocumentWindow = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <DragIndicatorIcon sx={{ fontSize: 16, opacity: 0.7 }} />
-          <WindowTitle variant="body1">
-            {windowData.title}
-          </WindowTitle>
+          {headerIsEditing ? (
+            <EditableTitleInput
+              value={editableTitle}
+              onChange={handleTitleChange}
+              onKeyPress={handleTitleKeyPress}
+              onMouseDown={handleInputMouseDown}
+              onClick={handleInputMouseDown}
+              variant="outlined"
+              size="small"
+              isActive={isActive}
+              aria-label="编辑笔记标题"
+              placeholder="输入标题..."
+            />
+          ) : (
+            <WindowTitle variant="body1">
+              {windowData.title}
+            </WindowTitle>
+          )}
           <WindowControlButton
             size="small"
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
