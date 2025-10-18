@@ -16,6 +16,7 @@ backend/db.env
 port.env
 file.env
 login.env
+ai.env
 
 # 测试数据目录
 frontend/src/testdata

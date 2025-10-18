@@ -10,6 +10,7 @@ require('dotenv').config({ path: './db.env' });
 require('dotenv').config({ path: '../port.env' });
 require('dotenv').config({ path: '../file.env' });
 require('dotenv').config({ path: '../login.env' });
+require('dotenv').config({ path: '../ai.env' });
 
 // 导入路由和中间件
 const authRoutes = require('./routes/auth');
@@ -17,6 +18,7 @@ const documentRoutes = require('./routes/documents');
 const quoteRoutes = require('./routes/quotes');
 const attachmentRoutes = require('./routes/attachments');
 const customPageRoutes = require('./routes/customPages');
+const aiRoutes = require('./routes/ai');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
 const helmet = require('helmet');
@@ -33,6 +35,16 @@ console.log('========================');
 console.log('=== 自定义页面配置检查 ===');
 console.log('CUSTOM_PAGE_COLLECTION:', process.env.CUSTOM_PAGE_COLLECTION || 'custom-pages');
 console.log('========================');
+
+// 输出AI配置信息
+console.log('=== AI配置检查 ===');
+console.log('AI_ENABLED:', process.env.AI_ENABLED || 'false');
+console.log('AI_BASE_URL:', process.env.AI_BASE_URL || '未配置');
+console.log('AI_DEFAULT_MODEL:', process.env.AI_DEFAULT_MODEL || '未配置');
+console.log('AI_API_KEY:', process.env.AI_API_KEY ? '已配置' : '未配置');
+console.log('AI_STREAM_ENABLED:', process.env.AI_STREAM_ENABLED || 'true');
+console.log('AI_REQUEST_TIMEOUT_MS:', process.env.AI_REQUEST_TIMEOUT_MS || '60000');
+console.log('==================');
 
 /**
  * 创建Express应用实例
@@ -143,7 +155,10 @@ app.get('/api', (req, res) => {
       attachmentSigned: '/api/attachments/:id/signed',
       customPages: '/api/custom-pages',
       customPagesSearch: '/api/custom-pages/search',
-      customPagesByName: '/api/custom-pages/by-name/:name'
+      customPagesByName: '/api/custom-pages/by-name/:name',
+      ai: '/api/ai/v1',
+      aiChatCompletions: '/api/ai/v1/chat/completions',
+      aiModels: '/api/ai/v1/models'
     }
   });
 });
@@ -165,6 +180,9 @@ app.use('/api/quotes', quoteRoutes);
 
 // 自定义页面相关路由
 app.use('/api/custom-pages', customPageRoutes);
+
+// AI相关路由（需要JWT认证）
+app.use('/api/ai', aiRoutes);
 
 /**
  * 404错误处理

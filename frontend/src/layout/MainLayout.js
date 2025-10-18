@@ -27,6 +27,7 @@ import {
   BugReport as BugReportIcon,
   Settings as SettingsIcon,
   CollectionsBookmark as CollectionsBookmarkIcon,
+  SmartToy as SmartToyIcon,
 } from '@mui/icons-material';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -122,6 +123,11 @@ const fixedNavigationItems = [
     text: '交互测试',
     path: '/交互测试',
     icon: <BugReportIcon />,
+  },
+  {
+    text: 'AI Chat',
+    path: '/AI-Chat',
+    icon: <SmartToyIcon />,
   },
   {
     text: '设置',

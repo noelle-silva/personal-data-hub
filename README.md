@@ -28,6 +28,7 @@
 - 🚀 **HTML笔记动态化**: 支持在HTML笔记中安全地引用由后端统一托管的前端库（如Animate.css, Chart.js等），轻松创建具有丰富交互和动态效果的笔记内容。
   - 详细说明请参考：[`docs/HTML笔记如何使用后端托管依赖.md`](docs/HTML笔记如何使用后端托管依赖.md)
   - 查看一个具体示例：[`docs/调用后端托管Animate.css依赖的html例子.md`](docs/调用后端托管Animate.css依赖的html例子.md)
+- 🤖 **AI聊天功能**: 集成OpenAI兼容的AI服务，支持流式和非流式聊天，可自定义模型和参数，为知识管理提供智能辅助。
 
 
 ## 技术栈
@@ -193,6 +194,28 @@ JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 ```
 
+#### 3.5 AI服务配置
+
+```bash
+# 在项目根目录执行
+cp ai.env.example ai.env
+```
+
+编辑 `ai.env` 文件：
+
+```
+# AI 服务配置
+AI_BASE_URL=https://api.openai.com
+AI_API_KEY=your-openai-api-key-here
+AI_DEFAULT_MODEL=gpt-4o-mini
+AI_ENABLED=true
+AI_STREAM_ENABLED=true
+AI_REQUEST_TIMEOUT_MS=60000
+AI_ALLOWED_MODELS=
+AI_MAX_TOKENS=4096
+AI_TEMPERATURE=0.7
+```
+
 ### 4. 启动应用
 
 #### 开发环境
@@ -253,6 +276,42 @@ npm start
 npm run init-data        # 初始化示例数据
 npm run init-quotes      # 初始化引用数据
 npm run init-attachments # 初始化附件数据
+```
+
+### 7. AI功能使用
+
+> 详细安装和配置指南请参考：[`docs/AI功能安装指南.md`](docs/AI功能安装指南.md)
+
+#### 7.1 配置AI服务
+
+1. 复制 `ai.env.example` 为 `ai.env`
+2. 编辑 `ai.env` 文件，配置你的AI服务提供商信息：
+   - `AI_BASE_URL`: AI服务的基础URL（OpenAI API或兼容服务）
+   - `AI_API_KEY`: 你的API密钥
+   - `AI_DEFAULT_MODEL`: 默认使用的模型
+   - `AI_ENABLED`: 是否启用AI功能
+
+#### 7.2 使用AI聊天
+
+1. 启动应用后，在侧边栏点击"AI Chat"
+2. 选择你想要使用的AI模型
+3. 在输入框中输入你的问题或需求
+4. 按Enter键发送消息，AI会实时回复
+
+#### 7.3 AI功能特性
+
+- **流式响应**: 默认启用流式输出，实时显示AI回复内容
+- **模型选择**: 支持从可用模型列表中选择不同的AI模型
+- **中断生成**: 可以随时停止AI的回复生成
+- **错误处理**: 完善的错误提示和重试机制
+- **JWT保护**: 所有AI请求都需要用户认证
+
+#### 7.4 支持的AI服务
+
+本系统支持所有兼容OpenAI API规范的服务，包括：
+- OpenAI官方API
+- Azure OpenAI服务
+- 其他兼容OpenAI规范的AI服务提供商
 ```
 
 ## 使用指南
