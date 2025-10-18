@@ -44,7 +44,8 @@ console.log('AI_DEFAULT_MODEL:', process.env.AI_DEFAULT_MODEL || '未配置');
 console.log('AI_API_KEY:', process.env.AI_API_KEY ? '已配置' : '未配置');
 console.log('AI_STREAM_ENABLED:', process.env.AI_STREAM_ENABLED || 'true');
 console.log('AI_REQUEST_TIMEOUT_MS:', process.env.AI_REQUEST_TIMEOUT_MS || '60000');
-console.log('AI_PROMPTS_COLLECTION:', process.env.AI_PROMPTS_COLLECTION || 'AI-prompts');
+console.log('AI_ROLES_COLLECTION:', process.env.AI_ROLES_COLLECTION || 'AI-roles');
+console.log('AI_CHAT_HISTORY_COLLECTION:', process.env.AI_CHAT_HISTORY_COLLECTION || 'ai-chat-history');
 console.log('==================');
 
 /**

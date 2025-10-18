@@ -22,7 +22,8 @@ import {
   Switch,
   FormControlLabel,
   Divider,
-  Tooltip
+  Tooltip,
+  Slider
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -31,7 +32,10 @@ import {
   SmartToy as BotIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
-  Tune as TuneIcon
+  Tune as TuneIcon,
+  Refresh as RefreshIcon,
+  History as HistoryIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import aiService from '../services/ai';
 
@@ -90,10 +94,22 @@ const AIChat = () => {
   const [currentResponse, setCurrentResponse] = useState('');
   const [currentController, setCurrentController] = useState(null);
   
-  // AI提示词相关状态
-  const [prompts, setPrompts] = useState([]);
-  const [selectedPromptId, setSelectedPromptId] = useState('default'); // 'default', 'none', 或具体的prompt ID
-  const [promptsLoading, setPromptsLoading] = useState(false);
+  // AI角色相关状态
+  const [roles, setRoles] = useState([]);
+  const [selectedRoleId, setSelectedRoleId] = useState('default'); // 'default', 'none', 或具体的role ID
+  const [rolesLoading, setRolesLoading] = useState(false);
+  
+  // 聊天历史相关状态
+  const [chatHistories, setChatHistories] = useState([]);
+  const [selectedHistoryId, setSelectedHistoryId] = useState(''); // 空字符串表示未选择会话
+  const [historiesLoading, setHistoriesLoading] = useState(false);
+  
+  // 温度相关状态
+  const [temperature, setTemperature] = useState(0.7);
+  const [isTempManuallySet, setIsTempManuallySet] = useState(false);
+  
+  // 模型手动修改标志
+  const [isModelManuallySet, setIsModelManuallySet] = useState(false);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -120,37 +136,124 @@ const AIChat = () => {
     loadModels();
   }, [selectedModel]);
 
-  // 加载AI提示词列表
+  // 加载AI角色列表
+  const loadRoles = async () => {
+    try {
+      setRolesLoading(true);
+      const response = await aiService.listRoles();
+      if (response.success) {
+        setRoles(response.data);
+      }
+    } catch (error) {
+      console.error('加载AI角色失败:', error);
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
+  // 初始化时加载角色列表
   useEffect(() => {
-    const loadPrompts = async () => {
-      try {
-        setPromptsLoading(true);
-        const response = await aiService.listPrompts();
-        if (response.success) {
-          setPrompts(response.data);
-        }
-      } catch (error) {
-        console.error('加载AI提示词失败:', error);
-      } finally {
-        setPromptsLoading(false);
+    loadRoles();
+  }, []);
+
+  // 加载聊天历史列表
+  const loadChatHistories = async () => {
+    try {
+      setHistoriesLoading(true);
+      const response = await aiService.listChatHistories({
+        role_id: selectedRoleId === 'default' || selectedRoleId === 'none' ? 'all' : selectedRoleId,
+        limit: 50
+      });
+      if (response.success) {
+        setChatHistories(response.data.histories);
+      }
+    } catch (error) {
+      console.error('加载聊天历史失败:', error);
+    } finally {
+      setHistoriesLoading(false);
+    }
+  };
+
+  // 当页面获得焦点时刷新角色列表（从设置页返回时）
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadRoles();
+        loadChatHistories();
       }
     };
 
-    loadPrompts();
+    const handleFocus = () => {
+      loadRoles();
+      loadChatHistories();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
-  // 从localStorage恢复上次选择的提示词
+  // 当角色改变时，重新加载聊天历史列表
   useEffect(() => {
-    const savedPromptId = localStorage.getItem('aiChat_selectedPromptId');
-    if (savedPromptId) {
-      setSelectedPromptId(savedPromptId);
+    loadChatHistories();
+    // 切换角色时，清除选中的聊天历史
+    setSelectedHistoryId('');
+    setMessages([]);
+  }, [selectedRoleId]);
+
+  // 从localStorage恢复上次选择的角色和温度
+  useEffect(() => {
+    const savedRoleId = localStorage.getItem('aiChat_selectedRoleId');
+    if (savedRoleId) {
+      setSelectedRoleId(savedRoleId);
+    }
+    
+    const savedTemperature = localStorage.getItem('aiChat_temperature');
+    if (savedTemperature) {
+      setTemperature(parseFloat(savedTemperature));
+      setIsTempManuallySet(true);
+    }
+    
+    const savedIsModelManuallySet = localStorage.getItem('aiChat_isModelManuallySet');
+    if (savedIsModelManuallySet) {
+      setIsModelManuallySet(JSON.parse(savedIsModelManuallySet));
     }
   }, []);
 
-  // 保存选择的提示词到localStorage
+  // 保存选择的角色到localStorage
   useEffect(() => {
-    localStorage.setItem('aiChat_selectedPromptId', selectedPromptId);
-  }, [selectedPromptId]);
+    localStorage.setItem('aiChat_selectedRoleId', selectedRoleId);
+  }, [selectedRoleId]);
+
+  // 保存温度到localStorage
+  useEffect(() => {
+    localStorage.setItem('aiChat_temperature', temperature.toString());
+  }, [temperature]);
+
+  // 保存模型手动修改标志到localStorage
+  useEffect(() => {
+    localStorage.setItem('aiChat_isModelManuallySet', JSON.stringify(isModelManuallySet));
+  }, [isModelManuallySet]);
+
+  // 当选择的角色改变时，如果用户没有手动修改过模型和温度，则使用角色的默认值
+  useEffect(() => {
+    if (selectedRoleId !== 'default' && selectedRoleId !== 'none') {
+      const selectedRole = roles.find(role => role._id === selectedRoleId);
+      if (selectedRole) {
+        // 只有在用户没有手动修改过的情况下才更新
+        if (!isModelManuallySet && selectedRole.defaultModel && selectedRole.defaultModel !== selectedModel) {
+          setSelectedModel(selectedRole.defaultModel);
+        }
+        if (!isTempManuallySet && selectedRole.defaultTemperature !== undefined && selectedRole.defaultTemperature !== temperature) {
+          setTemperature(selectedRole.defaultTemperature);
+        }
+      }
+    }
+  }, [selectedRoleId, roles, isModelManuallySet, isTempManuallySet]);
 
   // 滚动到底部
   useEffect(() => {
@@ -183,15 +286,22 @@ const AIChat = () => {
     // 准备AI请求参数
     const requestParams = {
       messages: requestMessages,
-      model: selectedModel
+      model: selectedModel,
+      temperature: temperature
     };
 
-    // 添加系统提示词参数
-    if (selectedPromptId === 'none') {
-      requestParams.disable_system_prompt = true;
-    } else if (selectedPromptId !== 'default') {
-      requestParams.system_preset_id = selectedPromptId;
+    // 添加聊天历史ID（如果已选择）
+    if (selectedHistoryId) {
+      requestParams.history_id = selectedHistoryId;
     }
+
+    // 添加角色或系统提示词参数
+    if (selectedRoleId === 'none') {
+      requestParams.disable_system_prompt = true;
+    } else if (selectedRoleId !== 'default') {
+      requestParams.role_id = selectedRoleId;
+    }
+    // 如果没有选择角色，则使用默认逻辑（后端会自动选择默认角色或默认提示词）
 
     try {
       if (isStreaming) {
@@ -203,6 +313,14 @@ const AIChat = () => {
               const newContent = chunk.choices[0].delta.content;
               streamBufferRef.current += newContent; // 同步更新缓冲区
               setCurrentResponse(prev => prev + newContent);
+            }
+          },
+          onHistory: (historyData) => {
+            // 接收到新创建的聊天历史信息
+            if (historyData.id) {
+              setSelectedHistoryId(historyData.id);
+              // 重新加载聊天历史列表
+              loadChatHistories();
             }
           },
           onError: (error) => {
@@ -259,6 +377,13 @@ const AIChat = () => {
             usage: response.data.usage
           };
           setMessages(prev => [...prev, assistantMessage]);
+          
+          // 如果返回了新的historyId，更新选中的聊天历史
+          if (response.data.meta?.historyId) {
+            setSelectedHistoryId(response.data.meta.historyId);
+            // 重新加载聊天历史列表
+            loadChatHistories();
+          }
         }
       }
     } catch (error) {
@@ -306,6 +431,45 @@ const AIChat = () => {
     setError(null);
   };
 
+  // 处理聊天历史选择
+  const handleHistorySelect = async (historyId) => {
+    if (historyId === selectedHistoryId) return;
+    
+    try {
+      setSelectedHistoryId(historyId);
+      
+      if (historyId) {
+        // 加载选中的聊天历史
+        const response = await aiService.getChatHistoryById(historyId);
+        if (response.success) {
+          // 转换消息格式
+          const formattedMessages = response.data.messages.map(msg => ({
+            id: `${msg.role}-${new Date(msg.timestamp).getTime()}`,
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+            model: msg.model,
+            incomplete: msg.incomplete
+          }));
+          setMessages(formattedMessages);
+        }
+      } else {
+        // 清空消息
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('加载聊天历史失败:', error);
+      setError('加载聊天历史失败，请重试');
+    }
+  };
+
+  // 创建新会话
+  const handleNewChat = () => {
+    setSelectedHistoryId('');
+    setMessages([]);
+    clearError();
+  };
+
   return (
     <Container maxWidth="lg" sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 2 }}>
       <Typography variant="h4" component="h1" gutterBottom align="center">
@@ -321,7 +485,10 @@ const AIChat = () => {
               <Select
                 value={selectedModel}
                 label="模型"
-                onChange={(e) => setSelectedModel(e.target.value)}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  setIsModelManuallySet(true);
+                }}
                 disabled={isLoading}
               >
                 {models.map((model) => (
@@ -332,24 +499,118 @@ const AIChat = () => {
               </Select>
             </FormControl>
             
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>系统提示词</InputLabel>
-              <Select
-                value={selectedPromptId}
-                label="系统提示词"
-                onChange={(e) => setSelectedPromptId(e.target.value)}
-                disabled={isLoading || promptsLoading}
-              >
-                <MenuItem value="default">使用默认提示词</MenuItem>
-                <MenuItem value="none">无系统提示词</MenuItem>
-                {prompts.map((prompt) => (
-                  <MenuItem key={prompt._id} value={prompt._id}>
-                    {prompt.name}
-                    {prompt.isDefault && ' (默认)'}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel id="roleSelectLabel">角色</InputLabel>
+                <Select
+                  value={selectedRoleId}
+                  label="角色"
+                  labelId="roleSelectLabel"
+                  id="roleSelect"
+                  onChange={(e) => {
+                    console.log('角色选择器 onChange:', e.target.value, '当前值:', selectedRoleId);
+                    setSelectedRoleId(e.target.value);
+                  }}
+                  disabled={isLoading || rolesLoading || roles.length === 0}
+                >
+                  {roles.length === 0 ? (
+                    <MenuItem value="default" disabled>
+                      暂无可用角色
+                    </MenuItem>
+                  ) : (
+                    [
+                      <MenuItem key="default" value="default">使用默认角色</MenuItem>,
+                      <MenuItem key="none" value="none">无系统提示词</MenuItem>,
+                      ...roles.map((role) => (
+                        <MenuItem key={role._id} value={String(role._id)}>
+                          {role.name}
+                          {role.isDefault && ' (默认)'}
+                        </MenuItem>
+                      ))
+                    ]
+                  )}
+                </Select>
+              </FormControl>
+              <Tooltip title="刷新角色列表">
+                <IconButton
+                  onClick={loadRoles}
+                  disabled={rolesLoading}
+                  size="small"
+                  sx={{ mt: 1 }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel id="historySelectLabel">会话</InputLabel>
+                <Select
+                  value={selectedHistoryId}
+                  label="会话"
+                  labelId="historySelectLabel"
+                  id="historySelect"
+                  onChange={(e) => {
+                    handleHistorySelect(e.target.value);
+                  }}
+                  disabled={isLoading || historiesLoading}
+                >
+                  <MenuItem value="">
+                    <em>新建会话</em>
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                  {chatHistories.map((history) => (
+                    <MenuItem key={history._id} value={history._id}>
+                      {history.title}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Tooltip title="新建会话">
+                <IconButton
+                  onClick={handleNewChat}
+                  disabled={isLoading}
+                  size="small"
+                  sx={{ mt: 1 }}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="刷新会话列表">
+                <IconButton
+                  onClick={loadChatHistories}
+                  disabled={historiesLoading}
+                  size="small"
+                  sx={{ mt: 1 }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            <Box sx={{ minWidth: 200 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                温度: {temperature.toFixed(1)}
+              </Typography>
+              <Slider
+                value={temperature}
+                onChange={(e, newValue) => {
+                  setTemperature(newValue);
+                  setIsTempManuallySet(true);
+                }}
+                min={0}
+                max={2}
+                step={0.1}
+                disabled={isLoading}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 0.7, label: '0.7' },
+                  { value: 1.5, label: '1.5' },
+                  { value: 2, label: '2' }
+                ]}
+                valueLabelDisplay="auto"
+              />
+            </Box>
             
             <FormControlLabel
               control={
@@ -380,16 +641,25 @@ const AIChat = () => {
               />
             )}
             
-            {selectedPromptId !== 'default' && selectedPromptId !== 'none' && (
+            {roles.length === 0 && (
               <Chip
-                label={`提示词: ${prompts.find(p => p._id === selectedPromptId)?.name || '未知'}`}
+                label="暂无角色，请在设置中创建"
+                variant="outlined"
+                size="small"
+                color="warning"
+              />
+            )}
+            
+            {selectedRoleId !== 'default' && selectedRoleId !== 'none' && roles.length > 0 && (
+              <Chip
+                label={`角色: ${roles.find(r => r._id === selectedRoleId)?.name || '未知'}`}
                 variant="outlined"
                 size="small"
                 color="secondary"
               />
             )}
             
-            {selectedPromptId === 'none' && (
+            {selectedRoleId === 'none' && (
               <Chip
                 label="无系统提示词"
                 variant="outlined"
@@ -397,6 +667,33 @@ const AIChat = () => {
                 color="warning"
               />
             )}
+            
+            {isTempManuallySet && (
+              <Chip
+                label={`温度: ${temperature.toFixed(1)} (手动)`}
+                variant="outlined"
+                size="small"
+                color="info"
+              />
+            )}
+            
+            {isModelManuallySet && (
+              <Chip
+                label={`模型: ${selectedModel} (手动)`}
+                variant="outlined"
+                size="small"
+                color="info"
+              />
+            )}
+            
+            {/* 临时调试Chip，显示当前 selectedRoleId */}
+            <Chip
+              label={`DEBUG: selectedRoleId=${selectedRoleId}`}
+              variant="outlined"
+              size="small"
+              color="info"
+              sx={{ ml: 1 }}
+            />
           </Box>
         </CardContent>
       </ControlPanel>

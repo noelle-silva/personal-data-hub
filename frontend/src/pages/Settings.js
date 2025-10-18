@@ -22,6 +22,11 @@ import {
   DialogActions,
   Tooltip,
   FormControlLabel,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Slider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -39,6 +44,7 @@ import {
   SmartToy as BotIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useSelector, useDispatch } from 'react-redux';
@@ -96,15 +102,26 @@ const Settings = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
   
-  // AI提示词相关状态
-  const [prompts, setPrompts] = useState([]);
-  const [promptsLoading, setPromptsLoading] = useState(false);
-  const [promptsError, setPromptsError] = useState(null);
-  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
-  const [promptEditMode, setPromptEditMode] = useState(false); // true=编辑, false=新建
-  const [currentPrompt, setCurrentPrompt] = useState({ name: '', content: '', isDefault: false });
-  const [deletePromptConfirmOpen, setDeletePromptConfirmOpen] = useState(false);
-  const [promptToDelete, setPromptToDelete] = useState(null);
+  // AI角色相关状态
+  const [roles, setRoles] = useState([]);
+  const [models, setModels] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState(null);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [roleEditMode, setRoleEditMode] = useState(false); // true=编辑, false=新建
+  const [currentRole, setCurrentRole] = useState({
+    name: '',
+    systemPrompt: '',
+    defaultModel: '',
+    defaultTemperature: 0.7,
+    contextTokenLimit: 8192,
+    maxOutputTokens: 4096,
+    topP: 1.0,
+    topK: 0,
+    isDefault: false
+  });
+  const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState(null);
   
   // 处理创建页面
   const handleCreatePage = () => {
@@ -145,125 +162,195 @@ const Settings = () => {
     }
   };
 
-  // 加载AI提示词列表
-  const loadPrompts = async () => {
-    setPromptsLoading(true);
-    setPromptsError(null);
+  // 加载AI角色列表
+  const loadRoles = async () => {
+    setRolesLoading(true);
+    setRolesError(null);
     try {
-      const response = await aiService.listPrompts();
+      const response = await aiService.listRoles();
       if (response.success) {
-        setPrompts(response.data);
+        setRoles(response.data);
       }
     } catch (error) {
-      console.error('加载AI提示词失败:', error);
-      setPromptsError('加载AI提示词失败');
+      console.error('加载AI角色失败:', error);
+      setRolesError('加载AI角色失败');
     } finally {
-      setPromptsLoading(false);
+      setRolesLoading(false);
     }
   };
 
-  // 组件挂载时加载提示词
+  // 加载模型列表
+  const loadModels = async () => {
+    try {
+      const response = await aiService.getModels();
+      if (response.success) {
+        setModels(response.data);
+      }
+    } catch (error) {
+      console.error('加载AI模型列表失败:', error);
+    }
+  };
+
+  // 组件挂载时加载角色和模型
   useEffect(() => {
-    loadPrompts();
+    loadRoles();
+    loadModels();
   }, []);
 
-  // 打开新建提示词对话框
-  const openCreatePromptDialog = () => {
-    setPromptEditMode(false);
-    setCurrentPrompt({ name: '', content: '', isDefault: false });
-    setPromptDialogOpen(true);
+  // 打开新建角色对话框
+  const openCreateRoleDialog = () => {
+    setRoleEditMode(false);
+    setCurrentRole({
+      name: '',
+      systemPrompt: '',
+      defaultModel: models.length > 0 ? models[0].id : '',
+      defaultTemperature: 0.7,
+      contextTokenLimit: 8192,
+      maxOutputTokens: 4096,
+      topP: 1.0,
+      topK: 0,
+      isDefault: false
+    });
+    setRoleDialogOpen(true);
   };
 
-  // 打开编辑提示词对话框
-  const openEditPromptDialog = (prompt) => {
-    setPromptEditMode(true);
-    setCurrentPrompt({ ...prompt });
-    setPromptDialogOpen(true);
+  // 打开编辑角色对话框
+  const openEditRoleDialog = (role) => {
+    setRoleEditMode(true);
+    setCurrentRole({ ...role });
+    setRoleDialogOpen(true);
   };
 
-  // 关闭提示词对话框
-  const closePromptDialog = () => {
-    setPromptDialogOpen(false);
-    setCurrentPrompt({ name: '', content: '', isDefault: false });
+  // 关闭角色对话框
+  const closeRoleDialog = () => {
+    setRoleDialogOpen(false);
+    setCurrentRole({
+      name: '',
+      systemPrompt: '',
+      defaultModel: '',
+      defaultTemperature: 0.7,
+      contextTokenLimit: 8192,
+      maxOutputTokens: 4096,
+      topP: 1.0,
+      topK: 0,
+      isDefault: false
+    });
   };
 
-  // 保存提示词
-  const handleSavePrompt = async () => {
-    if (!currentPrompt.name.trim() || !currentPrompt.content.trim()) {
-      setPromptsError('提示词名称和内容不能为空');
+  // 保存角色
+  const handleSaveRole = async () => {
+    if (!currentRole.name.trim() || !currentRole.systemPrompt.trim()) {
+      setRolesError('角色名称和系统提示词不能为空');
+      return;
+    }
+
+    if (currentRole.defaultTemperature < 0 || currentRole.defaultTemperature > 2) {
+      setRolesError('温度值必须在0到2之间');
+      return;
+    }
+
+    if (currentRole.contextTokenLimit < 1 || currentRole.contextTokenLimit > 2000000) {
+      setRolesError('上下文Token上限必须在1到2000000之间');
+      return;
+    }
+
+    if (currentRole.maxOutputTokens < 1 || currentRole.maxOutputTokens > 8192) {
+      setRolesError('最大输出Token上限必须在1到8192之间');
+      return;
+    }
+
+    if (currentRole.topP < 0 || currentRole.topP > 1) {
+      setRolesError('Top P值必须在0到1之间');
+      return;
+    }
+
+    if (currentRole.topK < 0 || currentRole.topK > 64) {
+      setRolesError('Top K值必须在0到64之间');
       return;
     }
 
     try {
       let response;
-      if (promptEditMode) {
-        response = await aiService.updatePrompt(currentPrompt._id, {
-          name: currentPrompt.name.trim(),
-          content: currentPrompt.content.trim(),
-          isDefault: currentPrompt.isDefault
+      if (roleEditMode) {
+        response = await aiService.updateRole(currentRole._id, {
+          name: currentRole.name.trim(),
+          systemPrompt: currentRole.systemPrompt.trim(),
+          defaultModel: currentRole.defaultModel,
+          defaultTemperature: currentRole.defaultTemperature,
+          contextTokenLimit: currentRole.contextTokenLimit,
+          maxOutputTokens: currentRole.maxOutputTokens,
+          topP: currentRole.topP,
+          topK: currentRole.topK,
+          isDefault: currentRole.isDefault
         });
       } else {
-        response = await aiService.createPrompt({
-          name: currentPrompt.name.trim(),
-          content: currentPrompt.content.trim(),
-          isDefault: currentPrompt.isDefault
+        response = await aiService.createRole({
+          name: currentRole.name.trim(),
+          systemPrompt: currentRole.systemPrompt.trim(),
+          defaultModel: currentRole.defaultModel,
+          defaultTemperature: currentRole.defaultTemperature,
+          contextTokenLimit: currentRole.contextTokenLimit,
+          maxOutputTokens: currentRole.maxOutputTokens,
+          topP: currentRole.topP,
+          topK: currentRole.topK,
+          isDefault: currentRole.isDefault
         });
       }
 
       if (response.success) {
-        closePromptDialog();
-        loadPrompts();
+        closeRoleDialog();
+        loadRoles();
       } else {
-        setPromptsError(response.message || '保存失败');
+        setRolesError(response.message || '保存失败');
       }
     } catch (error) {
-      console.error('保存AI提示词失败:', error);
-      setPromptsError(error.response?.data?.message || '保存失败');
+      console.error('保存AI角色失败:', error);
+      setRolesError(error.response?.data?.message || '保存失败');
     }
   };
 
-  // 打开删除提示词确认对话框
-  const openDeletePromptConfirm = (prompt) => {
-    setPromptToDelete(prompt);
-    setDeletePromptConfirmOpen(true);
+  // 打开删除角色确认对话框
+  const openDeleteRoleConfirm = (role) => {
+    setRoleToDelete(role);
+    setDeleteRoleConfirmOpen(true);
   };
 
-  // 关闭删除提示词确认对话框
-  const closeDeletePromptConfirm = () => {
-    setDeletePromptConfirmOpen(false);
-    setPromptToDelete(null);
+  // 关闭删除角色确认对话框
+  const closeDeleteRoleConfirm = () => {
+    setDeleteRoleConfirmOpen(false);
+    setRoleToDelete(null);
   };
 
-  // 处理删除提示词
-  const handleDeletePrompt = async () => {
-    if (!promptToDelete) return;
+  // 处理删除角色
+  const handleDeleteRole = async () => {
+    if (!roleToDelete) return;
 
     try {
-      const response = await aiService.deletePrompt(promptToDelete._id);
+      const response = await aiService.deleteRole(roleToDelete._id);
       if (response.success) {
-        closeDeletePromptConfirm();
-        loadPrompts();
+        closeDeleteRoleConfirm();
+        loadRoles();
       } else {
-        setPromptsError(response.message || '删除失败');
+        setRolesError(response.message || '删除失败');
       }
     } catch (error) {
-      console.error('删除AI提示词失败:', error);
-      setPromptsError(error.response?.data?.message || '删除失败');
+      console.error('删除AI角色失败:', error);
+      setRolesError(error.response?.data?.message || '删除失败');
     }
   };
 
-  // 设置默认提示词
-  const handleSetDefaultPrompt = async (promptId) => {
+  // 设置默认角色
+  const handleSetDefaultRole = async (roleId) => {
     try {
-      const response = await aiService.setDefaultPrompt(promptId);
+      const response = await aiService.setDefaultRole(roleId);
       if (response.success) {
-        loadPrompts();
+        loadRoles();
       } else {
-        setPromptsError(response.message || '设置默认失败');
+        setRolesError(response.message || '设置默认失败');
       }
     } catch (error) {
-      console.error('设置默认AI提示词失败:', error);
-      setPromptsError(error.response?.data?.message || '设置默认失败');
+      console.error('设置默认AI角色失败:', error);
+      setRolesError(error.response?.data?.message || '设置默认失败');
     }
   };
 
@@ -503,48 +590,48 @@ const Settings = () => {
         </CardContent>
       </SettingsCard>
 
-      {/* AI系统提示词管理 */}
+      {/* AI角色管理 */}
       <SettingsCard>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            AI 系统提示词管理
+            AI角色管理
           </Typography>
           
-          {/* 新建提示词 */}
+          {/* 新建角色 */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              创建和管理AI系统提示词预设，用于定义AI助手的角色和行为
+              创建和管理AI角色，每个角色包含系统提示词、默认模型和温度设置
             </Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={openCreatePromptDialog}
-              disabled={promptsLoading}
+              onClick={openCreateRoleDialog}
+              disabled={rolesLoading}
             >
-              新建提示词
+              新建角色
             </Button>
           </Box>
           
           {/* 错误提示 */}
-          {promptsError && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPromptsError(null)}>
-              {promptsError}
+          {rolesError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setRolesError(null)}>
+              {rolesError}
             </Alert>
           )}
           
-          {/* 提示词列表 */}
-          {prompts.length === 0 && !promptsLoading ? (
+          {/* 角色列表 */}
+          {roles.length === 0 && !rolesLoading ? (
             <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
-              <BotIcon sx={{ fontSize: 48, mb: 1 }} />
+              <PersonIcon sx={{ fontSize: 48, mb: 1 }} />
               <Typography variant="body2">
-                暂无AI系统提示词，创建您的第一个提示词开始配置AI助手
+                暂无AI角色，创建您的第一个角色开始配置AI行为
               </Typography>
             </Box>
           ) : (
             <List sx={{ p: 0 }}>
-              {prompts.map((prompt) => (
+              {roles.map((role) => (
                 <ListItem
-                  key={prompt._id}
+                  key={role._id}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -556,13 +643,13 @@ const Settings = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <BotIcon color="primary" />
+                    <PersonIcon color="primary" />
                   </ListItemIcon>
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {prompt.name}
-                        {prompt.isDefault && (
+                        {role.name}
+                        {role.isDefault && (
                           <Chip
                             icon={<StarIcon sx={{ fontSize: 16 }} />}
                             label="默认"
@@ -574,21 +661,34 @@ const Settings = () => {
                       </Box>
                     }
                     secondary={
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {prompt.content.length > 100
-                          ? `${prompt.content.substring(0, 100)}...`
-                          : prompt.content
-                        }
-                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                        <Chip
+                          label={`${role.systemPrompt.length} 字符`}
+                          size="small"
+                          variant="outlined"
+                        />
+                        {role.defaultModel && (
+                          <Chip
+                            label={`模型: ${role.defaultModel}`}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                        <Chip
+                          label={`温度: ${role.defaultTemperature}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
                     }
                   />
                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                    {!prompt.isDefault && (
+                    {!role.isDefault && (
                       <Tooltip title="设为默认">
                         <IconButton
                           size="small"
-                          onClick={() => handleSetDefaultPrompt(prompt._id)}
-                          disabled={promptsLoading}
+                          onClick={() => handleSetDefaultRole(role._id)}
+                          disabled={rolesLoading}
                         >
                           <StarBorderIcon />
                         </IconButton>
@@ -597,8 +697,8 @@ const Settings = () => {
                     <Tooltip title="编辑">
                       <IconButton
                         size="small"
-                        onClick={() => openEditPromptDialog(prompt)}
-                        disabled={promptsLoading}
+                        onClick={() => openEditRoleDialog(role)}
+                        disabled={rolesLoading}
                       >
                         <EditIcon />
                       </IconButton>
@@ -607,8 +707,8 @@ const Settings = () => {
                       <IconButton
                         size="small"
                         color="error"
-                        onClick={() => openDeletePromptConfirm(prompt)}
-                        disabled={promptsLoading}
+                        onClick={() => openDeleteRoleConfirm(role)}
+                        disabled={rolesLoading}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -620,7 +720,7 @@ const Settings = () => {
           )}
           
           {/* 加载状态 */}
-          {promptsLoading && (
+          {rolesLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 加载中...
@@ -730,26 +830,26 @@ const Settings = () => {
         </DialogActions>
       </Dialog>
 
-      {/* 提示词编辑对话框 */}
-      <Dialog open={promptDialogOpen} onClose={closePromptDialog} maxWidth="md" fullWidth>
+      {/* 角色编辑对话框 */}
+      <Dialog open={roleDialogOpen} onClose={closeRoleDialog} maxWidth="md" fullWidth>
         <DialogTitle>
-          {promptEditMode ? '编辑AI系统提示词' : '新建AI系统提示词'}
+          {roleEditMode ? '编辑AI角色' : '新建AI角色'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <TextField
-              label="提示词名称"
-              value={currentPrompt.name}
-              onChange={(e) => setCurrentPrompt({ ...currentPrompt, name: e.target.value })}
+              label="角色名称"
+              value={currentRole.name}
+              onChange={(e) => setCurrentRole({ ...currentRole, name: e.target.value })}
               fullWidth
               margin="normal"
               variant="outlined"
               placeholder="例如：专业助手"
             />
             <TextField
-              label="提示词内容"
-              value={currentPrompt.content}
-              onChange={(e) => setCurrentPrompt({ ...currentPrompt, content: e.target.value })}
+              label="系统提示词"
+              value={currentRole.systemPrompt}
+              onChange={(e) => setCurrentRole({ ...currentRole, systemPrompt: e.target.value })}
               fullWidth
               margin="normal"
               variant="outlined"
@@ -757,46 +857,173 @@ const Settings = () => {
               rows={6}
               placeholder="输入系统提示词内容，定义AI助手的角色和行为..."
             />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>默认模型</InputLabel>
+              <Select
+                value={currentRole.defaultModel}
+                label="默认模型"
+                onChange={(e) => setCurrentRole({ ...currentRole, defaultModel: e.target.value })}
+              >
+                {models.map((model) => (
+                  <MenuItem key={model.id} value={model.id}>
+                    {model.id}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                默认温度: {currentRole.defaultTemperature.toFixed(1)}
+              </Typography>
+              <Slider
+                value={currentRole.defaultTemperature}
+                onChange={(e, newValue) => setCurrentRole({ ...currentRole, defaultTemperature: newValue })}
+                min={0}
+                max={2}
+                step={0.1}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 0.7, label: '0.7' },
+                  { value: 1.5, label: '1.5' },
+                  { value: 2, label: '2' }
+                ]}
+                valueLabelDisplay="auto"
+              />
+            </Box>
+            
+            {/* 新增的高级参数字段 */}
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                上下文Token上限: {currentRole.contextTokenLimit}
+              </Typography>
+              <Slider
+                value={currentRole.contextTokenLimit}
+                onChange={(e, newValue) => setCurrentRole({ ...currentRole, contextTokenLimit: newValue })}
+                min={1024}
+                max={2000000}
+                step={1024}
+                marks={[
+                  { value: 1024, label: '1K' },
+                  { value: 16384, label: '16K' },
+                  { value: 65536, label: '64K' },
+                  { value: 262144, label: '256K' },
+                  { value: 1048576, label: '1M' },
+                  { value: 2000000, label: '2M' }
+                ]}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => {
+                  if (value >= 1000000) {
+                    return `${(value / 1000000).toFixed(1)}M`;
+                  }
+                  return `${Math.round(value / 1024)}K`;
+                }}
+              />
+            </Box>
+            
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                最大输出Token上限: {currentRole.maxOutputTokens}
+              </Typography>
+              <Slider
+                value={currentRole.maxOutputTokens}
+                onChange={(e, newValue) => setCurrentRole({ ...currentRole, maxOutputTokens: newValue })}
+                min={256}
+                max={8192}
+                step={256}
+                marks={[
+                  { value: 256, label: '256' },
+                  { value: 1024, label: '1K' },
+                  { value: 2048, label: '2K' },
+                  { value: 4096, label: '4K' },
+                  { value: 8192, label: '8K' }
+                ]}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${Math.round(value / 1024)}K`}
+              />
+            </Box>
+            
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Top P: {currentRole.topP.toFixed(2)}
+              </Typography>
+              <Slider
+                value={currentRole.topP}
+                onChange={(e, newValue) => setCurrentRole({ ...currentRole, topP: newValue })}
+                min={0}
+                max={1}
+                step={0.05}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 0.5, label: '0.5' },
+                  { value: 0.8, label: '0.8' },
+                  { value: 0.9, label: '0.9' },
+                  { value: 1, label: '1' }
+                ]}
+                valueLabelDisplay="auto"
+              />
+            </Box>
+            
+            <Box sx={{ mt: 2, mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Top K: {currentRole.topK}
+              </Typography>
+              <Slider
+                value={currentRole.topK}
+                onChange={(e, newValue) => setCurrentRole({ ...currentRole, topK: newValue })}
+                min={0}
+                max={64}
+                step={1}
+                marks={[
+                  { value: 0, label: '0' },
+                  { value: 10, label: '10' },
+                  { value: 20, label: '20' },
+                  { value: 40, label: '40' },
+                  { value: 64, label: '64' }
+                ]}
+                valueLabelDisplay="auto"
+              />
+            </Box>
+            
             <FormControlLabel
               control={
                 <Switch
-                  checked={currentPrompt.isDefault}
-                  onChange={(e) => setCurrentPrompt({ ...currentPrompt, isDefault: e.target.checked })}
+                  checked={currentRole.isDefault}
+                  onChange={(e) => setCurrentRole({ ...currentRole, isDefault: e.target.checked })}
                 />
               }
-              label="设为默认提示词"
+              label="设为默认角色"
               sx={{ mt: 1 }}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closePromptDialog} disabled={promptsLoading}>
+          <Button onClick={closeRoleDialog} disabled={rolesLoading}>
             取消
           </Button>
           <Button
-            onClick={handleSavePrompt}
+            onClick={handleSaveRole}
             variant="contained"
-            disabled={promptsLoading || !currentPrompt.name.trim() || !currentPrompt.content.trim()}
+            disabled={rolesLoading || !currentRole.name.trim() || !currentRole.systemPrompt.trim()}
           >
-            {promptsLoading ? '保存中...' : '保存'}
+            {rolesLoading ? '保存中...' : '保存'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* 删除提示词确认对话框 */}
-      <Dialog open={deletePromptConfirmOpen} onClose={closeDeletePromptConfirm}>
-        <DialogTitle>确认删除AI系统提示词</DialogTitle>
+      {/* 删除角色确认对话框 */}
+      <Dialog open={deleteRoleConfirmOpen} onClose={closeDeleteRoleConfirm}>
+        <DialogTitle>确认删除AI角色</DialogTitle>
         <DialogContent>
-          {promptToDelete && (
+          {roleToDelete && (
             <Box>
               <Typography variant="body1" sx={{ mb: 2 }}>
-                确定要删除AI系统提示词 "<strong>{promptToDelete.name}</strong>" 吗？
+                确定要删除AI角色 "<strong>{roleToDelete.name}</strong>" 吗？
               </Typography>
               
-              {promptToDelete.isDefault && (
+              {roleToDelete.isDefault && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                   <Typography variant="body2">
-                    这是默认提示词，删除后系统将自动选择其他提示词作为默认。
+                    这是默认角色，删除后系统将自动选择其他角色作为默认。
                   </Typography>
                 </Alert>
               )}
@@ -808,16 +1035,16 @@ const Settings = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDeletePromptConfirm} disabled={promptsLoading}>
+          <Button onClick={closeDeleteRoleConfirm} disabled={rolesLoading}>
             取消
           </Button>
           <Button
-            onClick={handleDeletePrompt}
+            onClick={handleDeleteRole}
             color="error"
             variant="contained"
-            disabled={promptsLoading}
+            disabled={rolesLoading}
           >
-            {promptsLoading ? '删除中...' : '确认删除'}
+            {rolesLoading ? '删除中...' : '确认删除'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -3,12 +3,89 @@
  * 处理AI相关的HTTP请求和响应，调用OpenAI SDK处理业务逻辑
  */
 
-const AIPrompt = require('../models/AIPrompt');
+const AIRole = require('../models/AIRole');
+const AIChatHistory = require('../models/AIChatHistory');
+const aiChatHistoryController = require('./aiChatHistoryController');
 
 /**
  * AI 控制器类
  */
 class AIController {
+  /**
+   * 估算文本的 token 数量（简单估算：按字符数/4）
+   * @param {string} text - 要估算的文本
+   * @returns {number} 估算的 token 数量
+   */
+  estimateTokens(text) {
+    // 简单估算：平均每个 token 约等于 4 个字符（英文）或 1.5 个字符（中文）
+    // 这里使用保守的估算方法
+    if (!text) return 0;
+    
+    // 计算中文字符数
+    const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+    // 计算非中文字符数
+    const otherChars = text.length - chineseChars;
+    
+    // 中文字符按 1.5 个字符/token，其他字符按 4 个字符/token
+    return Math.ceil(chineseChars / 1.5 + otherChars / 4);
+  }
+
+  /**
+   * 估算消息数组的总 token 数量
+   * @param {Array} messages - 消息数组
+   * @returns {number} 估算的总 token 数量
+   */
+  estimateMessagesTokens(messages) {
+    if (!messages || !Array.isArray(messages)) return 0;
+    
+    return messages.reduce((total, msg) => {
+      return total + this.estimateTokens(msg.content || '');
+    }, 0);
+  }
+
+  /**
+   * 根据上下文限制截断消息
+   * @param {Array} messages - 消息数组
+   * @param {number} maxTokens - 最大 token 数量
+   * @returns {Array} 截断后的消息数组
+   */
+  truncateMessages(messages, maxTokens) {
+    if (!messages || !Array.isArray(messages)) return messages;
+    
+    // 如果消息总 token 数量未超过限制，直接返回
+    const totalTokens = this.estimateMessagesTokens(messages);
+    if (totalTokens <= maxTokens) return messages;
+    
+    // 保留系统消息（如果存在）
+    const systemMessage = messages.find(msg => msg.role === 'system');
+    const otherMessages = messages.filter(msg => msg.role !== 'system');
+    
+    // 从最新消息开始，逐步添加直到达到限制
+    const truncatedMessages = [];
+    let currentTokens = 0;
+    
+    // 添加系统消息
+    if (systemMessage) {
+      truncatedMessages.push(systemMessage);
+      currentTokens += this.estimateTokens(systemMessage.content);
+    }
+    
+    // 从最新消息开始倒序添加
+    for (let i = otherMessages.length - 1; i >= 0; i--) {
+      const msg = otherMessages[i];
+      const msgTokens = this.estimateTokens(msg.content);
+      
+      if (currentTokens + msgTokens <= maxTokens) {
+        truncatedMessages.unshift(msg);
+        currentTokens += msgTokens;
+      } else {
+        break;
+      }
+    }
+    
+    return truncatedMessages;
+  }
+
   /**
    * 获取可用的AI模型列表
    * @param {Object} req - Express请求对象
@@ -86,7 +163,7 @@ class AIController {
         });
       }
 
-      const { messages, model, stream = false, temperature, max_tokens, system_preset_id, disable_system_prompt } = req.body;
+      const { messages, model, stream = false, temperature, max_tokens, top_p, top_k, role_id, disable_system_prompt, history_id } = req.body;
 
       // 验证请求参数
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -112,26 +189,26 @@ class AIController {
       if (!disable_system_prompt) {
         let systemPrompt = null;
         
-        // 如果指定了预设ID，使用指定的预设
-        if (system_preset_id) {
+        // 优先级：role_id > 默认角色
+        if (role_id) {
+          // 使用指定角色的系统提示词
           try {
-            const prompt = await AIPrompt.findById(system_preset_id);
-            if (prompt) {
-              systemPrompt = prompt.content;
+            const role = await AIRole.findById(role_id);
+            if (role) {
+              systemPrompt = role.systemPrompt;
             }
           } catch (error) {
-            console.error('获取指定AI提示词失败:', error);
+            console.error('获取指定AI角色失败:', error);
           }
-        }
-        // 否则使用默认预设
-        else {
+        } else {
+          // 尝试使用默认角色
           try {
-            const defaultPrompt = await AIPrompt.getDefault();
-            if (defaultPrompt) {
-              systemPrompt = defaultPrompt.content;
+            const defaultRole = await AIRole.getDefault();
+            if (defaultRole) {
+              systemPrompt = defaultRole.systemPrompt;
             }
           } catch (error) {
-            console.error('获取默认AI提示词失败:', error);
+            console.error('获取默认AI角色失败:', error);
           }
         }
         
@@ -152,14 +229,160 @@ class AIController {
         }
       }
 
+      // 获取角色信息（如果指定了角色）
+      let role = null;
+      if (role_id) {
+        try {
+          role = await AIRole.findById(role_id);
+        } catch (error) {
+          console.error('获取AI角色失败:', error);
+        }
+      }
+
+      // 确定最终使用的模型（优先级：用户参数 > 角色默认 > 环境默认）
+      let finalModel = model;
+      if (!finalModel && role && role.defaultModel) {
+        finalModel = role.defaultModel;
+      }
+      
+      // 确定最终使用的温度（优先级：用户参数 > 角色默认 > 环境默认）
+      let finalTemperature = temperature;
+      if (finalTemperature === undefined && role && role.defaultTemperature !== undefined) {
+        finalTemperature = role.defaultTemperature;
+      }
+      
+      // 确定最终使用的 Top P（优先级：用户参数 > 角色默认 > 环境默认）
+      let finalTopP = top_p;
+      if (finalTopP === undefined && role && role.topP !== undefined) {
+        finalTopP = role.topP;
+      }
+      
+      // 确定最终使用的 Top K（优先级：用户参数 > 角色默认 > 环境默认）
+      let finalTopK = top_k;
+      if (finalTopK === undefined && role && role.topK !== undefined) {
+        finalTopK = role.topK;
+      }
+      
+      // 确定最终使用的最大输出 Token（优先级：用户参数 > 角色默认 > 环境默认）
+      let finalMaxTokens = max_tokens;
+      if (finalMaxTokens === undefined && role && role.maxOutputTokens !== undefined) {
+        finalMaxTokens = role.maxOutputTokens;
+      }
+      if (finalMaxTokens === undefined) {
+        finalMaxTokens = parseInt(process.env.AI_MAX_TOKENS) || 4096;
+      }
+      
+      // 如果角色有设置最大输出 Token，取较小值
+      if (role && role.maxOutputTokens !== undefined) {
+        finalMaxTokens = Math.min(finalMaxTokens, role.maxOutputTokens);
+      }
+
+      // 处理聊天历史
+      let chatHistory = null;
+      let isNewHistory = false;
+      
+      if (history_id) {
+        // 如果提供了history_id，加载现有聊天历史
+        try {
+          chatHistory = await AIChatHistory.findById(history_id);
+          if (!chatHistory) {
+            return res.status(404).json({
+              success: false,
+              message: '未找到指定的聊天历史'
+            });
+          }
+        } catch (error) {
+          console.error('获取聊天历史失败:', error);
+          return res.status(500).json({
+            success: false,
+            message: '获取聊天历史失败'
+          });
+        }
+      } else {
+        // 如果没有提供history_id，检查是否需要创建新的聊天历史
+        // 只有当用户消息不为空时才创建新历史，避免空会话
+        const userMessage = messages[messages.length - 1];
+        if (userMessage && userMessage.role === 'user' && userMessage.content && userMessage.content.trim()) {
+          try {
+            // 获取系统提示词（用于快照）
+            let systemPrompt = null;
+            if (!disable_system_prompt) {
+              if (role_id) {
+                const role = await AIRole.findById(role_id);
+                if (role) {
+                  systemPrompt = role.systemPrompt;
+                }
+              } else {
+                const defaultRole = await AIRole.getDefault();
+                if (defaultRole) {
+                  systemPrompt = defaultRole.systemPrompt;
+                }
+              }
+            }
+            
+            chatHistory = await aiChatHistoryController.createHistory({
+              userMessage: userMessage.content,
+              roleId: role_id || null,
+              systemPrompt,
+              model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini'
+            });
+            isNewHistory = true;
+            console.log('创建新聊天历史成功:', chatHistory._id);
+          } catch (error) {
+            console.error('创建聊天历史失败:', error);
+            // 创建失败不应该阻止聊天，继续处理但不保存历史
+          }
+        }
+      }
+
+      // 如果有现有聊天历史，将其消息添加到请求消息中
+      if (chatHistory && !isNewHistory) {
+        // 先将新的用户消息添加到历史中
+        const userMessage = messages[messages.length - 1];
+        if (userMessage && userMessage.role === 'user') {
+          await chatHistory.addMessage({
+            role: 'user',
+            content: userMessage.content,
+            timestamp: new Date()
+          });
+        }
+        
+        // 使用历史中的消息作为上下文，但排除系统消息（因为我们会重新添加）
+        const historyMessages = chatHistory.messages
+          .filter(msg => msg.role !== 'system')
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content
+          }));
+        
+        // 合并历史消息和新的用户消息（不重复添加最新的用户消息）
+        processedMessages = historyMessages;
+      }
+
+
+      // 根据角色的上下文限制截断消息
+      if (role && role.contextTokenLimit) {
+        processedMessages = this.truncateMessages(processedMessages, role.contextTokenLimit);
+      }
+
       // 构建请求参数
       const completionParams = {
-        model: model || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
+        model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
         messages: processedMessages,
         stream,
-        temperature: temperature !== undefined ? temperature : parseFloat(process.env.AI_TEMPERATURE) || 0.7,
-        max_tokens: max_tokens !== undefined ? max_tokens : parseInt(process.env.AI_MAX_TOKENS) || 4096,
+        temperature: finalTemperature !== undefined ? finalTemperature : parseFloat(process.env.AI_TEMPERATURE) || 0.7,
+        max_tokens: finalMaxTokens,
       };
+      
+      // 添加 Top P 参数（如果设置了）
+      if (finalTopP !== undefined) {
+        completionParams.top_p = finalTopP;
+      }
+      
+      // 添加 Top K 参数（如果设置了且大于0）
+      if (finalTopK !== undefined && finalTopK > 0) {
+        completionParams.top_k = finalTopK;
+      }
 
       // 如果是流式请求
       if (stream) {
@@ -168,13 +391,46 @@ class AIController {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
+        // 如果是新创建的聊天历史，发送history元事件
+        if (isNewHistory && chatHistory) {
+          const historyEvent = {
+            type: 'history',
+            data: {
+              id: chatHistory._id,
+              title: chatHistory.title
+            }
+          };
+          console.log('发送history元事件:', historyEvent);
+          res.write(`data: ${JSON.stringify(historyEvent)}\n\n`);
+        }
+
         try {
           const streamResponse = await openai.chat.completions.create(completionParams);
+          
+          let assistantContent = '';
           
           // 处理流式响应
           for await (const chunk of streamResponse) {
             const data = `data: ${JSON.stringify(chunk)}\n\n`;
             res.write(data);
+            
+            // 收集助手回复内容
+            if (chunk.choices && chunk.choices[0]?.delta?.content) {
+              assistantContent += chunk.choices[0].delta.content;
+            }
+          }
+          
+          // 流式响应完成，保存聊天历史
+          if (chatHistory && assistantContent.trim()) {
+            try {
+              await aiChatHistoryController.updateLastAssistantMessage(
+                chatHistory._id,
+                assistantContent,
+                finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini'
+              );
+            } catch (saveError) {
+              console.error('保存聊天历史失败:', saveError);
+            }
           }
           
           // 发送结束标记
@@ -182,6 +438,22 @@ class AIController {
           res.end();
         } catch (streamError) {
           console.error('流式AI请求失败:', streamError);
+          
+          // 如果有部分内容，保存不完整的消息
+          if (chatHistory && assistantContent && assistantContent.trim()) {
+            try {
+              await chatHistory.addMessage({
+                role: 'assistant',
+                content: assistantContent,
+                model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
+                incomplete: true,
+                timestamp: new Date()
+              });
+            } catch (saveError) {
+              console.error('保存不完整聊天历史失败:', saveError);
+            }
+          }
+          
           // 发送错误信息
           const errorData = {
             error: {
@@ -198,10 +470,31 @@ class AIController {
         // 非流式请求
         const completion = await openai.chat.completions.create(completionParams);
         
+        // 保存聊天历史
+        if (chatHistory && completion.choices && completion.choices[0]?.message?.content) {
+          try {
+            await chatHistory.addMessage({
+              role: 'assistant',
+              content: completion.choices[0].message.content,
+              model: completion.model,
+              timestamp: new Date()
+            });
+          } catch (saveError) {
+            console.error('保存聊天历史失败:', saveError);
+          }
+        }
+        
+        // 构建响应数据
+        const responseData = {
+          ...completion,
+          // 如果是新创建的聊天历史，返回historyId
+          ...(isNewHistory && chatHistory && { meta: { historyId: chatHistory._id } })
+        };
+        
         // 返回成功响应
         res.status(200).json({
           success: true,
-          data: completion,
+          data: responseData,
           message: '聊天完成创建成功'
         });
       }
