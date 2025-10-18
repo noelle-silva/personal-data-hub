@@ -3,6 +3,8 @@
  * 处理AI相关的HTTP请求和响应，调用OpenAI SDK处理业务逻辑
  */
 
+const AIPrompt = require('../models/AIPrompt');
+
 /**
  * AI 控制器类
  */
@@ -84,7 +86,7 @@ class AIController {
         });
       }
 
-      const { messages, model, stream = false, temperature, max_tokens } = req.body;
+      const { messages, model, stream = false, temperature, max_tokens, system_preset_id, disable_system_prompt } = req.body;
 
       // 验证请求参数
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -103,10 +105,57 @@ class AIController {
         apiKey: process.env.AI_API_KEY,
       });
 
+      // 处理系统提示词
+      let processedMessages = [...messages];
+      
+      // 如果没有禁用系统提示词
+      if (!disable_system_prompt) {
+        let systemPrompt = null;
+        
+        // 如果指定了预设ID，使用指定的预设
+        if (system_preset_id) {
+          try {
+            const prompt = await AIPrompt.findById(system_preset_id);
+            if (prompt) {
+              systemPrompt = prompt.content;
+            }
+          } catch (error) {
+            console.error('获取指定AI提示词失败:', error);
+          }
+        }
+        // 否则使用默认预设
+        else {
+          try {
+            const defaultPrompt = await AIPrompt.getDefault();
+            if (defaultPrompt) {
+              systemPrompt = defaultPrompt.content;
+            }
+          } catch (error) {
+            console.error('获取默认AI提示词失败:', error);
+          }
+        }
+        
+        // 如果找到了系统提示词，添加到消息数组的开头
+        if (systemPrompt) {
+          // 检查是否已经有系统消息
+          const hasSystemMessage = processedMessages.some(msg => msg.role === 'system');
+          
+          if (hasSystemMessage) {
+            // 如果已经有系统消息，替换它
+            processedMessages = processedMessages.map(msg =>
+              msg.role === 'system' ? { role: 'system', content: systemPrompt } : msg
+            );
+          } else {
+            // 如果没有系统消息，添加一个
+            processedMessages.unshift({ role: 'system', content: systemPrompt });
+          }
+        }
+      }
+
       // 构建请求参数
       const completionParams = {
         model: model || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
-        messages,
+        messages: processedMessages,
         stream,
         temperature: temperature !== undefined ? temperature : parseFloat(process.env.AI_TEMPERATURE) || 0.7,
         max_tokens: max_tokens !== undefined ? max_tokens : parseInt(process.env.AI_MAX_TOKENS) || 4096,

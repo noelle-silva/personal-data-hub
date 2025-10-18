@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -20,7 +21,8 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -28,7 +30,8 @@ import {
   Stop as StopIcon,
   SmartToy as BotIcon,
   Person as PersonIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Tune as TuneIcon
 } from '@mui/icons-material';
 import aiService from '../services/ai';
 
@@ -76,6 +79,7 @@ const ControlPanel = styled(Card)(({ theme }) => ({
 
 const AIChat = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [models, setModels] = useState([]);
@@ -85,6 +89,11 @@ const AIChat = () => {
   const [isStreaming, setIsStreaming] = useState(true);
   const [currentResponse, setCurrentResponse] = useState('');
   const [currentController, setCurrentController] = useState(null);
+  
+  // AI提示词相关状态
+  const [prompts, setPrompts] = useState([]);
+  const [selectedPromptId, setSelectedPromptId] = useState('default'); // 'default', 'none', 或具体的prompt ID
+  const [promptsLoading, setPromptsLoading] = useState(false);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -110,6 +119,38 @@ const AIChat = () => {
 
     loadModels();
   }, [selectedModel]);
+
+  // 加载AI提示词列表
+  useEffect(() => {
+    const loadPrompts = async () => {
+      try {
+        setPromptsLoading(true);
+        const response = await aiService.listPrompts();
+        if (response.success) {
+          setPrompts(response.data);
+        }
+      } catch (error) {
+        console.error('加载AI提示词失败:', error);
+      } finally {
+        setPromptsLoading(false);
+      }
+    };
+
+    loadPrompts();
+  }, []);
+
+  // 从localStorage恢复上次选择的提示词
+  useEffect(() => {
+    const savedPromptId = localStorage.getItem('aiChat_selectedPromptId');
+    if (savedPromptId) {
+      setSelectedPromptId(savedPromptId);
+    }
+  }, []);
+
+  // 保存选择的提示词到localStorage
+  useEffect(() => {
+    localStorage.setItem('aiChat_selectedPromptId', selectedPromptId);
+  }, [selectedPromptId]);
 
   // 滚动到底部
   useEffect(() => {
@@ -139,12 +180,24 @@ const AIChat = () => {
       content: msg.content
     }));
 
+    // 准备AI请求参数
+    const requestParams = {
+      messages: requestMessages,
+      model: selectedModel
+    };
+
+    // 添加系统提示词参数
+    if (selectedPromptId === 'none') {
+      requestParams.disable_system_prompt = true;
+    } else if (selectedPromptId !== 'default') {
+      requestParams.system_preset_id = selectedPromptId;
+    }
+
     try {
       if (isStreaming) {
         // 流式请求
         const controller = await aiService.createStreamingChatCompletion({
-          messages: requestMessages,
-          model: selectedModel,
+          ...requestParams,
           onChunk: (chunk) => {
             if (chunk.choices && chunk.choices[0]?.delta?.content) {
               const newContent = chunk.choices[0].delta.content;
@@ -194,10 +247,7 @@ const AIChat = () => {
         setCurrentController(controller);
       } else {
         // 非流式请求
-        const response = await aiService.createChatCompletion({
-          messages: requestMessages,
-          model: selectedModel
-        });
+        const response = await aiService.createChatCompletion(requestParams);
 
         if (response.success) {
           const assistantMessage = {
@@ -282,6 +332,25 @@ const AIChat = () => {
               </Select>
             </FormControl>
             
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>系统提示词</InputLabel>
+              <Select
+                value={selectedPromptId}
+                label="系统提示词"
+                onChange={(e) => setSelectedPromptId(e.target.value)}
+                disabled={isLoading || promptsLoading}
+              >
+                <MenuItem value="default">使用默认提示词</MenuItem>
+                <MenuItem value="none">无系统提示词</MenuItem>
+                {prompts.map((prompt) => (
+                  <MenuItem key={prompt._id} value={prompt._id}>
+                    {prompt.name}
+                    {prompt.isDefault && ' (默认)'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
             <FormControlLabel
               control={
                 <Switch
@@ -293,11 +362,39 @@ const AIChat = () => {
               label="流式响应"
             />
             
+            <Tooltip title="管理提示词设置">
+              <IconButton
+                color="primary"
+                onClick={() => navigate('/设置')}
+                disabled={isLoading}
+              >
+                <TuneIcon />
+              </IconButton>
+            </Tooltip>
+            
             {selectedModel && (
-              <Chip 
-                label={`当前模型: ${selectedModel}`} 
-                variant="outlined" 
+              <Chip
+                label={`当前模型: ${selectedModel}`}
+                variant="outlined"
                 size="small"
+              />
+            )}
+            
+            {selectedPromptId !== 'default' && selectedPromptId !== 'none' && (
+              <Chip
+                label={`提示词: ${prompts.find(p => p._id === selectedPromptId)?.name || '未知'}`}
+                variant="outlined"
+                size="small"
+                color="secondary"
+              />
+            )}
+            
+            {selectedPromptId === 'none' && (
+              <Chip
+                label="无系统提示词"
+                variant="outlined"
+                size="small"
+                color="warning"
               />
             )}
           </Box>

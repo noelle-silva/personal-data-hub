@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogActions,
   Tooltip,
+  FormControlLabel,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -35,6 +36,9 @@ import {
   OpenInNew as OpenInNewIcon,
   VideoLibrary as VideoIcon,
   BugReport as BugReportIcon,
+  SmartToy as BotIcon,
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
 } from '@mui/icons-material';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useSelector, useDispatch } from 'react-redux';
@@ -57,6 +61,7 @@ import {
   toggleCustomPages,
   toggleCustomPageVisibility,
 } from '../store/settingsSlice';
+import aiService from '../services/ai';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -90,6 +95,16 @@ const Settings = () => {
   const [newPageName, setNewPageName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
+  
+  // AI提示词相关状态
+  const [prompts, setPrompts] = useState([]);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [promptsError, setPromptsError] = useState(null);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptEditMode, setPromptEditMode] = useState(false); // true=编辑, false=新建
+  const [currentPrompt, setCurrentPrompt] = useState({ name: '', content: '', isDefault: false });
+  const [deletePromptConfirmOpen, setDeletePromptConfirmOpen] = useState(false);
+  const [promptToDelete, setPromptToDelete] = useState(null);
   
   // 处理创建页面
   const handleCreatePage = () => {
@@ -127,6 +142,128 @@ const Settings = () => {
           closeDeleteConfirm();
         }
       });
+    }
+  };
+
+  // 加载AI提示词列表
+  const loadPrompts = async () => {
+    setPromptsLoading(true);
+    setPromptsError(null);
+    try {
+      const response = await aiService.listPrompts();
+      if (response.success) {
+        setPrompts(response.data);
+      }
+    } catch (error) {
+      console.error('加载AI提示词失败:', error);
+      setPromptsError('加载AI提示词失败');
+    } finally {
+      setPromptsLoading(false);
+    }
+  };
+
+  // 组件挂载时加载提示词
+  useEffect(() => {
+    loadPrompts();
+  }, []);
+
+  // 打开新建提示词对话框
+  const openCreatePromptDialog = () => {
+    setPromptEditMode(false);
+    setCurrentPrompt({ name: '', content: '', isDefault: false });
+    setPromptDialogOpen(true);
+  };
+
+  // 打开编辑提示词对话框
+  const openEditPromptDialog = (prompt) => {
+    setPromptEditMode(true);
+    setCurrentPrompt({ ...prompt });
+    setPromptDialogOpen(true);
+  };
+
+  // 关闭提示词对话框
+  const closePromptDialog = () => {
+    setPromptDialogOpen(false);
+    setCurrentPrompt({ name: '', content: '', isDefault: false });
+  };
+
+  // 保存提示词
+  const handleSavePrompt = async () => {
+    if (!currentPrompt.name.trim() || !currentPrompt.content.trim()) {
+      setPromptsError('提示词名称和内容不能为空');
+      return;
+    }
+
+    try {
+      let response;
+      if (promptEditMode) {
+        response = await aiService.updatePrompt(currentPrompt._id, {
+          name: currentPrompt.name.trim(),
+          content: currentPrompt.content.trim(),
+          isDefault: currentPrompt.isDefault
+        });
+      } else {
+        response = await aiService.createPrompt({
+          name: currentPrompt.name.trim(),
+          content: currentPrompt.content.trim(),
+          isDefault: currentPrompt.isDefault
+        });
+      }
+
+      if (response.success) {
+        closePromptDialog();
+        loadPrompts();
+      } else {
+        setPromptsError(response.message || '保存失败');
+      }
+    } catch (error) {
+      console.error('保存AI提示词失败:', error);
+      setPromptsError(error.response?.data?.message || '保存失败');
+    }
+  };
+
+  // 打开删除提示词确认对话框
+  const openDeletePromptConfirm = (prompt) => {
+    setPromptToDelete(prompt);
+    setDeletePromptConfirmOpen(true);
+  };
+
+  // 关闭删除提示词确认对话框
+  const closeDeletePromptConfirm = () => {
+    setDeletePromptConfirmOpen(false);
+    setPromptToDelete(null);
+  };
+
+  // 处理删除提示词
+  const handleDeletePrompt = async () => {
+    if (!promptToDelete) return;
+
+    try {
+      const response = await aiService.deletePrompt(promptToDelete._id);
+      if (response.success) {
+        closeDeletePromptConfirm();
+        loadPrompts();
+      } else {
+        setPromptsError(response.message || '删除失败');
+      }
+    } catch (error) {
+      console.error('删除AI提示词失败:', error);
+      setPromptsError(error.response?.data?.message || '删除失败');
+    }
+  };
+
+  // 设置默认提示词
+  const handleSetDefaultPrompt = async (promptId) => {
+    try {
+      const response = await aiService.setDefaultPrompt(promptId);
+      if (response.success) {
+        loadPrompts();
+      } else {
+        setPromptsError(response.message || '设置默认失败');
+      }
+    } catch (error) {
+      console.error('设置默认AI提示词失败:', error);
+      setPromptsError(error.response?.data?.message || '设置默认失败');
     }
   };
 
@@ -366,6 +503,133 @@ const Settings = () => {
         </CardContent>
       </SettingsCard>
 
+      {/* AI系统提示词管理 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            AI 系统提示词管理
+          </Typography>
+          
+          {/* 新建提示词 */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              创建和管理AI系统提示词预设，用于定义AI助手的角色和行为
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreatePromptDialog}
+              disabled={promptsLoading}
+            >
+              新建提示词
+            </Button>
+          </Box>
+          
+          {/* 错误提示 */}
+          {promptsError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setPromptsError(null)}>
+              {promptsError}
+            </Alert>
+          )}
+          
+          {/* 提示词列表 */}
+          {prompts.length === 0 && !promptsLoading ? (
+            <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+              <BotIcon sx={{ fontSize: 48, mb: 1 }} />
+              <Typography variant="body2">
+                暂无AI系统提示词，创建您的第一个提示词开始配置AI助手
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ p: 0 }}>
+              {prompts.map((prompt) => (
+                <ListItem
+                  key={prompt._id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    p: 1,
+                    borderRadius: 1,
+                    mb: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <ListItemIcon>
+                    <BotIcon color="primary" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {prompt.name}
+                        {prompt.isDefault && (
+                          <Chip
+                            icon={<StarIcon sx={{ fontSize: 16 }} />}
+                            label="默认"
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        )}
+                      </Box>
+                    }
+                    secondary={
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        {prompt.content.length > 100
+                          ? `${prompt.content.substring(0, 100)}...`
+                          : prompt.content
+                        }
+                      </Typography>
+                    }
+                  />
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    {!prompt.isDefault && (
+                      <Tooltip title="设为默认">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSetDefaultPrompt(prompt._id)}
+                          disabled={promptsLoading}
+                        >
+                          <StarBorderIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="编辑">
+                      <IconButton
+                        size="small"
+                        onClick={() => openEditPromptDialog(prompt)}
+                        disabled={promptsLoading}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="删除">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => openDeletePromptConfirm(prompt)}
+                        disabled={promptsLoading}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          )}
+          
+          {/* 加载状态 */}
+          {promptsLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                加载中...
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </SettingsCard>
+
       {/* 关于应用 */}
       <SettingsCard>
         <CardContent>
@@ -462,6 +726,98 @@ const Settings = () => {
             disabled={saving}
           >
             {saving ? '删除中...' : '确认删除'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 提示词编辑对话框 */}
+      <Dialog open={promptDialogOpen} onClose={closePromptDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {promptEditMode ? '编辑AI系统提示词' : '新建AI系统提示词'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              label="提示词名称"
+              value={currentPrompt.name}
+              onChange={(e) => setCurrentPrompt({ ...currentPrompt, name: e.target.value })}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              placeholder="例如：专业助手"
+            />
+            <TextField
+              label="提示词内容"
+              value={currentPrompt.content}
+              onChange={(e) => setCurrentPrompt({ ...currentPrompt, content: e.target.value })}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              multiline
+              rows={6}
+              placeholder="输入系统提示词内容，定义AI助手的角色和行为..."
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={currentPrompt.isDefault}
+                  onChange={(e) => setCurrentPrompt({ ...currentPrompt, isDefault: e.target.checked })}
+                />
+              }
+              label="设为默认提示词"
+              sx={{ mt: 1 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closePromptDialog} disabled={promptsLoading}>
+            取消
+          </Button>
+          <Button
+            onClick={handleSavePrompt}
+            variant="contained"
+            disabled={promptsLoading || !currentPrompt.name.trim() || !currentPrompt.content.trim()}
+          >
+            {promptsLoading ? '保存中...' : '保存'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 删除提示词确认对话框 */}
+      <Dialog open={deletePromptConfirmOpen} onClose={closeDeletePromptConfirm}>
+        <DialogTitle>确认删除AI系统提示词</DialogTitle>
+        <DialogContent>
+          {promptToDelete && (
+            <Box>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                确定要删除AI系统提示词 "<strong>{promptToDelete.name}</strong>" 吗？
+              </Typography>
+              
+              {promptToDelete.isDefault && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    这是默认提示词，删除后系统将自动选择其他提示词作为默认。
+                  </Typography>
+                </Alert>
+              )}
+              
+              <Typography variant="body2" color="text.secondary">
+                此操作不可撤销。
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeletePromptConfirm} disabled={promptsLoading}>
+            取消
+          </Button>
+          <Button
+            onClick={handleDeletePrompt}
+            color="error"
+            variant="contained"
+            disabled={promptsLoading}
+          >
+            {promptsLoading ? '删除中...' : '确认删除'}
           </Button>
         </DialogActions>
       </Dialog>
