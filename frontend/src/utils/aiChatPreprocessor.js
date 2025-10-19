@@ -11,10 +11,10 @@
 function escapeHtml(text) {
   if (typeof text !== 'string') return '';
   return text
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/"/g, '"')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
 
@@ -64,12 +64,13 @@ function transformToolUseBlocks(text) {
     
     const escapedFullContent = escapeHtml(content);
     
-    return `<div class="vcp-tool-use-bubble">` +
-           `<div class="vcp-tool-summary">` +
-           `<span class="vcp-tool-label">VCP-ToolUse:</span> ` +
-           `<span class="vcp-tool-name-highlight">${escapeHtml(toolName)}</span>` +
+    return `<div class="vcp-tool-use-bubble ai-bubble ai-variant-tool collapsible">` +
+           `<div class="vcp-tool-summary ai-bubble-header">` +
+           `<span class="vcp-tool-label ai-bubble-title">VCP-ToolUse:</span> ` +
+           `<span class="vcp-tool-name-highlight ai-bubble-meta">${escapeHtml(toolName)}</span>` +
+           `<span class="ai-toggle-icon"></span>` +
            `</div>` +
-           `<div class="vcp-tool-details"><pre>${escapedFullContent}</pre></div>` +
+           `<div class="vcp-tool-details ai-bubble-collapsible-content"><pre>${escapedFullContent}</pre></div>` +
            `</div>`;
   });
 }
@@ -96,22 +97,22 @@ function transformMaidDiaryBlocks(text) {
     const date = dateMatch ? dateMatch[1].trim() : '';
     const diaryContent = contentMatch ? contentMatch[1].trim() : content;
 
-    let html = `<div class="maid-diary-bubble">`;
-    html += `<div class="diary-header">`;
-    html += `<span class="diary-title">Maid's Diary</span>`;
+    let html = `<div class="maid-diary-bubble ai-bubble ai-variant-maid">`;
+    html += `<div class="diary-header ai-bubble-header">`;
+    html += `<span class="diary-title ai-bubble-title">Maid's Diary</span>`;
     if (date) {
-      html += `<span class="diary-date">${escapeHtml(date)}</span>`;
+      html += `<span class="diary-date ai-bubble-meta">${escapeHtml(date)}</span>`;
     }
     html += `</div>`;
     
     if (maid) {
-      html += `<div class="diary-maid-info">`;
+      html += `<div class="diary-maid-info ai-bubble-meta">`;
       html += `<span class="diary-maid-label">Maid:</span> `;
       html += `<span class="diary-maid-name">${escapeHtml(maid)}</span>`;
       html += `</div>`;
     }
 
-    html += `<div class="diary-content">${escapeHtml(diaryContent)}</div>`;
+    html += `<div class="diary-content ai-bubble-content">${escapeHtml(diaryContent)}</div>`;
     html += `</div>`;
 
     return html;
@@ -221,7 +222,8 @@ export function preprocessAIMessageContent(text) {
 
   // 步骤3：转换特殊块为HTML
   processed = transformToolUseBlocks(processed);
-  processed = transformToolResultBlocks(processed);
+  // 暂时注释掉工具结果转换，本轮不处理
+  // processed = transformToolResultBlocks(processed);
   processed = transformMaidDiaryBlocks(processed);
 
   // 步骤4：恢复保护的代码块

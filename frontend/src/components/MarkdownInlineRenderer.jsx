@@ -274,6 +274,17 @@ const MarkdownInlineRenderer = ({
     
     // 添加点击事件监听器处理工具结果的折叠/展开
     const handleResultToggle = (event) => {
+      // 优先处理新的统一气泡头部
+      const aiHeader = event.target.closest('.ai-bubble-header');
+      if (aiHeader) {
+        const aiBubble = aiHeader.closest('.ai-bubble.collapsible');
+        if (aiBubble) {
+          aiBubble.classList.toggle('expanded');
+          return; // 处理了新气泡就不再处理旧气泡
+        }
+      }
+      
+      // 保留原有工具结果事件处理以确保兼容性
       const header = event.target.closest('.vcp-tool-result-header');
       if (header) {
         const bubble = header.closest('.vcp-tool-result-bubble.collapsible');
