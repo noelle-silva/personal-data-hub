@@ -38,6 +38,7 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import aiService from '../services/ai';
+import MarkdownInlineRenderer from '../components/MarkdownInlineRenderer';
 
 // 样式化的消息容器
 const MessageContainer = styled(Box)(({ theme }) => ({
@@ -114,6 +115,7 @@ const AIChat = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const streamBufferRef = useRef(''); // 流式响应缓冲区，避免闭包问题
+  const streamDebounceRef = useRef(null); // 防抖定时器引用
 
   // 加载模型列表
   useEffect(() => {
@@ -352,7 +354,15 @@ const AIChat = () => {
             if (chunk.choices && chunk.choices[0]?.delta?.content) {
               const newContent = chunk.choices[0].delta.content;
               streamBufferRef.current += newContent; // 同步更新缓冲区
-              setCurrentResponse(prev => prev + newContent);
+              
+              // 使用防抖优化流式渲染性能
+              if (streamDebounceRef.current) {
+                clearTimeout(streamDebounceRef.current);
+              }
+              
+              streamDebounceRef.current = setTimeout(() => {
+                setCurrentResponse(streamBufferRef.current);
+              }, 150); // 150ms 防抖延迟
             }
           },
           onHistory: (historyData) => {
@@ -384,6 +394,12 @@ const AIChat = () => {
             setCurrentController(null);
           },
           onComplete: () => {
+            // 清除防抖定时器并立即更新显示
+            if (streamDebounceRef.current) {
+              clearTimeout(streamDebounceRef.current);
+              streamDebounceRef.current = null;
+            }
+            
             // 从缓冲区读取最终响应
             if (streamBufferRef.current.trim()) {
               const assistantMessage = {
@@ -444,6 +460,12 @@ const AIChat = () => {
       currentController.abort();
       setCurrentController(null);
       setIsLoading(false);
+      
+      // 清除防抖定时器
+      if (streamDebounceRef.current) {
+        clearTimeout(streamDebounceRef.current);
+        streamDebounceRef.current = null;
+      }
       
       // 从缓冲区读取部分响应并保存
       if (streamBufferRef.current.trim()) {
@@ -775,9 +797,17 @@ const AIChat = () => {
                   {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
                 </Avatar>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {message.content}
-                  </Typography>
+                  {message.role === 'user' ? (
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {message.content}
+                    </Typography>
+                  ) : (
+                    <MarkdownInlineRenderer
+                      content={message.content}
+                      scopeClass="ai-chat-enhanced"
+                      enableAIChatEnhancements={true}
+                    />
+                  )}
                   {message.incomplete && (
                     <Typography variant="caption" sx={{ fontStyle: 'italic', mt: 1, display: 'block' }}>
                       (响应已中断)
@@ -799,11 +829,21 @@ const AIChat = () => {
                 <Avatar sx={{ bgcolor: 'secondary.main' }}>
                   <BotIcon />
                 </Avatar>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {currentResponse}
-                    <CircularProgress size={16} sx={{ ml: 1 }} />
-                  </Typography>
+                <Box sx={{ flexGrow: 1, position: 'relative' }}>
+                  <MarkdownInlineRenderer
+                    content={currentResponse}
+                    scopeClass="ai-chat-enhanced"
+                    enableAIChatEnhancements={true}
+                  />
+                  <CircularProgress
+                    size={16}
+                    sx={{
+                      position: 'absolute',
+                      bottom: 4,
+                      right: 4,
+                      ml: 1
+                    }}
+                  />
                 </Box>
               </Box>
             </MessageCard>

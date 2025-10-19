@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import parse from 'html-react-parser';
 import { renderMarkdownToHtml, generateBaseStylesScoped, generateHighlightStylesScoped, generateKatexStylesScoped } from '../utils/markdownRenderer';
 import { generateTabActionFancyCssScoped, generateQuoteActionFancyCssScoped } from '../utils/tabActionStyles';
+import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyles';
+import { preprocessAIMessageContent } from '../utils/aiChatPreprocessor';
 import AttachmentImage from './AttachmentImage';
 import AttachmentVideo from './AttachmentVideo';
 
@@ -85,18 +87,28 @@ const MarkdownInlineRenderer = ({
   content,
   fallbackContent = null,
   cacheKey = null,
-  scopeClass = 'markdown-body'
+  scopeClass = 'markdown-body',
+  enableAIChatEnhancements = false
 }) => {
+  // 预处理AI聊天内容（如果启用增强功能）
+  const preprocessedContent = useMemo(() => {
+    if (!content) return '';
+    if (enableAIChatEnhancements) {
+      return preprocessAIMessageContent(content);
+    }
+    return content;
+  }, [content, enableAIChatEnhancements]);
+
   // 渲染 Markdown 为 HTML
   const renderedHtml = useMemo(() => {
     try {
-      if (!content) return '';
-      return renderMarkdownToHtml(content, cacheKey);
+      if (!preprocessedContent) return '';
+      return renderMarkdownToHtml(preprocessedContent, cacheKey);
     } catch (err) {
       console.error('Markdown 渲染错误:', err);
       return '';
     }
-  }, [content, cacheKey]);
+  }, [preprocessedContent, cacheKey]);
 
   // 生成作用域样式
   const scopedStyles = useMemo(() => {
@@ -108,8 +120,16 @@ const MarkdownInlineRenderer = ({
     const tabActionStyles = generateTabActionFancyCssScoped(scopeClass);
     const quoteActionStyles = generateQuoteActionFancyCssScoped(scopeClass);
     
-    return `${baseStyles}\n${highlightStyles}\n${katexStyles}\n${tabActionStyles}\n${quoteActionStyles}`;
-  }, [renderedHtml, scopeClass]);
+    let styles = `${baseStyles}\n${highlightStyles}\n${katexStyles}\n${tabActionStyles}\n${quoteActionStyles}`;
+    
+    // 如果启用AI聊天增强功能，添加增强样式
+    if (enableAIChatEnhancements) {
+      const enhancedStyles = generateAIChatEnhancedStylesScoped(scopeClass);
+      styles += `\n${enhancedStyles}`;
+    }
+    
+    return styles;
+  }, [renderedHtml, scopeClass, enableAIChatEnhancements]);
 
   // 处理特殊元素的替换函数
   const replaceElements = (node) => {
@@ -225,6 +245,52 @@ const MarkdownInlineRenderer = ({
     return undefined;
   };
 
+  // 安全过滤函数，移除潜在的不安全元素和属性
+  const sanitizeElement = (node) => {
+    // 移除script标签
+    if (node.name === 'script') {
+      return null;
+    }
+    
+    // 移除所有on*事件属性
+    if (node.attribs) {
+      const newAttribs = { ...node.attribs };
+      Object.keys(newAttribs).forEach(key => {
+        if (key.toLowerCase().startsWith('on')) {
+          delete newAttribs[key];
+        }
+      });
+      node.attribs = newAttribs;
+    }
+    
+    return undefined; // 继续处理其他替换逻辑
+  };
+
+  // 处理工具结果折叠/展开功能
+  const containerRef = useRef(null);
+  
+  useEffect(() => {
+    if (!containerRef.current || !enableAIChatEnhancements) return;
+    
+    // 添加点击事件监听器处理工具结果的折叠/展开
+    const handleResultToggle = (event) => {
+      const header = event.target.closest('.vcp-tool-result-header');
+      if (header) {
+        const bubble = header.closest('.vcp-tool-result-bubble.collapsible');
+        if (bubble) {
+          bubble.classList.toggle('expanded');
+        }
+      }
+    };
+    
+    const container = containerRef.current;
+    container.addEventListener('click', handleResultToggle);
+    
+    return () => {
+      container.removeEventListener('click', handleResultToggle);
+    };
+  }, [enableAIChatEnhancements]);
+
   // 收敛文档级标签并解析 HTML 为 React 元素
   const parsedContent = useMemo(() => {
     if (!renderedHtml) return null;
@@ -232,7 +298,20 @@ const MarkdownInlineRenderer = ({
     try {
       // 收敛文档级标签
       const sanitizedHtml = sanitizeDocLevelHtml(renderedHtml);
-      return parse(sanitizedHtml, { replace: replaceElements });
+      
+      // 组合替换函数：先执行安全过滤，再执行其他替换逻辑
+      const combinedReplace = (node) => {
+        // 先执行安全过滤
+        const sanitizeResult = sanitizeElement(node);
+        if (sanitizeResult === null) {
+          return null; // 完全移除元素
+        }
+        
+        // 然后执行其他替换逻辑
+        return replaceElements(node);
+      };
+      
+      return parse(sanitizedHtml, { replace: combinedReplace });
     } catch (err) {
       console.error('HTML 解析错误:', err);
       return null;
@@ -271,7 +350,7 @@ const MarkdownInlineRenderer = ({
   }
 
   return (
-    <RendererContainer>
+    <RendererContainer ref={containerRef}>
       {/* 注入作用域样式 */}
       <style>{scopedStyles}</style>
       
