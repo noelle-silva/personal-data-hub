@@ -30,6 +30,8 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import DocumentFormModal from '../components/DocumentFormModal';
 import DocumentDetailModal from '../components/DocumentDetailModal';
+import QuickActionsBar from '../components/QuickActionsBar';
+import TagCloud from '../components/TagCloud';
 import {
   fetchDocuments,
   fetchDocumentById,
@@ -41,10 +43,10 @@ import {
   closeDocumentModal,
 } from '../store/documentsSlice';
 
-// 样式化的欢迎卡片
+// 样式化的欢迎卡片 - 玻璃拟态风格
 const WelcomeCard = styled(Card)(({ theme }) => ({
   height: '100%',
-  borderRadius: 20,
+  borderRadius: 24,
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
   color: theme.palette.primary.contrastText,
   display: 'flex',
@@ -52,9 +54,12 @@ const WelcomeCard = styled(Card)(({ theme }) => ({
   justifyContent: 'center',
   alignItems: 'center',
   textAlign: 'center',
-  padding: theme.spacing(4),
+  padding: theme.spacing(5),
   position: 'relative',
   overflow: 'hidden',
+  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)',
+  backdropFilter: 'blur(4px)',
+  border: `1px solid rgba(255, 255, 255, 0.18)`,
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -62,38 +67,75 @@ const WelcomeCard = styled(Card)(({ theme }) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'rgba(255, 255, 255, 0.1)',
+    background: 'rgba(255, 255, 255, 0.15)',
     transform: 'skewY(-5deg) translateY(-20px)',
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: '50%',
+    background: 'rgba(255, 255, 255, 0.1)',
+    zIndex: 0,
+  },
+  '& > *': {
+    position: 'relative',
+    zIndex: 1,
+  },
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: '0 12px 40px rgba(31, 38, 135, 0.45)',
+    transition: 'all 0.3s ease-in-out',
   },
 }));
 
-// 样式化的统计卡片
+// 样式化的统计卡片 - 玻璃拟态风格
 const StatCard = styled(Card)(({ theme }) => ({
   height: '100%',
   borderRadius: 20,
   display: 'flex',
   flexDirection: 'column',
-  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  background: 'rgba(255, 255, 255, 0.25)',
+  backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(255, 255, 255, 0.18)',
+  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.15)',
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
   '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: theme.shadows[8],
+    transform: 'translateY(-6px)',
+    boxShadow: '0 12px 40px rgba(31, 38, 135, 0.25)',
+    background: 'rgba(255, 255, 255, 0.35)',
   },
 }));
 
-// 样式化的统计图标容器
+// 样式化的统计图标容器 - 玻璃拟态风格
 const StatIconContainer = styled(Avatar)(({ theme, color }) => ({
   backgroundColor: color,
-  width: 56,
-  height: 56,
+  width: 64,
+  height: 64,
   marginBottom: theme.spacing(2),
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+  border: '2px solid rgba(255, 255, 255, 0.3)',
 }));
 
-// 样式化的最近更新列表
+// 样式化的最近更新列表 - 玻璃拟态风格
 const RecentUpdatesCard = styled(Card)(({ theme }) => ({
   height: '100%',
   borderRadius: 20,
   display: 'flex',
   flexDirection: 'column',
+  background: 'rgba(255, 255, 255, 0.25)',
+  backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(255, 255, 255, 0.18)',
+  boxShadow: '0 8px 32px rgba(31, 38, 135, 0.15)',
+  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-6px)',
+    boxShadow: '0 12px 40px rgba(31, 38, 135, 0.25)',
+    background: 'rgba(255, 255, 255, 0.35)',
+  },
 }));
 
 // 样式化的空状态容器
@@ -391,6 +433,12 @@ const Home = () => {
           </Grid>
         </Grid>
       </Grid>
+
+      {/* 快捷操作条 */}
+      <QuickActionsBar onCreateDocument={handleOpenCreateModal} />
+
+      {/* 标签云 */}
+      <TagCloud />
 
       {/* 统计数据 */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
