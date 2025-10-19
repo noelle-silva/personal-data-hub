@@ -129,7 +129,11 @@ const AIChat = () => {
         }
       } catch (error) {
         console.error('加载模型列表失败:', error);
-        setError('加载模型列表失败，请刷新页面重试');
+        if (error.response?.status === 503) {
+          setError('AI功能已禁用，请在设置页面启用AI功能并配置供应商');
+        } else {
+          setError('加载模型列表失败，请刷新页面重试');
+        }
       }
     };
 
@@ -196,6 +200,42 @@ const AIChat = () => {
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
+
+  // 监听供应商切换事件，刷新模型列表
+  useEffect(() => {
+    const handleProviderSwitch = () => {
+      console.log('检测到供应商切换，刷新模型列表');
+      setSelectedModel(''); // 清空当前选择的模型
+      // 重新加载模型列表
+      const loadModels = async () => {
+        try {
+          const response = await aiService.getModels();
+          if (response.success) {
+            setModels(response.data);
+            // 设置默认模型
+            if (response.data.length > 0 && !selectedModel) {
+              setSelectedModel(response.data[0].id);
+            }
+          }
+        } catch (error) {
+          console.error('加载模型列表失败:', error);
+          if (error.response?.status === 503) {
+            setError('AI功能已禁用，请在设置页面启用AI功能并配置供应商');
+          } else {
+            setError('加载模型列表失败，请刷新页面重试');
+          }
+        }
+      };
+      loadModels();
+    };
+
+    // 监听自定义事件
+    window.addEventListener('ai-provider-switched', handleProviderSwitch);
+    
+    return () => {
+      window.removeEventListener('ai-provider-switched', handleProviderSwitch);
+    };
+  }, [selectedModel]);
 
   // 当角色改变时，重新加载聊天历史列表
   useEffect(() => {
@@ -388,7 +428,11 @@ const AIChat = () => {
       }
     } catch (error) {
       console.error('发送消息失败:', error);
-      setError(error.message || '发送消息失败，请重试');
+      if (error.response?.status === 503) {
+        setError('AI功能已禁用，请在设置页面启用AI功能并配置供应商');
+      } else {
+        setError(error.message || '发送消息失败，请重试');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -45,6 +45,9 @@ import {
   Star as StarIcon,
   StarBorder as StarBorderIcon,
   Person as PersonIcon,
+  Cloud as CloudIcon,
+  Key as KeyIcon,
+  Language as LanguageIcon,
 } from '@mui/icons-material';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useSelector, useDispatch } from 'react-redux';
@@ -122,6 +125,25 @@ const Settings = () => {
   });
   const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
+  
+  // AI配置相关状态
+  const [aiConfig, setAiConfig] = useState({
+    enabled: false,
+    current: null,
+    providers: {}
+  });
+  const [aiConfigLoading, setAiConfigLoading] = useState(false);
+  const [aiConfigError, setAiConfigError] = useState(null);
+  const [providerDialogOpen, setProviderDialogOpen] = useState(false);
+  const [providerEditMode, setProviderEditMode] = useState(false); // true=编辑, false=新建
+  const [currentProvider, setCurrentProvider] = useState({
+    key: '',
+    AI_BASE_URL: '',
+    AI_API_KEY: '',
+    AI_ALLOWED_MODELS: []
+  });
+  const [deleteProviderConfirmOpen, setDeleteProviderConfirmOpen] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState(null);
   
   // 处理创建页面
   const handleCreatePage = () => {
@@ -354,6 +376,178 @@ const Settings = () => {
     }
   };
 
+  // 加载AI配置
+  const loadAIConfig = async () => {
+    setAiConfigLoading(true);
+    setAiConfigError(null);
+    try {
+      const response = await aiService.getConfig();
+      if (response.success) {
+        setAiConfig(response.data);
+      }
+    } catch (error) {
+      console.error('加载AI配置失败:', error);
+      setAiConfigError('加载AI配置失败');
+    } finally {
+      setAiConfigLoading(false);
+    }
+  };
+
+  // 切换AI启用状态
+  const handleToggleAI = async (enabled) => {
+    try {
+      const response = await aiService.toggleEnabled(enabled);
+      if (response.success) {
+        setAiConfig(response.data);
+        // 如果启用了AI，也触发供应商切换事件以刷新模型列表
+        if (enabled) {
+          window.dispatchEvent(new CustomEvent('ai-provider-switched', {
+            detail: { provider: aiConfig.current }
+          }));
+        }
+      } else {
+        setAiConfigError(response.message || '操作失败');
+      }
+    } catch (error) {
+      console.error('切换AI状态失败:', error);
+      setAiConfigError(error.response?.data?.message || '操作失败');
+    }
+  };
+
+  // 切换当前供应商
+  const handleSelectProvider = async (providerKey) => {
+    try {
+      const response = await aiService.selectProvider(providerKey);
+      if (response.success) {
+        setAiConfig(response.data);
+        // 触发自定义事件，通知其他页面供应商已切换
+        window.dispatchEvent(new CustomEvent('ai-provider-switched', {
+          detail: { provider: providerKey }
+        }));
+      } else {
+        setAiConfigError(response.message || '切换供应商失败');
+      }
+    } catch (error) {
+      console.error('切换供应商失败:', error);
+      setAiConfigError(error.response?.data?.message || '切换供应商失败');
+    }
+  };
+
+  // 打开新建供应商对话框
+  const openCreateProviderDialog = () => {
+    setProviderEditMode(false);
+    setCurrentProvider({
+      key: '',
+      AI_BASE_URL: '',
+      AI_API_KEY: '',
+      AI_ALLOWED_MODELS: []
+    });
+    setProviderDialogOpen(true);
+  };
+
+  // 打开编辑供应商对话框
+  const openEditProviderDialog = (key) => {
+    setProviderEditMode(true);
+    const provider = aiConfig.providers[key];
+    setCurrentProvider({
+      key,
+      AI_BASE_URL: provider.AI_BASE_URL,
+      AI_API_KEY: provider.AI_API_KEY,
+      AI_ALLOWED_MODELS: provider.AI_ALLOWED_MODELS ? [...provider.AI_ALLOWED_MODELS] : []
+    });
+    setProviderDialogOpen(true);
+  };
+
+  // 关闭供应商对话框
+  const closeProviderDialog = () => {
+    setProviderDialogOpen(false);
+    setCurrentProvider({
+      key: '',
+      AI_BASE_URL: '',
+      AI_API_KEY: '',
+      AI_ALLOWED_MODELS: []
+    });
+  };
+
+  // 保存供应商
+  const handleSaveProvider = async () => {
+    if (!currentProvider.key.trim() || !currentProvider.AI_BASE_URL.trim() || !currentProvider.AI_API_KEY.trim()) {
+      setAiConfigError('供应商名称、API Base URL 和 API Key 不能为空');
+      return;
+    }
+
+    try {
+      let response;
+      const providerData = {
+        AI_BASE_URL: currentProvider.AI_BASE_URL.trim(),
+        AI_API_KEY: currentProvider.AI_API_KEY.trim(),
+        AI_ALLOWED_MODELS: currentProvider.AI_ALLOWED_MODELS
+      };
+
+      if (providerEditMode) {
+        response = await aiService.updateProvider(currentProvider.key, providerData);
+      } else {
+        response = await aiService.upsertProvider(currentProvider.key, providerData);
+      }
+
+      if (response.success) {
+        closeProviderDialog();
+        loadAIConfig();
+      } else {
+        setAiConfigError(response.message || '保存失败');
+      }
+    } catch (error) {
+      console.error('保存供应商失败:', error);
+      setAiConfigError(error.response?.data?.message || '保存失败');
+    }
+  };
+
+  // 打开删除供应商确认对话框
+  const openDeleteProviderConfirm = (key) => {
+    setProviderToDelete(key);
+    setDeleteProviderConfirmOpen(true);
+  };
+
+  // 关闭删除供应商确认对话框
+  const closeDeleteProviderConfirm = () => {
+    setDeleteProviderConfirmOpen(false);
+    setProviderToDelete(null);
+  };
+
+  // 处理删除供应商
+  const handleDeleteProvider = async () => {
+    if (!providerToDelete) return;
+
+    try {
+      const response = await aiService.deleteProvider(providerToDelete);
+      if (response.success) {
+        closeDeleteProviderConfirm();
+        loadAIConfig();
+      } else {
+        setAiConfigError(response.message || '删除失败');
+      }
+    } catch (error) {
+      console.error('删除供应商失败:', error);
+      setAiConfigError(error.response?.data?.message || '删除失败');
+    }
+  };
+
+  // 处理模型列表变化
+  const handleModelsChange = (event) => {
+    const { value } = event.target;
+    // 将字符串分割为数组，过滤空字符串
+    const models = value.split(',').map(model => model.trim()).filter(model => model);
+    setCurrentProvider(prev => ({
+      ...prev,
+      AI_ALLOWED_MODELS: models
+    }));
+  };
+
+  // 组件挂载时加载AI配置
+  useEffect(() => {
+    loadAIConfig();
+  }, []);
+
   return (
     <Container maxWidth="md">
       <PageTitle variant="h3" component="h1">
@@ -437,6 +631,147 @@ const Settings = () => {
               />
             </ListItem>
           </List>
+        </CardContent>
+      </SettingsCard>
+
+      {/* AI设置 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            AI设置
+          </Typography>
+          
+          {/* AI功能开关 */}
+          <List sx={{ p: 0 }}>
+            <ListItem>
+              <ListItemIcon>
+                <BotIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="AI功能"
+                secondary="启用或禁用AI聊天功能"
+              />
+              <Switch
+                checked={aiConfig.enabled}
+                onChange={(e) => handleToggleAI(e.target.checked)}
+                color="primary"
+                disabled={aiConfigLoading}
+              />
+            </ListItem>
+            <Divider />
+            
+            {/* 当前供应商选择 */}
+            <ListItem>
+              <ListItemIcon>
+                <CloudIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="当前供应商"
+                secondary={aiConfig.current ? `已选择: ${aiConfig.current}` : '未选择供应商'}
+              />
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>供应商</InputLabel>
+                <Select
+                  value={aiConfig.current || ''}
+                  label="供应商"
+                  onChange={(e) => handleSelectProvider(e.target.value)}
+                  disabled={!aiConfig.enabled || aiConfigLoading || Object.keys(aiConfig.providers).length === 0}
+                  size="small"
+                >
+                  {Object.keys(aiConfig.providers).map((key) => (
+                    <MenuItem key={key} value={key}>
+                      {key}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </ListItem>
+            <Divider />
+            
+            {/* 供应商管理 */}
+            <ListItem>
+              <ListItemIcon>
+                <LanguageIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="供应商管理"
+                secondary={`已配置 ${Object.keys(aiConfig.providers).length} 个供应商`}
+              />
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={openCreateProviderDialog}
+                disabled={aiConfigLoading}
+              >
+                添加供应商
+              </Button>
+            </ListItem>
+          </List>
+
+          {/* 供应商列表 */}
+          {Object.keys(aiConfig.providers).length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                已配置的供应商
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {Object.entries(aiConfig.providers).map(([key, provider]) => (
+                  <Box
+                    key={key}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      p: 2,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      backgroundColor: aiConfig.current === key ? 'action.selected' : 'background.paper'
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        {key}
+                        {aiConfig.current === key && (
+                          <Chip label="当前" size="small" sx={{ ml: 1 }} />
+                        )}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {provider.AI_BASE_URL}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        模型数量: {provider.AI_ALLOWED_MODELS?.length || 0}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        onClick={() => openEditProviderDialog(key)}
+                        title="编辑"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => openDeleteProviderConfirm(key)}
+                        title="删除"
+                        disabled={aiConfig.current === key}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* AI配置错误提示 */}
+          {aiConfigError && (
+            <Alert severity="error" sx={{ mt: 2 }} onClose={() => setAiConfigError(null)}>
+              {aiConfigError}
+            </Alert>
+          )}
         </CardContent>
       </SettingsCard>
 
@@ -1045,6 +1380,109 @@ const Settings = () => {
             disabled={rolesLoading}
           >
             {rolesLoading ? '删除中...' : '确认删除'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 供应商编辑对话框 */}
+      <Dialog open={providerDialogOpen} onClose={closeProviderDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {providerEditMode ? '编辑供应商' : '新建供应商'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              label="供应商名称"
+              value={currentProvider.key}
+              onChange={(e) => setCurrentProvider({ ...currentProvider, key: e.target.value })}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              placeholder="例如：OpenAI"
+              disabled={providerEditMode}
+            />
+            <TextField
+              label="API Base URL"
+              value={currentProvider.AI_BASE_URL}
+              onChange={(e) => setCurrentProvider({ ...currentProvider, AI_BASE_URL: e.target.value })}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              placeholder="https://api.openai.com/v1"
+            />
+            <TextField
+              label="API Key"
+              value={currentProvider.AI_API_KEY}
+              onChange={(e) => setCurrentProvider({ ...currentProvider, AI_API_KEY: e.target.value })}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              type="password"
+              placeholder="sk-..."
+            />
+            <TextField
+              label="允许的模型列表"
+              value={currentProvider.AI_ALLOWED_MODELS.join(', ')}
+              onChange={handleModelsChange}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              multiline
+              rows={2}
+              placeholder="gpt-4o-mini, gpt-4o, gpt-3.5-turbo"
+              helperText="用逗号分隔多个模型名称，留空则允许使用所有可用模型"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeProviderDialog} disabled={aiConfigLoading}>
+            取消
+          </Button>
+          <Button
+            onClick={handleSaveProvider}
+            variant="contained"
+            disabled={aiConfigLoading || !currentProvider.key.trim() || !currentProvider.AI_BASE_URL.trim() || !currentProvider.AI_API_KEY.trim()}
+          >
+            {aiConfigLoading ? '保存中...' : '保存'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 删除供应商确认对话框 */}
+      <Dialog open={deleteProviderConfirmOpen} onClose={closeDeleteProviderConfirm}>
+        <DialogTitle>确认删除供应商</DialogTitle>
+        <DialogContent>
+          {providerToDelete && (
+            <Box>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                确定要删除供应商 "<strong>{providerToDelete}</strong>" 吗？
+              </Typography>
+              
+              {aiConfig.current === providerToDelete && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    这是当前使用的供应商，删除后需要重新选择其他供应商。
+                  </Typography>
+                </Alert>
+              )}
+              
+              <Typography variant="body2" color="text.secondary">
+                此操作不可撤销。
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteProviderConfirm} disabled={aiConfigLoading}>
+            取消
+          </Button>
+          <Button
+            onClick={handleDeleteProvider}
+            color="error"
+            variant="contained"
+            disabled={aiConfigLoading}
+          >
+            {aiConfigLoading ? '删除中...' : '确认删除'}
           </Button>
         </DialogActions>
       </Dialog>

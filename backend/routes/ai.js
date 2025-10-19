@@ -8,6 +8,7 @@ const router = express.Router();
 const aiController = require('../controllers/aiController');
 const aiRoleController = require('../controllers/aiRoleController');
 const aiChatHistoryController = require('../controllers/aiChatHistoryController');
+const aiSettingsController = require('../controllers/aiSettingsController');
 
 /**
  * @route   GET /api/ai/v1/models
@@ -21,10 +22,10 @@ router.get('/v1/models', aiController.getModels.bind(aiController));
  * @desc    创建聊天完成（支持流式和非流式）
  * @access  Private - 需要登录
  * @body    messages - 消息数组 (必填)
- * @body    model - 模型名称 (可选，默认使用AI_DEFAULT_MODEL)
+ * @body    model - 模型名称 (可选，默认使用AI角色的默认模型)
  * @body    stream - 是否启用流式响应 (可选，默认false)
- * @body    temperature - 温度参数 (可选，默认使用AI_TEMPERATURE)
- * @body    max_tokens - 最大token数 (可选，默认使用AI_MAX_TOKENS)
+ * @body    temperature - 温度参数 (可选，默认使用AI角色的默认温度)
+ * @body    max_tokens - 最大token数 (可选，默认使用AI角色的maxOutputTokens)
  */
 router.post('/v1/chat/completions', aiController.createChatCompletion.bind(aiController));
 
@@ -119,5 +120,72 @@ router.put('/v1/chat/histories/:id', aiChatHistoryController.updateTitle);
  * @access  Private - 需要登录
  */
 router.delete('/v1/chat/histories/:id', aiChatHistoryController.delete);
+
+// AI 设置相关路由
+
+/**
+ * @route   GET /api/ai/v1/config
+ * @desc    获取AI配置
+ * @access  Private - 需要登录
+ */
+router.get('/v1/config', aiSettingsController.getConfig);
+
+/**
+ * @route   PUT /api/ai/v1/config
+ * @desc    更新AI配置
+ * @access  Private - 需要登录
+ * @body    enabled - AI启用状态 (可选)
+ * @body    current - 当前供应商键名 (可选)
+ */
+router.put('/v1/config', aiSettingsController.updateConfig);
+
+/**
+ * @route   POST /api/ai/v1/toggle
+ * @desc    切换AI启用状态
+ * @access  Private - 需要登录
+ * @body    enabled - AI启用状态 (必填)
+ */
+router.post('/v1/toggle', aiSettingsController.toggleEnabled);
+
+/**
+ * @route   GET /api/ai/v1/providers
+ * @desc    获取所有供应商
+ * @access  Private - 需要登录
+ */
+router.get('/v1/providers', aiSettingsController.getProviders);
+
+/**
+ * @route   POST /api/ai/v1/providers/:key
+ * @desc    创建或更新供应商
+ * @access  Private - 需要登录
+ * @body    AI_BASE_URL - API基础URL (必填)
+ * @body    AI_API_KEY - API密钥 (必填)
+ * @body    AI_ALLOWED_MODELS - 允许的模型列表 (可选)
+ */
+router.post('/v1/providers/:key', aiSettingsController.upsertProvider);
+
+/**
+ * @route   PUT /api/ai/v1/providers/:key
+ * @desc    更新供应商
+ * @access  Private - 需要登录
+ * @body    AI_BASE_URL - API基础URL (可选)
+ * @body    AI_API_KEY - API密钥 (可选)
+ * @body    AI_ALLOWED_MODELS - 允许的模型列表 (可选)
+ */
+router.put('/v1/providers/:key', aiSettingsController.updateProvider);
+
+/**
+ * @route   DELETE /api/ai/v1/providers/:key
+ * @desc    删除供应商
+ * @access  Private - 需要登录
+ */
+router.delete('/v1/providers/:key', aiSettingsController.deleteProvider);
+
+/**
+ * @route   POST /api/ai/v1/providers/:key/select
+ * @desc    设置当前供应商
+ * @access  Private - 需要登录
+ */
+router.post('/v1/providers/:key/select', aiSettingsController.setCurrentProvider);
 
 module.exports = router;

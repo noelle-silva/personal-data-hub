@@ -6,6 +6,7 @@
 const AIRole = require('../models/AIRole');
 const AIChatHistory = require('../models/AIChatHistory');
 const aiChatHistoryController = require('./aiChatHistoryController');
+const aiConfigService = require('../config/ai/configService');
 
 /**
  * AI 控制器类
@@ -95,10 +96,19 @@ class AIController {
   async getModels(req, res, next) {
     try {
       // 检查AI功能是否启用
-      if (process.env.AI_ENABLED !== 'true') {
+      if (!aiConfigService.isEnabled()) {
         return res.status(503).json({
           success: false,
           message: 'AI功能已禁用'
+        });
+      }
+
+      // 获取当前供应商配置
+      const currentProvider = aiConfigService.getCurrentProvider();
+      if (!currentProvider) {
+        return res.status(503).json({
+          success: false,
+          message: '未配置AI供应商'
         });
       }
 
@@ -107,17 +117,15 @@ class AIController {
       
       // 创建OpenAI客户端
       const openai = new OpenAI({
-        baseURL: process.env.AI_BASE_URL,
-        apiKey: process.env.AI_API_KEY,
+        baseURL: currentProvider.AI_BASE_URL,
+        apiKey: currentProvider.AI_API_KEY,
       });
 
       // 获取模型列表
       const list = await openai.models.list();
       
       // 获取允许的模型列表（如果配置了的话）
-      const allowedModels = process.env.AI_ALLOWED_MODELS 
-        ? process.env.AI_ALLOWED_MODELS.split(',').map(m => m.trim())
-        : null;
+      const allowedModels = currentProvider.AI_ALLOWED_MODELS || null;
       
       // 过滤模型列表
       let models = list.data;
@@ -156,10 +164,19 @@ class AIController {
   async createChatCompletion(req, res, next) {
     try {
       // 检查AI功能是否启用
-      if (process.env.AI_ENABLED !== 'true') {
+      if (!aiConfigService.isEnabled()) {
         return res.status(503).json({
           success: false,
           message: 'AI功能已禁用'
+        });
+      }
+
+      // 获取当前供应商配置
+      const currentProvider = aiConfigService.getCurrentProvider();
+      if (!currentProvider) {
+        return res.status(503).json({
+          success: false,
+          message: '未配置AI供应商'
         });
       }
 
@@ -178,8 +195,8 @@ class AIController {
       
       // 创建OpenAI客户端
       const openai = new OpenAI({
-        baseURL: process.env.AI_BASE_URL,
-        apiKey: process.env.AI_API_KEY,
+        baseURL: currentProvider.AI_BASE_URL,
+        apiKey: currentProvider.AI_API_KEY,
       });
 
       // 处理系统提示词
@@ -269,7 +286,7 @@ class AIController {
         finalMaxTokens = role.maxOutputTokens;
       }
       if (finalMaxTokens === undefined) {
-        finalMaxTokens = parseInt(process.env.AI_MAX_TOKENS) || 4096;
+        finalMaxTokens = 4096; // 默认值
       }
       
       // 如果角色有设置最大输出 Token，取较小值
@@ -324,7 +341,7 @@ class AIController {
               userMessage: userMessage.content,
               roleId: role_id || null,
               systemPrompt,
-              model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini'
+              model: finalModel || 'gpt-4o-mini'
             });
             isNewHistory = true;
             console.log('创建新聊天历史成功:', chatHistory._id);
@@ -367,10 +384,10 @@ class AIController {
 
       // 构建请求参数
       const completionParams = {
-        model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
+        model: finalModel || 'gpt-4o-mini',
         messages: processedMessages,
         stream,
-        temperature: finalTemperature !== undefined ? finalTemperature : parseFloat(process.env.AI_TEMPERATURE) || 0.7,
+        temperature: finalTemperature !== undefined ? finalTemperature : 0.7,
         max_tokens: finalMaxTokens,
       };
       
@@ -426,7 +443,7 @@ class AIController {
               await aiChatHistoryController.updateLastAssistantMessage(
                 chatHistory._id,
                 assistantContent,
-                finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini'
+                finalModel || 'gpt-4o-mini'
               );
             } catch (saveError) {
               console.error('保存聊天历史失败:', saveError);
@@ -445,7 +462,7 @@ class AIController {
               await chatHistory.addMessage({
                 role: 'assistant',
                 content: assistantContent,
-                model: finalModel || process.env.AI_DEFAULT_MODEL || 'gpt-4o-mini',
+                model: finalModel || 'gpt-4o-mini',
                 incomplete: true,
                 timestamp: new Date()
               });

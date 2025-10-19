@@ -366,6 +366,134 @@ class AIService {
       throw error;
     }
   }
+
+  /**
+   * 获取AI配置
+   * @returns {Promise} 返回AI配置的Promise
+   */
+  async getConfig() {
+    try {
+      const response = await apiClient.get('/ai/v1/config');
+      return response.data;
+    } catch (error) {
+      console.error('获取AI配置失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新AI配置
+   * @param {Object} params - 请求参数
+   * @param {boolean} params.enabled - AI启用状态 (可选)
+   * @param {string} params.current - 当前供应商键名 (可选)
+   * @returns {Promise} 返回更新结果的Promise
+   */
+  async updateConfig(params) {
+    try {
+      const response = await apiClient.put('/ai/v1/config', params);
+      return response.data;
+    } catch (error) {
+      console.error('更新AI配置失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 切换AI启用状态
+   * @param {boolean} enabled - AI启用状态
+   * @returns {Promise} 返回切换结果的Promise
+   */
+  async toggleEnabled(enabled) {
+    try {
+      const response = await apiClient.post('/ai/v1/toggle', { enabled });
+      return response.data;
+    } catch (error) {
+      console.error('切换AI启用状态失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取所有供应商
+   * @returns {Promise} 返回供应商列表的Promise
+   */
+  async listProviders() {
+    try {
+      const response = await apiClient.get('/ai/v1/providers');
+      return response.data;
+    } catch (error) {
+      console.error('获取供应商列表失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建或更新供应商
+   * @param {string} key - 供应商键名
+   * @param {Object} params - 供应商配置
+   * @param {string} params.AI_BASE_URL - API基础URL
+   * @param {string} params.AI_API_KEY - API密钥
+   * @param {Array} params.AI_ALLOWED_MODELS - 允许的模型列表 (可选)
+   * @returns {Promise} 返回保存结果的Promise
+   */
+  async upsertProvider(key, params) {
+    try {
+      const response = await apiClient.post(`/ai/v1/providers/${key}`, params);
+      return response.data;
+    } catch (error) {
+      console.error('保存供应商失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 更新供应商
+   * @param {string} key - 供应商键名
+   * @param {Object} params - 供应商配置
+   * @param {string} params.AI_BASE_URL - API基础URL (可选)
+   * @param {string} params.AI_API_KEY - API密钥 (可选)
+   * @param {Array} params.AI_ALLOWED_MODELS - 允许的模型列表 (可选)
+   * @returns {Promise} 返回更新结果的Promise
+   */
+  async updateProvider(key, params) {
+    try {
+      const response = await apiClient.put(`/ai/v1/providers/${key}`, params);
+      return response.data;
+    } catch (error) {
+      console.error('更新供应商失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除供应商
+   * @param {string} key - 供应商键名
+   * @returns {Promise} 返回删除结果的Promise
+   */
+  async deleteProvider(key) {
+    try {
+      const response = await apiClient.delete(`/ai/v1/providers/${key}`);
+      return response.data;
+    } catch (error) {
+      console.error('删除供应商失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 设置当前供应商
+   * @param {string} key - 供应商键名
+   * @returns {Promise} 返回设置结果的Promise
+   */
+  async selectProvider(key) {
+    try {
+      const response = await apiClient.post(`/ai/v1/providers/${key}/select`);
+      return response.data;
+    } catch (error) {
+      console.error('设置当前供应商失败:', error);
+      throw error;
+    }
+  }
 }
 
 // 创建并导出服务实例

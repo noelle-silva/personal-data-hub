@@ -282,16 +282,17 @@ npm run init-attachments # 初始化附件数据
 
 ### 7. AI功能使用
 
-> 详细安装和配置指南请参考：[`docs/AI功能安装指南.md`](docs/AI功能安装指南.md)
+> 详细配置说明请参考：[`docs/AI配置说明.md`](docs/AI配置说明.md)
 
 #### 7.1 配置AI服务
 
-1. 复制 `ai.env.example` 为 `ai.env`
-2. 编辑 `ai.env` 文件，配置你的AI服务提供商信息：
-   - `AI_BASE_URL`: AI服务的基础URL（OpenAI API或兼容服务）
-   - `AI_API_KEY`: 你的API密钥
-   - `AI_DEFAULT_MODEL`: 默认使用的模型
-   - `AI_ENABLED`: 是否启用AI功能
+AI配置已迁移到前端设置页面管理，不再使用环境变量。
+
+1. 启动应用后，在侧边栏点击"设置"
+2. 在"AI设置"区块中：
+   - 开启AI功能开关
+   - 添加供应商预设（API Base URL、API Key、允许的模型列表）
+   - 选择当前使用的供应商
 
 #### 7.2 使用AI聊天
 
