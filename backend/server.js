@@ -18,6 +18,7 @@ const quoteRoutes = require('./routes/quotes');
 const attachmentRoutes = require('./routes/attachments');
 const customPageRoutes = require('./routes/customPages');
 const aiRoutes = require('./routes/ai');
+const testRoutes = require('./routes/test');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
 const helmet = require('helmet');
@@ -169,6 +170,9 @@ app.use('/api/auth', authRoutes);
 
 // 附件相关路由（需要附件认证，不需要JWT认证）
 app.use('/api/attachments', attachmentRoutes);
+
+// 测试相关路由（不需要认证，仅用于开发测试）
+app.use('/api/test', testRoutes);
 
 // 对其他API路由应用JWT认证中间件
 app.use('/api', requireAuth);

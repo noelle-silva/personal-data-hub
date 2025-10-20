@@ -38,6 +38,8 @@ class AIService {
       const response = await apiClient.post('/ai/v1/chat/completions', {
         ...params,
         stream: false
+      }, {
+        timeout: 120000 // 2分钟超时，避免长回答被误判为超时
       });
       return response.data;
     } catch (error) {
@@ -60,7 +62,7 @@ class AIService {
    * @returns {Promise} 返回AbortController的Promise，可用于取消请求
    */
   async createStreamingChatCompletion(params) {
-    const { onChunk, onError, onComplete, onHistory, ...requestParams } = params;
+    const { onChunk, onError, onComplete, onHistory, onFinish, ...requestParams } = params;
     
     // 创建AbortController用于取消请求
     const controller = new AbortController();
@@ -94,28 +96,36 @@ class AIService {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let completed = false;
       
       try {
         while (true) {
           const { done, value } = await reader.read();
           
-          if (done) break;
+          if (done) {
+            // 流结束时，flush 解码器以处理可能的多字节字符末尾
+            const tail = decoder.decode();
+            if (tail) {
+              buffer += tail;
+            }
+            break;
+          }
           
           // 解码数据块
           buffer += decoder.decode(value, { stream: true });
           
-          // 处理SSE数据
-          const lines = buffer.split('\n');
+          // 处理SSE数据，支持 CRLF 换行符
+          const lines = buffer.split(/\r?\n/);
           buffer = lines.pop() || ''; // 保留最后一行（可能不完整）
           
           for (const line of lines) {
             if (line.startsWith('data: ')) {
-              const data = line.slice(6);
+              const data = line.slice(6).trim(); // 去除可能的空白字符和 CR
               
               // 检查是否结束
               if (data === '[DONE]') {
-                if (onComplete) onComplete();
-                return controller;
+                completed = true;
+                break; // 跳出循环，确保在 finally 中处理完成逻辑
               }
               
               try {
@@ -128,6 +138,12 @@ class AIService {
                   continue;
                 }
                 
+                // 检查是否是finish元事件
+                if (chunk.type === 'finish' && chunk.data) {
+                  if (onFinish) onFinish(chunk.data);
+                  continue;
+                }
+                
                 // 检查是否是错误数据
                 if (chunk.error) {
                   console.error('SSE错误数据:', chunk.error);
@@ -137,7 +153,8 @@ class AIService {
                     error.code = chunk.error.code || 'stream_error';
                     onError(error);
                   }
-                  return controller;
+                  completed = true;
+                  break;
                 }
                 
                 // 调用回调函数
@@ -147,8 +164,52 @@ class AIService {
               }
             }
           }
+          
+          // 如果已经收到 [DONE] 标记，跳出读取循环
+          if (completed) break;
         }
         
+        // 处理 buffer 中剩余的数据（如果有）
+        if (buffer && !completed) {
+          const lines = buffer.split(/\r?\n/);
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim();
+              
+              if (data === '[DONE]') {
+                completed = true;
+                break;
+              }
+              
+              try {
+                const chunk = JSON.parse(data);
+                
+                if (chunk.type === 'history' && chunk.data) {
+                  if (onHistory) onHistory(chunk.data);
+                  continue;
+                }
+                
+                if (chunk.error) {
+                  console.error('SSE错误数据:', chunk.error);
+                  if (onError) {
+                    const error = new Error(chunk.error.message || '流式请求失败');
+                    error.status = chunk.error.status || 500;
+                    error.code = chunk.error.code || 'stream_error';
+                    onError(error);
+                  }
+                  completed = true;
+                  break;
+                }
+                
+                if (onChunk) onChunk(chunk);
+              } catch (parseError) {
+                console.warn('解析SSE数据失败:', parseError, data);
+              }
+            }
+          }
+        }
+        
+        // 调用完成回调
         if (onComplete) onComplete();
       } finally {
         reader.releaseLock();

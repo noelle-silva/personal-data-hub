@@ -94,6 +94,7 @@ const AIChat = () => {
   const [isStreaming, setIsStreaming] = useState(true);
   const [currentResponse, setCurrentResponse] = useState('');
   const [currentController, setCurrentController] = useState(null);
+  const finishReasonRef = useRef(null); // 记录finish_reason
   
   // AI角色相关状态
   const [roles, setRoles] = useState([]);
@@ -373,6 +374,11 @@ const AIChat = () => {
               loadChatHistories();
             }
           },
+          onFinish: (finishData) => {
+            // 记录finish_reason
+            finishReasonRef.current = finishData.finish_reason;
+            console.log('[AIChat] 收到finish事件:', finishData);
+          },
           onError: (error) => {
             console.error('流式请求失败:', error);
             // 如果有部分响应，保存它
@@ -407,12 +413,14 @@ const AIChat = () => {
                 role: 'assistant',
                 content: streamBufferRef.current,
                 timestamp: new Date(),
-                model: selectedModel
+                model: selectedModel,
+                incomplete: finishReasonRef.current === 'length' // 如果是长度限制，标记为不完整
               };
               setMessages(prev => [...prev, assistantMessage]);
             }
             setCurrentResponse('');
             streamBufferRef.current = '';
+            finishReasonRef.current = null; // 重置finish_reason
             setIsLoading(false);
             setCurrentController(null);
           }
@@ -424,13 +432,15 @@ const AIChat = () => {
         const response = await aiService.createChatCompletion(requestParams);
 
         if (response.success) {
+          const choice = response.data.choices[0];
           const assistantMessage = {
             id: `assistant-${Date.now()}`,
             role: 'assistant',
-            content: response.data.choices[0].message.content,
+            content: choice.message.content,
             timestamp: new Date(),
             model: selectedModel,
-            usage: response.data.usage
+            usage: response.data.usage,
+            incomplete: choice.finish_reason === 'length' // 如果是长度限制，标记为不完整
           };
           setMessages(prev => [...prev, assistantMessage]);
           
@@ -809,8 +819,8 @@ const AIChat = () => {
                     />
                   )}
                   {message.incomplete && (
-                    <Typography variant="caption" sx={{ fontStyle: 'italic', mt: 1, display: 'block' }}>
-                      (响应已中断)
+                    <Typography variant="caption" sx={{ fontStyle: 'italic', mt: 1, display: 'block', color: 'warning.main' }}>
+                      (响应因长度限制被截断)
                     </Typography>
                   )}
                   <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>

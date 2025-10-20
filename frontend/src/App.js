@@ -15,6 +15,7 @@ import NotFound from './pages/NotFound';
 import CustomPage from './pages/CustomPage';
 import AIChat from './pages/AIChat';
 import AIChatTest from './pages/AIChatTest';
+import SSETest from './pages/SSETest';
 import ProtectedRoute from './components/ProtectedRoute';
 import { restoreAuth, selectAttachmentToken } from './store/authSlice';
 import { fetchAttachmentConfig } from './store/attachmentsSlice';
@@ -59,6 +60,7 @@ function App() {
         <Route path="/设置" element={<Settings />} />
         <Route path="/AI-Chat" element={<AIChat />} />
         <Route path="/AI-Chat-Test" element={<AIChatTest />} />
+        <Route path="/SSE-Test" element={<SSETest />} />
         <Route path="/自定义/:name" element={<CustomPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

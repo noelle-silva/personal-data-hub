@@ -276,8 +276,8 @@ const Settings = () => {
       return;
     }
 
-    if (currentRole.maxOutputTokens < 1 || currentRole.maxOutputTokens > 8192) {
-      setRolesError('最大输出Token上限必须在1到8192之间');
+    if (currentRole.maxOutputTokens < 1 || currentRole.maxOutputTokens > 2000000) {
+      setRolesError('最大输出Token上限必须在1到2000000之间');
       return;
     }
 
@@ -1262,18 +1262,24 @@ const Settings = () => {
               <Slider
                 value={currentRole.maxOutputTokens}
                 onChange={(e, newValue) => setCurrentRole({ ...currentRole, maxOutputTokens: newValue })}
-                min={256}
-                max={8192}
-                step={256}
+                min={1024}
+                max={2000000}
+                step={1024}
                 marks={[
-                  { value: 256, label: '256' },
                   { value: 1024, label: '1K' },
-                  { value: 2048, label: '2K' },
-                  { value: 4096, label: '4K' },
-                  { value: 8192, label: '8K' }
+                  { value: 16384, label: '16K' },
+                  { value: 65536, label: '64K' },
+                  { value: 262144, label: '256K' },
+                  { value: 1048576, label: '1M' },
+                  { value: 2000000, label: '2M' }
                 ]}
                 valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${Math.round(value / 1024)}K`}
+                valueLabelFormat={(value) => {
+                  if (value >= 1000000) {
+                    return `${(value / 1000000).toFixed(1)}M`;
+                  }
+                  return `${Math.round(value / 1024)}K`;
+                }}
               />
             </Box>
             

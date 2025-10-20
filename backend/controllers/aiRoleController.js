@@ -132,10 +132,10 @@ class AIRoleController {
       }
       
       // 验证最大输出Token上限
-      if (maxOutputTokens !== undefined && (maxOutputTokens < 1 || maxOutputTokens > 8192)) {
+      if (maxOutputTokens !== undefined && (maxOutputTokens < 1 || maxOutputTokens > 2000000)) {
         return res.status(400).json({
           success: false,
-          message: '最大输出Token上限必须在1到8192之间'
+          message: '最大输出Token上限必须在1到2000000之间'
         });
       }
       
@@ -267,10 +267,10 @@ class AIRoleController {
       }
       
       // 验证最大输出Token上限
-      if (maxOutputTokens !== undefined && (maxOutputTokens < 1 || maxOutputTokens > 8192)) {
+      if (maxOutputTokens !== undefined && (maxOutputTokens < 1 || maxOutputTokens > 2000000)) {
         return res.status(400).json({
           success: false,
-          message: '最大输出Token上限必须在1到8192之间'
+          message: '最大输出Token上限必须在1到2000000之间'
         });
       }
       

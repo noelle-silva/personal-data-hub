@@ -403,10 +403,16 @@ class AIController {
 
       // 如果是流式请求
       if (stream) {
-        // 设置响应头为SSE
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
+        // 设置响应头为SSE，明确指定UTF-8编码
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
         res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no'); // 禁用Nginx缓冲
+        
+        // 刷新响应头（如果方法存在）
+        if (typeof res.flushHeaders === 'function') {
+          res.flushHeaders();
+        }
 
         // 如果是新创建的聊天历史，发送history元事件
         if (isNewHistory && chatHistory) {
@@ -421,10 +427,24 @@ class AIController {
           res.write(`data: ${JSON.stringify(historyEvent)}\n\n`);
         }
 
+        let assistantContent = '';
+        let finishReason = null;
+        
+        // 添加连接诊断
+        res.on('close', () => {
+          console.log('[SSE] 客户端连接关闭');
+        });
+        
+        res.on('finish', () => {
+          console.log('[SSE] 响应完成发送');
+        });
+        
+        req.on('aborted', () => {
+          console.log('[SSE] 客户端请求中止');
+        });
+        
         try {
           const streamResponse = await openai.chat.completions.create(completionParams);
-          
-          let assistantContent = '';
           
           // 处理流式响应
           for await (const chunk of streamResponse) {
@@ -435,6 +455,24 @@ class AIController {
             if (chunk.choices && chunk.choices[0]?.delta?.content) {
               assistantContent += chunk.choices[0].delta.content;
             }
+            
+            // 捕获finish_reason
+            if (chunk.choices && chunk.choices[0]?.finish_reason) {
+              finishReason = chunk.choices[0].finish_reason;
+            }
+          }
+          
+          // 发送finish元事件
+          if (finishReason) {
+            const finishEvent = {
+              type: 'finish',
+              data: {
+                finish_reason: finishReason,
+                content_length: assistantContent.length
+              }
+            };
+            console.log('[SSE] 发送finish事件:', finishEvent);
+            res.write(`data: ${JSON.stringify(finishEvent)}\n\n`);
           }
           
           // 流式响应完成，保存聊天历史
@@ -452,7 +490,6 @@ class AIController {
           
           // 发送结束标记
           res.write('data: [DONE]\n\n');
-          res.end();
         } catch (streamError) {
           console.error('流式AI请求失败:', streamError);
           
@@ -481,7 +518,11 @@ class AIController {
           };
           res.write(`data: ${JSON.stringify(errorData)}\n\n`);
           res.write('data: [DONE]\n\n');
-          res.end();
+        } finally {
+          // 确保响应结束
+          if (!res.destroyed) {
+            res.end();
+          }
         }
       } else {
         // 非流式请求

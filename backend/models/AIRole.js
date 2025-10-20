@@ -44,7 +44,7 @@ const aiRoleSchema = new mongoose.Schema({
   maxOutputTokens: {
     type: Number,
     min: [1, '最大输出Token上限必须大于0'],
-    max: [8192, '最大输出Token上限不能超过8192'],
+    max: [2000000, '最大输出Token上限不能超过2000000'],
     default: 4096
   },
   // Top P 参数，控制词汇选择的多样性
