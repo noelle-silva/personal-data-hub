@@ -190,6 +190,14 @@ class AIController {
         });
       }
 
+      // 新增校验：必须提供 role_id 或 disable_system_prompt=true
+      if (!role_id && !disable_system_prompt) {
+        return res.status(400).json({
+          success: false,
+          message: '必须指定角色ID或明确禁用系统提示词（disable_system_prompt=true）'
+        });
+      }
+
       // 动态导入OpenAI模块
       const { default: OpenAI } = await import('openai');
       
@@ -279,17 +287,10 @@ class AIController {
           try {
             // 获取系统提示词（用于快照）
             let systemPrompt = null;
-            if (!disable_system_prompt) {
-              if (role_id) {
-                const role = await AIRole.findById(role_id);
-                if (role) {
-                  systemPrompt = role.systemPrompt;
-                }
-              } else {
-                const defaultRole = await AIRole.getDefault();
-                if (defaultRole) {
-                  systemPrompt = defaultRole.systemPrompt;
-                }
+            if (!disable_system_prompt && role_id) {
+              const role = await AIRole.findById(role_id);
+              if (role) {
+                systemPrompt = role.systemPrompt;
               }
             }
             
@@ -333,30 +334,18 @@ class AIController {
       }
 
       // 处理系统提示词（在历史合并后、截断前）
-      if (!disable_system_prompt) {
+      // 只有当 role_id 存在且未禁用系统提示词时才注入
+      if (!disable_system_prompt && role_id) {
         let systemPrompt = null;
         
-        // 优先级：role_id > 默认角色
-        if (role_id) {
-          // 使用指定角色的系统提示词
-          try {
-            const role = await AIRole.findById(role_id);
-            if (role) {
-              systemPrompt = role.systemPrompt;
-            }
-          } catch (error) {
-            console.error('获取指定AI角色失败:', error);
+        // 使用指定角色的系统提示词
+        try {
+          const role = await AIRole.findById(role_id);
+          if (role) {
+            systemPrompt = role.systemPrompt;
           }
-        } else {
-          // 尝试使用默认角色
-          try {
-            const defaultRole = await AIRole.getDefault();
-            if (defaultRole) {
-              systemPrompt = defaultRole.systemPrompt;
-            }
-          } catch (error) {
-            console.error('获取默认AI角色失败:', error);
-          }
+        } catch (error) {
+          console.error('获取指定AI角色失败:', error);
         }
         
         // 如果找到了系统提示词，添加到消息数组的开头

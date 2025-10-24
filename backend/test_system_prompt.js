@@ -80,15 +80,14 @@ async function testSystemPromptInjection() {
   
   console.log('可用角色:');
   roles.forEach(role => {
-    console.log(`- ${role.name} (ID: ${role._id}, 默认: ${role.isDefault})`);
+    console.log(`- ${role.name} (ID: ${role._id})`);
   });
   
-  const defaultRole = roles.find(r => r.isDefault);
-  const testRole = roles.find(r => !r.isDefault) || defaultRole;
+  const testRole = roles[0]; // 使用第一个角色进行测试
   
-  // 2. 测试场景1：默认角色
-  console.log('\n--- 测试场景1：默认角色 ---');
-  await testScenario('默认角色', null, false, defaultRole?.systemPrompt);
+  // 2. 测试场景1：缺少二选一参数（应该返回400）
+  console.log('\n--- 测试场景1：缺少二选一参数 ---');
+  await testMissingParamsScenario();
   
   // 3. 测试场景2：指定角色
   console.log('\n--- 测试场景2：指定角色 ---');
@@ -97,6 +96,29 @@ async function testSystemPromptInjection() {
   // 4. 测试场景3：禁用系统提示词
   console.log('\n--- 测试场景3：禁用系统提示词 ---');
   await testScenario('禁用系统提示词', null, true, null);
+}
+
+// 测试缺少参数场景
+async function testMissingParamsScenario() {
+  console.log('  测试缺少 role_id 且未设置 disable_system_prompt 的情况...');
+  
+  try {
+    const response = await axios.post(`${BASE_URL}/api/ai/v1/chat/completions`, {
+      messages: [{ role: 'user', content: '测试消息' }],
+      stream: false
+      // 故意不提供 role_id 和 disable_system_prompt
+    }, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    
+    console.log('  ❌ 应该返回400错误，但请求成功了');
+  } catch (error) {
+    if (error.response?.status === 400) {
+      console.log('  ✅ 正确返回400错误:', error.response.data.message);
+    } else {
+      console.log('  ❌ 返回了意外的错误:', error.response?.status, error.response?.data);
+    }
+  }
 }
 
 // 测试单个场景

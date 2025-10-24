@@ -98,7 +98,7 @@ const AIChat = () => {
   
   // AI角色相关状态
   const [roles, setRoles] = useState([]);
-  const [selectedRoleId, setSelectedRoleId] = useState('default'); // 'default', 'none', 或具体的role ID
+  const [selectedRoleId, setSelectedRoleId] = useState(''); // 空字符串表示未选择，'none' 表示无系统提示词，或具体的role ID
   const [rolesLoading, setRolesLoading] = useState(false);
   
   // 聊天历史相关状态
@@ -168,7 +168,7 @@ const AIChat = () => {
     try {
       setHistoriesLoading(true);
       const response = await aiService.listChatHistories({
-        role_id: selectedRoleId === 'default' || selectedRoleId === 'none' ? 'all' : selectedRoleId,
+        role_id: selectedRoleId === 'none' || !selectedRoleId ? 'all' : selectedRoleId,
         limit: 50
       });
       if (response.success) {
@@ -252,7 +252,13 @@ const AIChat = () => {
   useEffect(() => {
     const savedRoleId = localStorage.getItem('aiChat_selectedRoleId');
     if (savedRoleId) {
-      setSelectedRoleId(savedRoleId);
+      // 兼容迁移：如果读取到 'default'，则重置为空值
+      if (savedRoleId === 'default') {
+        setSelectedRoleId('');
+        localStorage.removeItem('aiChat_selectedRoleId');
+      } else {
+        setSelectedRoleId(savedRoleId);
+      }
     }
     
     const savedTemperature = localStorage.getItem('aiChat_temperature');
@@ -284,7 +290,8 @@ const AIChat = () => {
 
   // 当选择的角色改变时，如果用户没有手动修改过模型和温度，则使用角色的默认值
   useEffect(() => {
-    if (selectedRoleId !== 'default' && selectedRoleId !== 'none') {
+    // 只有在选择了具体角色时才应用角色的默认模型和温度
+    if (selectedRoleId && selectedRoleId !== 'none') {
       const selectedRole = roles.find(role => role._id === selectedRoleId);
       if (selectedRole) {
         // 只有在用户没有手动修改过的情况下才更新
@@ -296,7 +303,7 @@ const AIChat = () => {
         }
       }
     }
-  }, [selectedRoleId, roles, isModelManuallySet, isTempManuallySet]);
+  }, [selectedRoleId, roles, isModelManuallySet, isTempManuallySet, selectedModel, temperature]);
 
   // 滚动到底部
   useEffect(() => {
@@ -306,6 +313,12 @@ const AIChat = () => {
   // 发送消息
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
+    
+    // 检查是否已选择角色或明确选择无系统提示词
+    if (!selectedRoleId) {
+      setError('请先选择一个AI角色或选择"无系统提示词"选项');
+      return;
+    }
 
     const userMessage = {
       id: `user-${Date.now()}`,
@@ -341,10 +354,10 @@ const AIChat = () => {
     // 添加角色或系统提示词参数
     if (selectedRoleId === 'none') {
       requestParams.disable_system_prompt = true;
-    } else if (selectedRoleId !== 'default') {
+    } else if (selectedRoleId) {
       requestParams.role_id = selectedRoleId;
     }
-    // 如果没有选择角色，则使用默认逻辑（后端会自动选择默认角色或默认提示词）
+    // 不再允许未选择角色的情况，后端会返回400错误
 
     try {
       if (isStreaming) {
@@ -590,17 +603,15 @@ const AIChat = () => {
                   disabled={isLoading || rolesLoading || roles.length === 0}
                 >
                   {roles.length === 0 ? (
-                    <MenuItem value="default" disabled>
+                    <MenuItem value="" disabled>
                       暂无可用角色
                     </MenuItem>
                   ) : (
                     [
-                      <MenuItem key="default" value="default">使用默认角色</MenuItem>,
                       <MenuItem key="none" value="none">无系统提示词</MenuItem>,
                       ...roles.map((role) => (
                         <MenuItem key={role._id} value={String(role._id)}>
                           {role.name}
-                          {role.isDefault && ' (默认)'}
                         </MenuItem>
                       ))
                     ]

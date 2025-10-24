@@ -248,10 +248,12 @@ class AIService {
   }
 
   /**
-   * 获取默认AI角色
+   * 获取默认AI角色 (已废弃)
    * @returns {Promise} 返回默认AI角色的Promise
+   * @deprecated 默认角色功能已移除，请使用具体角色ID或禁用系统提示词
    */
   async getDefaultRole() {
+    console.warn('getDefaultRole方法已废弃，默认角色功能已移除');
     try {
       const response = await apiClient.get('/ai/v1/roles/default');
       return response.data;
@@ -287,7 +289,6 @@ class AIService {
    * @param {number} params.maxOutputTokens - 最大输出Token上限（可选）
    * @param {number} params.topP - Top P值（可选，0-1）
    * @param {number} params.topK - Top K值（可选，0-64）
-   * @param {boolean} params.isDefault - 是否设为默认
    * @returns {Promise} 返回创建结果的Promise
    */
   async createRole(params) {
@@ -312,7 +313,6 @@ class AIService {
    * @param {number} params.maxOutputTokens - 最大输出Token上限（可选）
    * @param {number} params.topP - Top P值（可选，0-1）
    * @param {number} params.topK - Top K值（可选，0-64）
-   * @param {boolean} params.isDefault - 是否设为默认（可选）
    * @returns {Promise} 返回更新结果的Promise
    */
   async updateRole(id, params) {
@@ -341,11 +341,13 @@ class AIService {
   }
 
   /**
-   * 设置默认AI角色
+   * 设置默认AI角色 (已废弃)
    * @param {string} id - 角色ID
    * @returns {Promise} 返回设置结果的Promise
+   * @deprecated 默认角色功能已移除，请使用具体角色ID或禁用系统提示词
    */
   async setDefaultRole(id) {
+    console.warn('setDefaultRole方法已废弃，默认角色功能已移除');
     try {
       const response = await apiClient.post(`/ai/v1/roles/${id}/default`);
       return response.data;

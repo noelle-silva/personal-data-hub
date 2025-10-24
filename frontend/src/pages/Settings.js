@@ -120,8 +120,7 @@ const Settings = () => {
     contextTokenLimit: 8192,
     maxOutputTokens: 4096,
     topP: 1.0,
-    topK: 0,
-    isDefault: false
+    topK: 0
   });
   const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState(null);
@@ -230,8 +229,7 @@ const Settings = () => {
       contextTokenLimit: 8192,
       maxOutputTokens: 4096,
       topP: 1.0,
-      topK: 0,
-      isDefault: false
+      topK: 0
     });
     setRoleDialogOpen(true);
   };
@@ -254,8 +252,7 @@ const Settings = () => {
       contextTokenLimit: 8192,
       maxOutputTokens: 4096,
       topP: 1.0,
-      topK: 0,
-      isDefault: false
+      topK: 0
     });
   };
 
@@ -302,8 +299,7 @@ const Settings = () => {
           contextTokenLimit: currentRole.contextTokenLimit,
           maxOutputTokens: currentRole.maxOutputTokens,
           topP: currentRole.topP,
-          topK: currentRole.topK,
-          isDefault: currentRole.isDefault
+          topK: currentRole.topK
         });
       } else {
         response = await aiService.createRole({
@@ -314,8 +310,7 @@ const Settings = () => {
           contextTokenLimit: currentRole.contextTokenLimit,
           maxOutputTokens: currentRole.maxOutputTokens,
           topP: currentRole.topP,
-          topK: currentRole.topK,
-          isDefault: currentRole.isDefault
+          topK: currentRole.topK
         });
       }
 
@@ -361,19 +356,9 @@ const Settings = () => {
     }
   };
 
-  // 设置默认角色
+  // 设置默认角色功能已移除，保留函数以避免错误
   const handleSetDefaultRole = async (roleId) => {
-    try {
-      const response = await aiService.setDefaultRole(roleId);
-      if (response.success) {
-        loadRoles();
-      } else {
-        setRolesError(response.message || '设置默认失败');
-      }
-    } catch (error) {
-      console.error('设置默认AI角色失败:', error);
-      setRolesError(error.response?.data?.message || '设置默认失败');
-    }
+    console.warn('设置默认角色功能已移除');
   };
 
   // 加载AI配置
@@ -984,15 +969,6 @@ const Settings = () => {
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {role.name}
-                        {role.isDefault && (
-                          <Chip
-                            icon={<StarIcon sx={{ fontSize: 16 }} />}
-                            label="默认"
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        )}
                       </Box>
                     }
                     secondary={
@@ -1018,17 +994,6 @@ const Settings = () => {
                     }
                   />
                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                    {!role.isDefault && (
-                      <Tooltip title="设为默认">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleSetDefaultRole(role._id)}
-                          disabled={rolesLoading}
-                        >
-                          <StarBorderIcon />
-                        </IconButton>
-                      </Tooltip>
-                    )}
                     <Tooltip title="编辑">
                       <IconButton
                         size="small"
@@ -1325,16 +1290,7 @@ const Settings = () => {
               />
             </Box>
             
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={currentRole.isDefault}
-                  onChange={(e) => setCurrentRole({ ...currentRole, isDefault: e.target.checked })}
-                />
-              }
-              label="设为默认角色"
-              sx={{ mt: 1 }}
-            />
+            {/* 默认角色功能已移除 */}
           </Box>
         </DialogContent>
         <DialogActions>

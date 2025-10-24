@@ -39,10 +39,11 @@ router.get('/v1/roles', aiRoleController.list);
 
 /**
  * @route   GET /api/ai/v1/roles/default
- * @desc    获取默认AI角色
+ * @desc    获取默认AI角色 (已废弃)
  * @access  Private - 需要登录
+ * @deprecated 默认角色功能已移除，请使用具体角色ID或禁用系统提示词
  */
-router.get('/v1/roles/default', aiRoleController.getDefault);
+// router.get('/v1/roles/default', aiRoleController.getDefault); // 已废弃
 
 /**
  * @route   GET /api/ai/v1/roles/:id
@@ -84,10 +85,11 @@ router.delete('/v1/roles/:id', aiRoleController.delete);
 
 /**
  * @route   POST /api/ai/v1/roles/:id/default
- * @desc    设置默认AI角色
+ * @desc    设置默认AI角色 (已废弃)
  * @access  Private - 需要登录
+ * @deprecated 默认角色功能已移除，请使用具体角色ID或禁用系统提示词
  */
-router.post('/v1/roles/:id/default', aiRoleController.setDefault);
+// router.post('/v1/roles/:id/default', aiRoleController.setDefault); // 已废弃
 
 /**
  * @route   GET /api/ai/v1/chat/histories
