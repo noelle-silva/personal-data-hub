@@ -199,52 +199,8 @@ class AIController {
         apiKey: currentProvider.AI_API_KEY,
       });
 
-      // 处理系统提示词
+      // 初始化处理后的消息数组
       let processedMessages = [...messages];
-      
-      // 如果没有禁用系统提示词
-      if (!disable_system_prompt) {
-        let systemPrompt = null;
-        
-        // 优先级：role_id > 默认角色
-        if (role_id) {
-          // 使用指定角色的系统提示词
-          try {
-            const role = await AIRole.findById(role_id);
-            if (role) {
-              systemPrompt = role.systemPrompt;
-            }
-          } catch (error) {
-            console.error('获取指定AI角色失败:', error);
-          }
-        } else {
-          // 尝试使用默认角色
-          try {
-            const defaultRole = await AIRole.getDefault();
-            if (defaultRole) {
-              systemPrompt = defaultRole.systemPrompt;
-            }
-          } catch (error) {
-            console.error('获取默认AI角色失败:', error);
-          }
-        }
-        
-        // 如果找到了系统提示词，添加到消息数组的开头
-        if (systemPrompt) {
-          // 检查是否已经有系统消息
-          const hasSystemMessage = processedMessages.some(msg => msg.role === 'system');
-          
-          if (hasSystemMessage) {
-            // 如果已经有系统消息，替换它
-            processedMessages = processedMessages.map(msg =>
-              msg.role === 'system' ? { role: 'system', content: systemPrompt } : msg
-            );
-          } else {
-            // 如果没有系统消息，添加一个
-            processedMessages.unshift({ role: 'system', content: systemPrompt });
-          }
-        }
-      }
 
       // 获取角色信息（如果指定了角色）
       let role = null;
@@ -376,10 +332,65 @@ class AIController {
         processedMessages = historyMessages;
       }
 
+      // 处理系统提示词（在历史合并后、截断前）
+      if (!disable_system_prompt) {
+        let systemPrompt = null;
+        
+        // 优先级：role_id > 默认角色
+        if (role_id) {
+          // 使用指定角色的系统提示词
+          try {
+            const role = await AIRole.findById(role_id);
+            if (role) {
+              systemPrompt = role.systemPrompt;
+            }
+          } catch (error) {
+            console.error('获取指定AI角色失败:', error);
+          }
+        } else {
+          // 尝试使用默认角色
+          try {
+            const defaultRole = await AIRole.getDefault();
+            if (defaultRole) {
+              systemPrompt = defaultRole.systemPrompt;
+            }
+          } catch (error) {
+            console.error('获取默认AI角色失败:', error);
+          }
+        }
+        
+        // 如果找到了系统提示词，添加到消息数组的开头
+        if (systemPrompt) {
+          // 检查是否已经有系统消息
+          const hasSystemMessage = processedMessages.some(msg => msg.role === 'system');
+          
+          if (hasSystemMessage) {
+            // 如果已经有系统消息，替换它
+            processedMessages = processedMessages.map(msg =>
+              msg.role === 'system' ? { role: 'system', content: systemPrompt } : msg
+            );
+          } else {
+            // 如果没有系统消息，添加一个
+            processedMessages.unshift({ role: 'system', content: systemPrompt });
+          }
+        }
+      }
 
       // 根据角色的上下文限制截断消息
       if (role && role.contextTokenLimit) {
         processedMessages = this.truncateMessages(processedMessages, role.contextTokenLimit);
+      }
+
+      // 调试日志：输出系统提示词信息（验证用）
+      if (process.env.DEBUG_SYSTEM_PROMPT === 'true' && processedMessages.length > 0) {
+        const firstMessage = processedMessages[0];
+        console.log('[DEBUG] 系统提示词注入结果:', {
+          role: firstMessage.role,
+          contentLength: firstMessage.content ? firstMessage.content.length : 0,
+          disable_system_prompt,
+          role_id,
+          totalMessages: processedMessages.length
+        });
       }
 
       // 构建请求参数
