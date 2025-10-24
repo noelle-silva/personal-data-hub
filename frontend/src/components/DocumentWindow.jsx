@@ -16,7 +16,9 @@ import FilterNoneIcon from '@mui/icons-material/FilterNone';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import DocumentDetailContent from './DocumentDetailContent';
+import AIChatSidebar from './AIChatSidebar';
 import { saveDocumentReferences, saveAttachmentReferences } from '../store/windowsSlice';
 
 // 窗口容器
@@ -124,10 +126,19 @@ const WindowControlButton = styled(IconButton)(({ theme }) => ({
 const WindowContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'row',
   overflow: 'hidden',
   borderBottomLeftRadius: 20,
   borderBottomRightRadius: 20,
+}));
+
+// 主内容区域
+const MainContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  minWidth: 0, // 允许flex子项收缩
 }));
 
 // 加载容器
@@ -170,6 +181,7 @@ const DocumentWindow = ({
 }) => {
   const dispatch = useDispatch();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -410,19 +422,29 @@ const DocumentWindow = ({
         };
 
         return (
-          <DocumentDetailContent
-            document={windowData.document}
-            onSave={handleSave}
-            onDelete={onDelete}
-            onSaveReferences={onSaveReferences || handleSaveReferences}
-            onSaveAttachmentReferences={onSaveAttachmentReferences || handleSaveAttachmentReferences}
-            onSaveQuoteReferences={onSaveQuoteReferences}
-            onViewDocument={onViewDocument}
-            selectedDocumentStatus="loaded"
-            isSidebarCollapsed={isSidebarCollapsed}
-            onEditModeChange={handleEditModeChange}
-            externalTitle={headerIsEditing ? editableTitle : undefined}
-          />
+          <>
+            <MainContent>
+              <DocumentDetailContent
+                document={windowData.document}
+                onSave={handleSave}
+                onDelete={onDelete}
+                onSaveReferences={onSaveReferences || handleSaveReferences}
+                onSaveAttachmentReferences={onSaveAttachmentReferences || handleSaveAttachmentReferences}
+                onSaveQuoteReferences={onSaveQuoteReferences}
+                onViewDocument={onViewDocument}
+                selectedDocumentStatus="loaded"
+                isSidebarCollapsed={isSidebarCollapsed}
+                onEditModeChange={handleEditModeChange}
+                externalTitle={headerIsEditing ? editableTitle : undefined}
+              />
+            </MainContent>
+            
+            {/* AI 聊天侧边栏 */}
+            <AIChatSidebar
+              isOpen={isAISidebarOpen}
+              onClose={() => setIsAISidebarOpen(false)}
+            />
+          </>
         );
       default:
         return renderLoading();
@@ -475,6 +497,16 @@ const DocumentWindow = ({
             title={isSidebarCollapsed ? "展开引用区" : "收起引用区"}
           >
             {isSidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </WindowControlButton>
+          <WindowControlButton
+            size="small"
+            onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}
+            title={isAISidebarOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+            sx={{
+              backgroundColor: isAISidebarOpen ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
+            }}
+          >
+            <SmartToyIcon />
           </WindowControlButton>
         </Box>
         
