@@ -6,6 +6,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 
 /**
  * 创建登录限流中间件
@@ -62,6 +63,38 @@ const login = async (req, res, next) => {
       });
     }
 
+    // 获取或生成管理员用户ID（必须是有效的ObjectId格式）
+    let adminUserId = process.env.ADMIN_USER_ID;
+    
+    // 如果没有配置ADMIN_USER_ID，则基于用户名和JWT_SECRET生成一个稳定的ObjectId
+    if (!adminUserId) {
+      // 使用SHA256哈希用户名和JWT_SECRET，然后取前24个字符作为ObjectId
+      const hash = crypto.createHash('sha256')
+        .update(envUsername + jwtSecret)
+        .digest('hex');
+      adminUserId = hash.substring(0, 24);
+      
+      // 验证生成的ID是否为有效的24位十六进制字符串
+      if (!/^[a-f0-9]{24}$/i.test(adminUserId)) {
+        console.error('生成的管理员用户ID格式无效');
+        return res.status(500).json({
+          success: false,
+          message: '服务器配置错误：无法生成有效的用户ID'
+        });
+      }
+      
+      console.log('基于环境变量生成管理员用户ID:', adminUserId);
+    } else {
+      // 验证配置的ADMIN_USER_ID是否为有效的ObjectId格式
+      if (!/^[a-f0-9]{24}$/i.test(adminUserId)) {
+        console.error('配置的ADMIN_USER_ID格式无效:', adminUserId);
+        return res.status(500).json({
+          success: false,
+          message: '服务器配置错误：ADMIN_USER_ID必须是24位十六进制字符串'
+        });
+      }
+    }
+
     // 验证用户名
     if (username !== envUsername) {
       return res.status(401).json({
@@ -90,7 +123,7 @@ const login = async (req, res, next) => {
     // 生成 JWT Token
     const now = Date.now();
     const payload = {
-      id: 1, // 简单的固定ID，因为只有一个管理员用户
+      id: adminUserId, // 使用有效的ObjectId格式作为用户ID
       username: envUsername,
       loginTime: now
     };

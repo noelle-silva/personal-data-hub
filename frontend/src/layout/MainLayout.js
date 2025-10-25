@@ -71,7 +71,7 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 
 // 样式化的主容器
 const MainContainer = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: 'transparent',
   transition: 'background-color 0.3s ease',
   minHeight: '100vh',
   display: 'flex',

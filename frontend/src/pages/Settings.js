@@ -27,6 +27,7 @@ import {
   Select,
   MenuItem,
   Slider,
+  CircularProgress,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -48,6 +49,8 @@ import {
   Cloud as CloudIcon,
   Key as KeyIcon,
   Language as LanguageIcon,
+  Wallpaper as WallpaperIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useThemeContext } from '../contexts/ThemeContext';
 import { useSelector, useDispatch } from 'react-redux';
@@ -70,7 +73,10 @@ import {
   toggleCustomPages,
   toggleCustomPageVisibility,
 } from '../store/settingsSlice';
+import { logout, selectUser, selectAuthLoading } from '../store/authSlice';
 import aiService from '../services/ai';
+import WallpaperUpload from '../components/WallpaperUpload';
+import WallpaperList from '../components/WallpaperList';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -99,11 +105,14 @@ const Settings = () => {
   const interactiveTestEnabled = useSelector(selectInteractiveTestEnabled);
   const customPagesEnabled = useSelector(selectCustomPagesEnabled);
   const customPagesVisibility = useSelector(selectCustomPagesVisibility);
+  const user = useSelector(selectUser);
+  const authLoading = useSelector(selectAuthLoading);
   
   // 本地状态
   const [newPageName, setNewPageName] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   
   // AI角色相关状态
   const [roles, setRoles] = useState([]);
@@ -528,6 +537,27 @@ const Settings = () => {
     }));
   };
 
+  // 打开退出登录确认对话框
+  const openLogoutConfirm = () => {
+    setLogoutConfirmOpen(true);
+  };
+
+  // 关闭退出登录确认对话框
+  const closeLogoutConfirm = () => {
+    setLogoutConfirmOpen(false);
+  };
+
+  // 处理退出登录
+  const handleLogout = () => {
+    dispatch(logout()).then((action) => {
+      if (!action.error) {
+        // 退出成功，重定向到登录页面
+        navigate('/登录');
+      }
+    });
+    closeLogoutConfirm();
+  };
+
   // 组件挂载时加载AI配置
   useEffect(() => {
     loadAIConfig();
@@ -616,6 +646,21 @@ const Settings = () => {
               />
             </ListItem>
           </List>
+        </CardContent>
+      </SettingsCard>
+
+      {/* 壁纸管理 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            壁纸管理
+          </Typography>
+          
+          {/* 壁纸上传组件 */}
+          <WallpaperUpload />
+          
+          {/* 壁纸列表组件 */}
+          <WallpaperList />
         </CardContent>
       </SettingsCard>
 
@@ -1064,6 +1109,45 @@ const Settings = () => {
         </CardContent>
       </SettingsCard>
 
+      {/* 账户管理 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            账户管理
+          </Typography>
+          <List sx={{ p: 0 }}>
+            <ListItem>
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="当前用户"
+                secondary={user ? user.username : '未知用户'}
+              />
+            </ListItem>
+            <Divider />
+            <ListItem>
+              <ListItemIcon>
+                <LogoutIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="退出登录"
+                secondary="退出当前账户并返回登录页面"
+              />
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<LogoutIcon />}
+                onClick={openLogoutConfirm}
+                disabled={authLoading}
+              >
+                退出登录
+              </Button>
+            </ListItem>
+          </List>
+        </CardContent>
+      </SettingsCard>
+
       {/* 开发者信息 */}
       <SettingsCard>
         <CardContent>
@@ -1445,6 +1529,33 @@ const Settings = () => {
             disabled={aiConfigLoading}
           >
             {aiConfigLoading ? '删除中...' : '确认删除'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 退出登录确认对话框 */}
+      <Dialog open={logoutConfirmOpen} onClose={closeLogoutConfirm}>
+        <DialogTitle>确认退出登录</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            确定要退出登录吗？
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            退出后需要重新输入用户名和密码才能访问系统。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeLogoutConfirm} disabled={authLoading}>
+            取消
+          </Button>
+          <Button
+            onClick={handleLogout}
+            color="error"
+            variant="contained"
+            disabled={authLoading}
+            startIcon={authLoading ? <CircularProgress size={20} color="inherit" /> : <LogoutIcon />}
+          >
+            {authLoading ? '退出中...' : '确认退出'}
           </Button>
         </DialogActions>
       </Dialog>

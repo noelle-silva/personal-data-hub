@@ -9,6 +9,7 @@ import windowsReducer from './windowsSlice';
 import authReducer from './authSlice';
 import customPagesReducer from './customPagesSlice';
 import settingsReducer from './settingsSlice';
+import wallpaperReducer from './wallpaperSlice';
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     auth: authReducer,
     customPages: customPagesReducer,
     settings: settingsReducer,
+    wallpaper: wallpaperReducer,
   },
 });
 
