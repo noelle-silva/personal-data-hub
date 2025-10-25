@@ -92,7 +92,7 @@ class ThemesService {
    * @returns {Array<String>} 变体列表
    */
   getAvailableVariants() {
-    return ['tonalSpot', 'vibrant', 'expressive', 'fidelity'];
+    return ['tonalSpot', 'vibrant', 'expressive', 'fidelity', 'muted'];
   }
 
   /**
@@ -105,7 +105,8 @@ class ThemesService {
       tonalSpot: '柔和色调',
       vibrant: '鲜艳活力',
       expressive: '表现力强',
-      fidelity: '忠实原色'
+      fidelity: '忠实原色',
+      muted: '低饱和柔和'
     };
     return variantNames[variant] || variant;
   }

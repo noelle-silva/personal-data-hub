@@ -124,8 +124,8 @@ class ThemeColorService {
       // 生成核心调色板
       const corePalette = CorePalette.of(sourceColorArgb);
 
-      // 生成4种变体的主题方案
-      const variants = ['tonalSpot', 'vibrant', 'expressive', 'fidelity'];
+      // 生成5种变体的主题方案
+      const variants = ['tonalSpot', 'vibrant', 'expressive', 'fidelity', 'muted'];
       const schemes = {};
 
       // 使用正确的Material Color Utilities API生成不同变体的主题
@@ -172,6 +172,14 @@ class ThemeColorService {
           dark: this.schemeToTokens(fidelityTheme.schemes.dark)
         };
         
+        // Muted - 低饱和柔和变体，饱和度降至0.25
+        const mutedSourceColor = this.adjustColorSaturation(sourceColorArgb, 0.25);
+        const mutedTheme = themeFromSourceColor(mutedSourceColor);
+        schemes.muted = {
+          light: this.schemeToTokens(mutedTheme.schemes.light),
+          dark: this.schemeToTokens(mutedTheme.schemes.dark)
+        };
+        
         console.log('成功生成所有变体的主题方案');
       } catch (schemeError) {
         console.error('生成主题方案时出错，使用默认方案:', schemeError);
@@ -201,6 +209,10 @@ class ThemeColorService {
             // 调整亮度和对比度
             adjustedLightScheme = this.adjustSchemeBrightness(lightScheme, 0.85);
             adjustedDarkScheme = this.adjustSchemeBrightness(darkScheme, 0.85);
+          } else if (variant === 'muted') {
+            // 低饱和柔和变体：饱和度降至0.25
+            adjustedLightScheme = this.adjustSchemeSaturation(lightScheme, 0.25);
+            adjustedDarkScheme = this.adjustSchemeSaturation(darkScheme, 0.25);
           }
           
           schemes[variant] = {
@@ -239,6 +251,24 @@ class ThemeColorService {
       const currentFilePath = path.join(this.getColorThemeDir(), currentFileName);
       await fs.writeFile(currentFilePath, JSON.stringify(themeData, null, 2));
 
+      // 记录关键 token 采样，确保不会出现全黑
+      console.log('主题颜色生成完成，关键颜色采样:');
+      console.log('- 种子色:', sourceColorHex);
+      console.log('- Light 模式关键色:', {
+        primary: schemes.tonalSpot.light.primary,
+        background: schemes.tonalSpot.light.background,
+        surface: schemes.tonalSpot.light.surface,
+        onBackground: schemes.tonalSpot.light.onBackground,
+        onSurface: schemes.tonalSpot.light.onSurface
+      });
+      console.log('- Dark 模式关键色:', {
+        primary: schemes.tonalSpot.dark.primary,
+        background: schemes.tonalSpot.dark.background,
+        surface: schemes.tonalSpot.dark.surface,
+        onBackground: schemes.tonalSpot.dark.onBackground,
+        onSurface: schemes.tonalSpot.dark.onSurface
+      });
+      
       console.log(`主题颜色生成成功，保存到: ${filePath} 和 ${currentFilePath}`);
       return themeData;
     } catch (error) {
@@ -547,7 +577,7 @@ class ThemeColorService {
    */
   static adjustSchemeSaturation(scheme, factor) {
     try {
-      const adjustedScheme = { ...scheme };
+      const adjustedScheme = this.cloneScheme(scheme);
       
       // 调整主要颜色的饱和度
       if (adjustedScheme.primary) {
@@ -575,7 +605,7 @@ class ThemeColorService {
    */
   static adjustSchemeHue(scheme, degrees) {
     try {
-      const adjustedScheme = { ...scheme };
+      const adjustedScheme = this.cloneScheme(scheme);
       
       // 调整主要颜色的色相
       if (adjustedScheme.primary) {
@@ -603,7 +633,7 @@ class ThemeColorService {
    */
   static adjustSchemeBrightness(scheme, factor) {
     try {
-      const adjustedScheme = { ...scheme };
+      const adjustedScheme = this.cloneScheme(scheme);
       
       // 调整主要颜色的亮度
       if (adjustedScheme.primary) {
@@ -619,6 +649,40 @@ class ThemeColorService {
       return adjustedScheme;
     } catch (error) {
       console.error('调整方案亮度失败:', error);
+      return scheme;
+    }
+  }
+
+  /**
+   * 深度克隆 Material Scheme 对象
+   * @param {Object} scheme - Material Scheme对象
+   * @returns {Object} 克隆后的 Scheme 对象
+   */
+  static cloneScheme(scheme) {
+    try {
+      // Material Scheme 对象包含所有颜色属性，需要完整复制
+      const clonedScheme = {};
+      
+      // 复制所有已知的颜色属性
+      const colorProperties = [
+        'primary', 'onPrimary', 'primaryContainer', 'onPrimaryContainer',
+        'secondary', 'onSecondary', 'secondaryContainer', 'onSecondaryContainer',
+        'tertiary', 'onTertiary', 'tertiaryContainer', 'onTertiaryContainer',
+        'error', 'onError', 'errorContainer', 'onErrorContainer',
+        'background', 'onBackground', 'surface', 'onSurface',
+        'surfaceVariant', 'onSurfaceVariant', 'outline', 'outlineVariant',
+        'shadow', 'scrim', 'inverseSurface', 'inverseOnSurface', 'inversePrimary'
+      ];
+      
+      colorProperties.forEach(prop => {
+        if (scheme[prop] !== undefined) {
+          clonedScheme[prop] = scheme[prop];
+        }
+      });
+      
+      return clonedScheme;
+    } catch (error) {
+      console.error('克隆 Scheme 对象失败:', error);
       return scheme;
     }
   }

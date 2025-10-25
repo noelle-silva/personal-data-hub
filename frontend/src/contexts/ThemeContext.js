@@ -121,20 +121,27 @@ export const ThemeProvider = ({ children }) => {
     if (dynamicColorsEnabled && themeColors && themeColors.schemes && themeColors.schemes[selectedVariant]) {
       try {
         const mdTokens = themeColors.schemes[selectedVariant][mode];
-        console.log(`创建动态主题，变体: ${selectedVariant}, 模式: ${mode}`, mdTokens);
-        const dynamicPalette = mdToMuiPalette(mdTokens, mode);
         
-        // 创建基础动态主题
-        const dynamicTheme = createTheme({
-          palette: dynamicPalette,
-          // 使用基于 palette 的组件样式覆盖
-          components: buildComponentsOverrides({ palette: dynamicPalette, mode }),
-          // 添加自定义颜色
-          customColors: buildCustomColors({ palette: dynamicPalette, mode })
-        });
-        
-        console.log('动态主题创建成功');
-        return dynamicTheme;
+        // 检查 mdTokens 的有效性，防止全黑问题
+        const isValidTokens = validateMdTokens(mdTokens);
+        if (!isValidTokens) {
+          console.warn(`动态主题 tokens 无效，回退到静态主题。变体: ${selectedVariant}, 模式: ${mode}`, mdTokens);
+        } else {
+          console.log(`创建动态主题，变体: ${selectedVariant}, 模式: ${mode}`, mdTokens);
+          const dynamicPalette = mdToMuiPalette(mdTokens, mode);
+          
+          // 创建基础动态主题
+          const dynamicTheme = createTheme({
+            palette: dynamicPalette,
+            // 使用基于 palette 的组件样式覆盖
+            components: buildComponentsOverrides({ palette: dynamicPalette, mode }),
+            // 添加自定义颜色
+            customColors: buildCustomColors({ palette: dynamicPalette, mode })
+          });
+          
+          console.log('动态主题创建成功');
+          return dynamicTheme;
+        }
       } catch (error) {
         console.error('创建动态主题失败:', error);
         // 失败时回退到静态主题
@@ -287,5 +294,40 @@ export const useThemeContext = () => {
   }
   return context;
 };
+
+/**
+ * 验证 mdTokens 的有效性
+ * @param {Object} mdTokens - Material Design 系统颜色 tokens
+ * @returns {Boolean} 是否有效
+ */
+function validateMdTokens(mdTokens) {
+  if (!mdTokens || typeof mdTokens !== 'object') {
+    return false;
+  }
+  
+  // 检查关键颜色是否全为黑色或缺失
+  const criticalColors = ['primary', 'background', 'surface', 'onBackground', 'onSurface'];
+  const blackCount = criticalColors.filter(color =>
+    !mdTokens[color] || mdTokens[color] === '#000000'
+  ).length;
+  
+  // 如果超过一半的关键颜色是黑色或缺失，认为无效
+  if (blackCount > criticalColors.length / 2) {
+    console.warn(`检测到 ${blackCount}/${criticalColors.length} 个关键颜色为黑色或缺失:`,
+      criticalColors.map(color => `${color}: ${mdTokens[color] || 'missing'}`));
+    return false;
+  }
+  
+  // 检查是否所有颜色都是黑色（全黑问题）
+  const allColors = Object.values(mdTokens);
+  const blackColorsCount = allColors.filter(color => color === '#000000').length;
+  
+  if (blackColorsCount > allColors.length * 0.8) { // 80%以上是黑色
+    console.warn(`检测到可能的颜色全黑问题: ${blackColorsCount}/${allColors.length} 个颜色为黑色`);
+    return false;
+  }
+  
+  return true;
+}
 
 export default ThemeContext;

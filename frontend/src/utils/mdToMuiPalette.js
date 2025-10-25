@@ -151,7 +151,10 @@ export function mdToMuiPalette(mdTokens, mode = 'light') {
  * @returns {String} 调整后的颜色
  */
 function adjustColor(color, amount) {
-  if (!color) return '#000000';
+  if (!color) {
+    console.warn('adjustColor: 颜色值为空，返回输入而非默认黑色');
+    return color; // 返回原始输入而不是默认黑色
+  }
   
   try {
     // 移除 # 前缀
