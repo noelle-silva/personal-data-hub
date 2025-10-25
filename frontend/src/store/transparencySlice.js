@@ -4,12 +4,23 @@ import transparencyService from '../services/transparency';
 // 异步thunk：获取所有透明度配置
 export const fetchAllTransparencyConfigs = createAsyncThunk(
   'transparency/fetchAllConfigs',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
       const response = await transparencyService.getAllConfigs();
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || '获取透明度配置失败');
+    }
+  },
+  {
+    // 防止并发重复请求的条件
+    condition: (_, { getState }) => {
+      const { transparency } = getState();
+      // 如果正在加载中，则跳过此次请求
+      if (transparency.loading) {
+        return false;
+      }
+      return true;
     }
   }
 );
