@@ -84,6 +84,7 @@ import {
   Refresh as RefreshIcon,
   Colorize as ColorizeIcon,
 } from '@mui/icons-material';
+import ThemePreviewBar from '../components/ThemePreviewBar';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -739,6 +740,13 @@ const Settings = () => {
               </>
             )}
           </List>
+        </CardContent>
+      </SettingsCard>
+
+      {/* 主题预览 */}
+      <SettingsCard>
+        <CardContent>
+          <ThemePreviewBar />
         </CardContent>
       </SettingsCard>
 

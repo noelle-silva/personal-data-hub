@@ -7,6 +7,7 @@ import { selectCurrentWallpaper, fetchCurrentWallpaper } from '../store/wallpape
 import themesService from '../services/themes';
 import { mdToMuiPalette } from '../utils/mdToMuiPalette';
 import { createTheme } from '@mui/material/styles';
+import { buildComponentsOverrides, buildCustomColors } from '../themeOverrides';
 
 // 创建主题上下文
 const ThemeContext = createContext();
@@ -74,8 +75,8 @@ const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => (
           '--md-sys-color-on-surface': theme.palette.customColors.onSurface,
           '--md-sys-color-surface-variant': theme.palette.surfaceVariant.main,
           '--md-sys-color-on-surface-variant': theme.palette.customColors.onSurfaceVariant,
-          '--md-sys-color-outline': theme.palette.outline,
-          '--md-sys-color-outline-variant': theme.palette.outlineVariant,
+          '--md-sys-color-outline': theme.palette.divider,
+          '--md-sys-color-outline-variant': theme.palette.border,
           '--md-sys-color-shadow': theme.palette.customColors.shadow || '#000000',
           '--md-sys-color-scrim': theme.palette.customColors.scrim || '#000000',
           '--md-sys-color-inverse-surface': theme.palette.customColors.inverseSurface || '#ffffff',
@@ -123,13 +124,13 @@ export const ThemeProvider = ({ children }) => {
         console.log(`创建动态主题，变体: ${selectedVariant}, 模式: ${mode}`, mdTokens);
         const dynamicPalette = mdToMuiPalette(mdTokens, mode);
         
-        // 创建动态主题，保留原有的组件样式覆盖
-        const baseTheme = mode === 'light' ? lightTheme : darkTheme;
+        // 创建基础动态主题
         const dynamicTheme = createTheme({
-          ...baseTheme,
           palette: dynamicPalette,
-          // 保留原有的组件样式覆盖
-          components: baseTheme.components
+          // 使用基于 palette 的组件样式覆盖
+          components: buildComponentsOverrides({ palette: dynamicPalette, mode }),
+          // 添加自定义颜色
+          customColors: buildCustomColors({ palette: dynamicPalette, mode })
         });
         
         console.log('动态主题创建成功');
@@ -140,9 +141,16 @@ export const ThemeProvider = ({ children }) => {
       }
     }
     
-    // 回退到静态主题
+    // 回退到静态主题，但也要应用组件样式构建器
     console.log('使用静态主题，模式:', mode);
-    return mode === 'light' ? lightTheme : darkTheme;
+    const baseTheme = mode === 'light' ? lightTheme : darkTheme;
+    return createTheme({
+      ...baseTheme,
+      // 使用基于 palette 的组件样式覆盖替换静态覆盖
+      components: buildComponentsOverrides(baseTheme),
+      // 确保自定义颜色也正确设置
+      customColors: buildCustomColors(baseTheme)
+    });
   }, [mode, dynamicColorsEnabled, themeColors, selectedVariant]);
 
   // 加载主题颜色数据

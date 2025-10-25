@@ -130,37 +130,46 @@ class ThemeColorService {
 
       // 使用正确的Material Color Utilities API生成不同变体的主题
       try {
-        // 使用 themeFromSourceColor 生成主题，这是推荐的方式
-        const theme = themeFromSourceColor(sourceColorArgb);
+        // 使用 themeFromSourceColor 生成基础主题
+        const baseTheme = themeFromSourceColor(sourceColorArgb);
         console.log('成功生成基础主题');
         
         // 检查主题对象是否有效
-        if (!theme || !theme.schemes || !theme.schemes.light || !theme.schemes.dark) {
+        if (!baseTheme || !baseTheme.schemes || !baseTheme.schemes.light || !baseTheme.schemes.dark) {
           throw new Error('生成的主题对象无效');
         }
         
-        // 获取不同变体的方案
+        // 获取基础方案
         schemes.tonalSpot = {
-          light: this.schemeToTokens(theme.schemes.light),
-          dark: this.schemeToTokens(theme.schemes.dark)
+          light: this.schemeToTokens(baseTheme.schemes.light),
+          dark: this.schemeToTokens(baseTheme.schemes.dark)
         };
 
-        // 对于其他变体，我们可以使用相同的基础方案，但在实际应用中
-        // Material Color Utilities 可能不支持所有变体，这里我们使用相同的方案
-        // 但保留变体结构以便将来扩展
+        // 为不同变体创建不同的颜色方案
+        // 通过调整源颜色的饱和度和亮度来创建变体
+        
+        // Vibrant - 大幅增加饱和度，让颜色更鲜艳
+        const vibrantSourceColor = this.adjustColorSaturation(sourceColorArgb, 1.5);
+        const vibrantTheme = themeFromSourceColor(vibrantSourceColor);
         schemes.vibrant = {
-          light: this.schemeToTokens(theme.schemes.light),
-          dark: this.schemeToTokens(theme.schemes.dark)
+          light: this.schemeToTokens(vibrantTheme.schemes.light),
+          dark: this.schemeToTokens(vibrantTheme.schemes.dark)
         };
-
+        
+        // Expressive - 大幅调整色相，创造更明显的色彩变化
+        const expressiveSourceColor = this.adjustColorHue(sourceColorArgb, 30);
+        const expressiveTheme = themeFromSourceColor(expressiveSourceColor);
         schemes.expressive = {
-          light: this.schemeToTokens(theme.schemes.light),
-          dark: this.schemeToTokens(theme.schemes.dark)
+          light: this.schemeToTokens(expressiveTheme.schemes.light),
+          dark: this.schemeToTokens(expressiveTheme.schemes.dark)
         };
-
+        
+        // Fidelity - 调整亮度和对比度，保持原色但增强可读性
+        const fidelitySourceColor = this.adjustColorBrightness(sourceColorArgb, 0.85);
+        const fidelityTheme = themeFromSourceColor(fidelitySourceColor);
         schemes.fidelity = {
-          light: this.schemeToTokens(theme.schemes.light),
-          dark: this.schemeToTokens(theme.schemes.dark)
+          light: this.schemeToTokens(fidelityTheme.schemes.light),
+          dark: this.schemeToTokens(fidelityTheme.schemes.dark)
         };
         
         console.log('成功生成所有变体的主题方案');
@@ -175,10 +184,28 @@ class ThemeColorService {
           throw new Error('无法生成回退主题方案');
         }
         
+        // 即使在回退模式下，也尝试创建不同的变体
         variants.forEach(variant => {
+          let adjustedLightScheme = lightScheme;
+          let adjustedDarkScheme = darkScheme;
+          
+          if (variant === 'vibrant') {
+            // 大幅增加饱和度
+            adjustedLightScheme = this.adjustSchemeSaturation(lightScheme, 1.5);
+            adjustedDarkScheme = this.adjustSchemeSaturation(darkScheme, 1.5);
+          } else if (variant === 'expressive') {
+            // 大幅调整色相
+            adjustedLightScheme = this.adjustSchemeHue(lightScheme, 30);
+            adjustedDarkScheme = this.adjustSchemeHue(darkScheme, 30);
+          } else if (variant === 'fidelity') {
+            // 调整亮度和对比度
+            adjustedLightScheme = this.adjustSchemeBrightness(lightScheme, 0.85);
+            adjustedDarkScheme = this.adjustSchemeBrightness(darkScheme, 0.85);
+          }
+          
           schemes[variant] = {
-            light: this.schemeToTokens(lightScheme),
-            dark: this.schemeToTokens(darkScheme)
+            light: this.schemeToTokens(adjustedLightScheme),
+            dark: this.schemeToTokens(adjustedDarkScheme)
           };
         });
         
@@ -313,6 +340,286 @@ class ThemeColorService {
     } catch (error) {
       console.error('删除壁纸主题颜色文件失败:', error);
       return false;
+    }
+  }
+
+  /**
+   * 调整颜色的饱和度
+   * @param {Number} argbColor - ARGB颜色值
+   * @param {Number} factor - 饱和度因子 (1.0为原始值，>1.0增加饱和度，<1.0降低饱和度)
+   * @returns {Number} 调整后的ARGB颜色值
+   */
+  static adjustColorSaturation(argbColor, factor) {
+    try {
+      // 提取RGBA分量
+      const a = (argbColor >> 24) & 0xff;
+      const r = (argbColor >> 16) & 0xff;
+      const g = (argbColor >> 8) & 0xff;
+      const b = argbColor & 0xff;
+      
+      // 转换为HSL
+      const max = Math.max(r, g, b) / 255;
+      const min = Math.min(r, g, b) / 255;
+      const l = (max + min) / 2;
+      
+      let h, s;
+      
+      if (max === min) {
+        h = s = 0; // 灰色
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max * 255) {
+          case r:
+            h = ((g / 255 - b / 255) / d + (g < b ? 6 : 0)) / 6;
+            break;
+          case g:
+            h = ((b / 255 - r / 255) / d + 2) / 6;
+            break;
+          case b:
+            h = ((r / 255 - g / 255) / d + 4) / 6;
+            break;
+        }
+      }
+      
+      // 调整饱和度
+      s = Math.max(0, Math.min(1, s * factor));
+      
+      // 转换回RGB
+      const { r: newR, g: newG, b: newB } = this.hslToRgb(h, s, l);
+      
+      // 转换回ARGB
+      return (a << 24) | (Math.round(newR * 255) << 16) | (Math.round(newG * 255) << 8) | Math.round(newB * 255);
+    } catch (error) {
+      console.error('调整颜色饱和度失败:', error);
+      return argbColor;
+    }
+  }
+
+  /**
+   * 调整颜色的色相
+   * @param {Number} argbColor - ARGB颜色值
+   * @param {Number} degrees - 色相调整角度 (0-360)
+   * @returns {Number} 调整后的ARGB颜色值
+   */
+  static adjustColorHue(argbColor, degrees) {
+    try {
+      // 提取RGBA分量
+      const a = (argbColor >> 24) & 0xff;
+      const r = (argbColor >> 16) & 0xff;
+      const g = (argbColor >> 8) & 0xff;
+      const b = argbColor & 0xff;
+      
+      // 转换为HSL
+      const max = Math.max(r, g, b) / 255;
+      const min = Math.min(r, g, b) / 255;
+      const l = (max + min) / 2;
+      
+      let h, s;
+      
+      if (max === min) {
+        h = s = 0; // 灰色，调整色相没有意义
+        return argbColor;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max * 255) {
+          case r:
+            h = ((g / 255 - b / 255) / d + (g < b ? 6 : 0)) / 6;
+            break;
+          case g:
+            h = ((b / 255 - r / 255) / d + 2) / 6;
+            break;
+          case b:
+            h = ((r / 255 - g / 255) / d + 4) / 6;
+            break;
+        }
+      }
+      
+      // 调整色相
+      h = (h + degrees / 360) % 1;
+      if (h < 0) h += 1;
+      
+      // 转换回RGB
+      const { r: newR, g: newG, b: newB } = this.hslToRgb(h, s, l);
+      
+      // 转换回ARGB
+      return (a << 24) | (Math.round(newR * 255) << 16) | (Math.round(newG * 255) << 8) | Math.round(newB * 255);
+    } catch (error) {
+      console.error('调整颜色色相失败:', error);
+      return argbColor;
+    }
+  }
+
+  /**
+   * 调整颜色的亮度
+   * @param {Number} argbColor - ARGB颜色值
+   * @param {Number} factor - 亮度因子 (1.0为原始值，>1.0增加亮度，<1.0降低亮度)
+   * @returns {Number} 调整后的ARGB颜色值
+   */
+  static adjustColorBrightness(argbColor, factor) {
+    try {
+      // 提取RGBA分量
+      const a = (argbColor >> 24) & 0xff;
+      const r = (argbColor >> 16) & 0xff;
+      const g = (argbColor >> 8) & 0xff;
+      const b = argbColor & 0xff;
+      
+      // 转换为HSL
+      const max = Math.max(r, g, b) / 255;
+      const min = Math.min(r, g, b) / 255;
+      const l = (max + min) / 2;
+      
+      let h, s;
+      
+      if (max === min) {
+        h = s = 0; // 灰色
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max * 255) {
+          case r:
+            h = ((g / 255 - b / 255) / d + (g < b ? 6 : 0)) / 6;
+            break;
+          case g:
+            h = ((b / 255 - r / 255) / d + 2) / 6;
+            break;
+          case b:
+            h = ((r / 255 - g / 255) / d + 4) / 6;
+            break;
+        }
+      }
+      
+      // 调整亮度
+      const newL = Math.max(0, Math.min(1, l * factor));
+      
+      // 转换回RGB
+      const { r: newR, g: newG, b: newB } = this.hslToRgb(h, s, newL);
+      
+      // 转换回ARGB
+      return (a << 24) | (Math.round(newR * 255) << 16) | (Math.round(newG * 255) << 8) | Math.round(newB * 255);
+    } catch (error) {
+      console.error('调整颜色亮度失败:', error);
+      return argbColor;
+    }
+  }
+
+  /**
+   * HSL转RGB
+   * @param {Number} h - 色相 (0-1)
+   * @param {Number} s - 饱和度 (0-1)
+   * @param {Number} l - 亮度 (0-1)
+   * @returns {Object} RGB值 (0-1范围)
+   */
+  static hslToRgb(h, s, l) {
+    let r, g, b;
+
+    if (s === 0) {
+      r = g = b = l; // 灰色
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+
+    return { r, g, b };
+  }
+
+  /**
+   * 调整方案的饱和度
+   * @param {Object} scheme - Material Scheme对象
+   * @param {Number} factor - 饱和度因子
+   * @returns {Object} 调整后的方案
+   */
+  static adjustSchemeSaturation(scheme, factor) {
+    try {
+      const adjustedScheme = { ...scheme };
+      
+      // 调整主要颜色的饱和度
+      if (adjustedScheme.primary) {
+        adjustedScheme.primary = this.adjustColorSaturation(adjustedScheme.primary, factor);
+      }
+      if (adjustedScheme.secondary) {
+        adjustedScheme.secondary = this.adjustColorSaturation(adjustedScheme.secondary, factor);
+      }
+      if (adjustedScheme.tertiary) {
+        adjustedScheme.tertiary = this.adjustColorSaturation(adjustedScheme.tertiary, factor);
+      }
+      
+      return adjustedScheme;
+    } catch (error) {
+      console.error('调整方案饱和度失败:', error);
+      return scheme;
+    }
+  }
+
+  /**
+   * 调整方案的色相
+   * @param {Object} scheme - Material Scheme对象
+   * @param {Number} degrees - 色相调整角度
+   * @returns {Object} 调整后的方案
+   */
+  static adjustSchemeHue(scheme, degrees) {
+    try {
+      const adjustedScheme = { ...scheme };
+      
+      // 调整主要颜色的色相
+      if (adjustedScheme.primary) {
+        adjustedScheme.primary = this.adjustColorHue(adjustedScheme.primary, degrees);
+      }
+      if (adjustedScheme.secondary) {
+        adjustedScheme.secondary = this.adjustColorHue(adjustedScheme.secondary, degrees);
+      }
+      if (adjustedScheme.tertiary) {
+        adjustedScheme.tertiary = this.adjustColorHue(adjustedScheme.tertiary, degrees);
+      }
+      
+      return adjustedScheme;
+    } catch (error) {
+      console.error('调整方案色相失败:', error);
+      return scheme;
+    }
+  }
+
+  /**
+   * 调整方案的亮度
+   * @param {Object} scheme - Material Scheme对象
+   * @param {Number} factor - 亮度因子
+   * @returns {Object} 调整后的方案
+   */
+  static adjustSchemeBrightness(scheme, factor) {
+    try {
+      const adjustedScheme = { ...scheme };
+      
+      // 调整主要颜色的亮度
+      if (adjustedScheme.primary) {
+        adjustedScheme.primary = this.adjustColorBrightness(adjustedScheme.primary, factor);
+      }
+      if (adjustedScheme.secondary) {
+        adjustedScheme.secondary = this.adjustColorBrightness(adjustedScheme.secondary, factor);
+      }
+      if (adjustedScheme.tertiary) {
+        adjustedScheme.tertiary = this.adjustColorBrightness(adjustedScheme.tertiary, factor);
+      }
+      
+      return adjustedScheme;
+    } catch (error) {
+      console.error('调整方案亮度失败:', error);
+      return scheme;
     }
   }
 }
