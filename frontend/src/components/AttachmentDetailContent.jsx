@@ -34,7 +34,7 @@ import { styled, useTheme } from '@mui/material/styles';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { renderAsync } from 'docx-preview';
 import EpubViewer from './EpubViewer';
-import MarkdownSandboxRenderer from './MarkdownSandboxRenderer';
+import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   selectSelectedAttachment,
@@ -943,7 +943,7 @@ const AttachmentDetailContent = ({
                       maxHeight: 300,
                       overflow: 'auto'
                     }}>
-                      <MarkdownSandboxRenderer content={editForm.description} />
+                      <MarkdownInlineRenderer content={editForm.description} />
                     </Box>
                   </Box>
                 )}
@@ -958,7 +958,7 @@ const AttachmentDetailContent = ({
                     maxHeight: 300,
                     overflow: 'auto'
                   }}>
-                    <MarkdownSandboxRenderer content={attachment?.description || metadata?.description} />
+                    <MarkdownInlineRenderer content={attachment?.description || metadata?.description} />
                   </Box>
                 ) : (
                   <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
