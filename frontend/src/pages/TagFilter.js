@@ -109,10 +109,6 @@ const TagFilter = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const debounceTimerRef = useRef(null);
   
-  // 组件挂载时获取可用标签
-  useEffect(() => {
-    dispatch(fetchAvailableTags());
-  }, [dispatch]);
   
   // 监听错误状态变化
   useEffect(() => {
@@ -123,14 +119,14 @@ const TagFilter = () => {
   
   // 默认加载所有文档（当没有选择标签时）
   useEffect(() => {
-    if (selectedTags.length === 0) {
+    if (status === 'idle' && selectedTags.length === 0) {
       dispatch(fetchAllDocumentsPaged({
         page: 1,
         limit: 20,
         sort
       }));
     }
-  }, [sort, dispatch, selectedTags.length]); // 添加 selectedTags.length 依赖，确保清空标签时重新加载
+  }, [status, sort, dispatch, selectedTags.length]); // 添加 status 依赖，防止 StrictMode 重复触发
 
   // 防抖处理标签选择变化
   useEffect(() => {

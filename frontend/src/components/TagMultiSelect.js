@@ -14,7 +14,8 @@ import {
   selectAvailableTags,
   selectSelectedTags,
   setSelectedTags,
-  selectTagFilterStatus
+  selectTagFilterStatus,
+  selectTagsLoading
 } from '../store/tagFilterSlice';
 
 // 样式化的容器
@@ -36,16 +37,15 @@ const TagMultiSelect = () => {
   const availableTags = useSelector(selectAvailableTags);
   const selectedTags = useSelector(selectSelectedTags);
   const status = useSelector(selectTagFilterStatus);
+  const tagsLoading = useSelector(selectTagsLoading);
   
   // 本地状态：输入框的值
   const [inputValue, setInputValue] = useState('');
   
   // 组件挂载时获取可用标签
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchAvailableTags());
-    }
-  }, [dispatch, status]);
+    dispatch(fetchAvailableTags());
+  }, [dispatch]);
   
   // 处理标签选择变化
   const handleChange = (event, newValue) => {
@@ -114,7 +114,7 @@ const TagMultiSelect = () => {
         renderOption={renderOption}
         renderTags={renderTags}
         filterOptions={(options) => options} // 禁用内置过滤，使用自定义过滤
-        loading={status === 'loading'}
+        loading={tagsLoading}
         noOptionsText={inputValue ? '未找到匹配标签' : '暂无可用标签'}
         clearText="清除"
         closeText="关闭"

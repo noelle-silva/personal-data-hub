@@ -26,7 +26,6 @@ import QuoteTagMultiSelect from '../components/QuoteTagMultiSelect';
 import QuoteGrid from '../components/QuoteGrid';
 import QuoteFormModal from '../components/QuoteFormModal';
 import {
-  fetchAvailableQuoteTags,
   fetchQuotesByFilter,
   fetchAllQuotesPaged,
   selectSelectedQuoteTags,
@@ -126,10 +125,6 @@ const Quotes = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const debounceTimerRef = useRef(null);
   
-  // 组件挂载时获取可用标签
-  useEffect(() => {
-    dispatch(fetchAvailableQuoteTags());
-  }, [dispatch]);
   
   // 监听错误状态变化
   useEffect(() => {
@@ -140,14 +135,14 @@ const Quotes = () => {
   
   // 默认加载所有引用体（当没有搜索条件和标签时）
   useEffect(() => {
-    if (!query && selectedTags.length === 0) {
+    if (status === 'idle' && !query && selectedTags.length === 0) {
       dispatch(fetchAllQuotesPaged({
         page: 1,
         limit: 20,
         sort
       }));
     }
-  }, [sort, dispatch, query, selectedTags.length]); // 添加 query 和 selectedTags.length 依赖，确保清空时重新加载
+  }, [status, sort, dispatch, query, selectedTags.length]); // 添加 status 依赖，防止 StrictMode 重复触发
 
   // 防抖处理搜索查询变化
   useEffect(() => {

@@ -12,9 +12,32 @@ export const fetchAvailableTags = createAsyncThunk(
         name: tag._id,
         count: tag.count
       }));
-      return tags;
+      return { tags, fetchedAt: Date.now() };
     } catch (error) {
       return rejectWithValue(error.message || '获取标签列表失败');
+    }
+  },
+  {
+    // 防止并发重复请求的条件
+    condition: (_, { getState }) => {
+      const { tagFilter } = getState();
+      
+      // 如果正在加载中，则跳过此次请求
+      if (tagFilter.tagsLoading) {
+        return false;
+      }
+      
+      // 如果已有标签数据且未过期（5分钟缓存），则跳过请求
+      const CACHE_TTL = 5 * 60 * 1000; // 5分钟
+      if (
+        tagFilter.availableTags.length > 0 &&
+        tagFilter.tagsLastFetched &&
+        (Date.now() - tagFilter.tagsLastFetched < CACHE_TTL)
+      ) {
+        return false;
+      }
+      
+      return true;
     }
   }
 );
@@ -41,6 +64,24 @@ export const fetchByTags = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(error.message || '按标签搜索文档失败');
+    }
+  },
+  {
+    condition: ({ tags, mode, page, limit, sort }, { getState }) => {
+      const { tagFilter } = getState();
+      
+      // 如果正在加载列表，则跳过此次请求
+      if (tagFilter.listLoading) {
+        return false;
+      }
+      
+      // 检查是否是相同参数的请求
+      const requestKey = JSON.stringify({ tags, mode, page, limit, sort });
+      if (tagFilter.lastListRequest === requestKey) {
+        return false;
+      }
+      
+      return true;
     }
   }
 );
@@ -72,6 +113,24 @@ export const fetchAllDocumentsPaged = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message || '获取文档列表失败');
     }
+  },
+  {
+    condition: ({ page, limit, sort }, { getState }) => {
+      const { tagFilter } = getState();
+      
+      // 如果正在加载列表，则跳过此次请求
+      if (tagFilter.listLoading) {
+        return false;
+      }
+      
+      // 检查是否是相同参数的请求
+      const requestKey = JSON.stringify({ page, limit, sort });
+      if (tagFilter.lastListRequest === requestKey) {
+        return false;
+      }
+      
+      return true;
+    }
   }
 );
 
@@ -80,7 +139,7 @@ const initialState = {
   availableTags: [], // 可用标签列表 {name, count}[]
   selectedTags: [], // 当前选中的标签数组
   items: [], // 搜索结果文档列表
-  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于列表加载状态
   error: null,
   mode: 'all', // 匹配模式，固定为'all'
   sort: '-updatedAt', // 排序字段，默认按更新时间降序
@@ -92,7 +151,14 @@ const initialState = {
     hasMore: false,
     hasNext: false,
     hasPrev: false
-  }
+  },
+  // 标签加载状态（与列表状态分离）
+  tagsLoading: false,
+  tagsError: null,
+  tagsLastFetched: null, // 标签最后获取时间，用于缓存判断
+  // 列表请求并发控制
+  listLoading: false, // 列表加载状态，用于并发控制
+  lastListRequest: null // 上一次列表请求的参数，用于相同参数去重
 };
 
 const tagFilterSlice = createSlice({
@@ -141,25 +207,31 @@ const tagFilterSlice = createSlice({
     builder
       // 获取可用标签
       .addCase(fetchAvailableTags.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
+        state.tagsLoading = true;
+        state.tagsError = null;
       })
       .addCase(fetchAvailableTags.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.availableTags = action.payload;
-        state.error = null;
+        state.tagsLoading = false;
+        state.availableTags = action.payload.tags;
+        state.tagsLastFetched = action.payload.fetchedAt;
+        state.tagsError = null;
       })
       .addCase(fetchAvailableTags.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload;
+        state.tagsLoading = false;
+        state.tagsError = action.payload;
       })
       // 按标签搜索文档
-      .addCase(fetchByTags.pending, (state) => {
+      .addCase(fetchByTags.pending, (state, action) => {
         state.status = 'loading';
+        state.listLoading = true;
         state.error = null;
+        // 记录当前请求参数，用于去重
+        const { tags, mode, page, limit, sort } = action.meta.arg;
+        state.lastListRequest = JSON.stringify({ tags, mode, page, limit, sort });
       })
       .addCase(fetchByTags.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.listLoading = false;
         const { items, pagination, isFirstPage } = action.payload;
         
         if (isFirstPage) {
@@ -172,18 +244,28 @@ const tagFilterSlice = createSlice({
         
         state.pagination = pagination;
         state.error = null;
+        // 清除最后请求参数，允许相同参数的下次请求
+        state.lastListRequest = null;
       })
       .addCase(fetchByTags.rejected, (state, action) => {
         state.status = 'failed';
+        state.listLoading = false;
         state.error = action.payload;
+        // 清除最后请求参数，允许重试
+        state.lastListRequest = null;
       })
       // 获取所有文档（分页）
-      .addCase(fetchAllDocumentsPaged.pending, (state) => {
+      .addCase(fetchAllDocumentsPaged.pending, (state, action) => {
         state.status = 'loading';
+        state.listLoading = true;
         state.error = null;
+        // 记录当前请求参数，用于去重
+        const { page, limit, sort } = action.meta.arg;
+        state.lastListRequest = JSON.stringify({ page, limit, sort });
       })
       .addCase(fetchAllDocumentsPaged.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.listLoading = false;
         const { items, pagination, isFirstPage } = action.payload;
         
         if (isFirstPage) {
@@ -196,10 +278,15 @@ const tagFilterSlice = createSlice({
         
         state.pagination = pagination;
         state.error = null;
+        // 清除最后请求参数，允许相同参数的下次请求
+        state.lastListRequest = null;
       })
       .addCase(fetchAllDocumentsPaged.rejected, (state, action) => {
         state.status = 'failed';
+        state.listLoading = false;
         state.error = action.payload;
+        // 清除最后请求参数，允许重试
+        state.lastListRequest = null;
       });
   },
 });
@@ -223,5 +310,10 @@ export const selectTagFilterMode = (state) => state.tagFilter.mode;
 export const selectTagFilterSort = (state) => state.tagFilter.sort;
 export const selectTagFilterPagination = (state) => state.tagFilter.pagination;
 export const selectTagFilterHasMore = (state) => state.tagFilter.pagination.hasMore;
+
+// 新增：标签相关 selectors
+export const selectTagsLoading = (state) => state.tagFilter.tagsLoading;
+export const selectTagsError = (state) => state.tagFilter.tagsError;
+export const selectTagsLastFetched = (state) => state.tagFilter.tagsLastFetched;
 
 export default tagFilterSlice.reducer;

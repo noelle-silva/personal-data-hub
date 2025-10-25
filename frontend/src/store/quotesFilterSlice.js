@@ -12,9 +12,32 @@ export const fetchAvailableQuoteTags = createAsyncThunk(
         name: tag._id,
         count: tag.count
       }));
-      return tags;
+      return { tags, fetchedAt: Date.now() };
     } catch (error) {
       return rejectWithValue(error.message || '获取引用体标签列表失败');
+    }
+  },
+  {
+    // 防止并发重复请求的条件
+    condition: (_, { getState }) => {
+      const { quotesFilter } = getState();
+      
+      // 如果正在加载中，则跳过此次请求
+      if (quotesFilter.tagsLoading) {
+        return false;
+      }
+      
+      // 如果已有标签数据且未过期（5分钟缓存），则跳过请求
+      const CACHE_TTL = 5 * 60 * 1000; // 5分钟
+      if (
+        quotesFilter.availableTags.length > 0 &&
+        quotesFilter.tagsLastFetched &&
+        (Date.now() - quotesFilter.tagsLastFetched < CACHE_TTL)
+      ) {
+        return false;
+      }
+      
+      return true;
     }
   }
 );
@@ -49,6 +72,25 @@ export const fetchQuotesByFilter = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message || '搜索引用体失败');
     }
+  },
+  {
+    condition: (args, { getState }) => {
+      const { quotesFilter } = getState();
+      
+      // 如果正在加载列表，则跳过此次请求
+      if (quotesFilter.listLoading) {
+        return false;
+      }
+      
+      // 检查是否是相同参数的请求
+      const { query, tags, mode, page, limit, sort } = args;
+      const requestKey = JSON.stringify({ query, tags, mode, page, limit, sort });
+      if (quotesFilter.lastListRequest === requestKey) {
+        return false;
+      }
+      
+      return true;
+    }
   }
 );
 
@@ -79,6 +121,25 @@ export const fetchAllQuotesPaged = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message || '获取引用体列表失败');
     }
+  },
+  {
+    condition: (args, { getState }) => {
+      const { quotesFilter } = getState();
+      
+      // 如果正在加载列表，则跳过此次请求
+      if (quotesFilter.listLoading) {
+        return false;
+      }
+      
+      // 检查是否是相同参数的请求
+      const { page, limit, sort } = args;
+      const requestKey = JSON.stringify({ page, limit, sort });
+      if (quotesFilter.lastListRequest === requestKey) {
+        return false;
+      }
+      
+      return true;
+    }
   }
 );
 
@@ -88,7 +149,7 @@ const initialState = {
   selectedTags: [], // 当前选中的标签数组
   query: '', // 搜索关键词
   items: [], // 搜索结果引用体列表
-  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于列表加载状态
   error: null,
   mode: 'all', // 匹配模式，固定为'all'
   sort: '-updatedAt', // 排序字段，默认按更新时间降序
@@ -100,7 +161,14 @@ const initialState = {
     hasMore: false,
     hasNext: false,
     hasPrev: false
-  }
+  },
+  // 标签加载状态（与列表状态分离）
+  tagsLoading: false,
+  tagsError: null,
+  tagsLastFetched: null, // 标签最后获取时间，用于缓存判断
+  // 列表请求并发控制
+  listLoading: false, // 列表加载状态，用于并发控制
+  lastListRequest: null // 上一次列表请求的参数，用于相同参数去重
 };
 
 const quotesFilterSlice = createSlice({
@@ -153,25 +221,31 @@ const quotesFilterSlice = createSlice({
     builder
       // 获取可用标签
       .addCase(fetchAvailableQuoteTags.pending, (state) => {
-        state.status = 'loading';
-        state.error = null;
+        state.tagsLoading = true;
+        state.tagsError = null;
       })
       .addCase(fetchAvailableQuoteTags.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.availableTags = action.payload;
-        state.error = null;
+        state.tagsLoading = false;
+        state.availableTags = action.payload.tags;
+        state.tagsLastFetched = action.payload.fetchedAt;
+        state.tagsError = null;
       })
       .addCase(fetchAvailableQuoteTags.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload;
+        state.tagsLoading = false;
+        state.tagsError = action.payload;
       })
       // 复合搜索引用体
-      .addCase(fetchQuotesByFilter.pending, (state) => {
+      .addCase(fetchQuotesByFilter.pending, (state, action) => {
         state.status = 'loading';
+        state.listLoading = true;
         state.error = null;
+        // 记录当前请求参数，用于去重
+        const { query, tags, mode, page, limit, sort } = action.meta.arg;
+        state.lastListRequest = JSON.stringify({ query, tags, mode, page, limit, sort });
       })
       .addCase(fetchQuotesByFilter.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.listLoading = false;
         const { items, pagination, isFirstPage } = action.payload;
         
         if (isFirstPage) {
@@ -184,18 +258,28 @@ const quotesFilterSlice = createSlice({
         
         state.pagination = pagination;
         state.error = null;
+        // 清除最后请求参数，允许相同参数的下次请求
+        state.lastListRequest = null;
       })
       .addCase(fetchQuotesByFilter.rejected, (state, action) => {
         state.status = 'failed';
+        state.listLoading = false;
         state.error = action.payload;
+        // 清除最后请求参数，允许重试
+        state.lastListRequest = null;
       })
       // 获取所有引用体（分页）
-      .addCase(fetchAllQuotesPaged.pending, (state) => {
+      .addCase(fetchAllQuotesPaged.pending, (state, action) => {
         state.status = 'loading';
+        state.listLoading = true;
         state.error = null;
+        // 记录当前请求参数，用于去重
+        const { page, limit, sort } = action.meta.arg;
+        state.lastListRequest = JSON.stringify({ page, limit, sort });
       })
       .addCase(fetchAllQuotesPaged.fulfilled, (state, action) => {
         state.status = 'succeeded';
+        state.listLoading = false;
         const { items, pagination, isFirstPage } = action.payload;
         
         if (isFirstPage) {
@@ -208,10 +292,15 @@ const quotesFilterSlice = createSlice({
         
         state.pagination = pagination;
         state.error = null;
+        // 清除最后请求参数，允许相同参数的下次请求
+        state.lastListRequest = null;
       })
       .addCase(fetchAllQuotesPaged.rejected, (state, action) => {
         state.status = 'failed';
+        state.listLoading = false;
         state.error = action.payload;
+        // 清除最后请求参数，允许重试
+        state.lastListRequest = null;
       });
   },
 });
@@ -237,5 +326,10 @@ export const selectQuoteFilterMode = (state) => state.quotesFilter.mode;
 export const selectQuoteFilterSort = (state) => state.quotesFilter.sort;
 export const selectQuoteFilterPagination = (state) => state.quotesFilter.pagination;
 export const selectQuoteFilterHasMore = (state) => state.quotesFilter.pagination.hasMore;
+
+// 新增：标签相关 selectors
+export const selectQuoteTagsLoading = (state) => state.quotesFilter.tagsLoading;
+export const selectQuoteTagsError = (state) => state.quotesFilter.tagsError;
+export const selectQuoteTagsLastFetched = (state) => state.quotesFilter.tagsLastFetched;
 
 export default quotesFilterSlice.reducer;
