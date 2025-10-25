@@ -21,6 +21,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border}`,
   cursor: 'pointer',
+  opacity: 'var(--transparency-cards, 1)',
   '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: theme.shadows[8],

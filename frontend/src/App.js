@@ -20,6 +20,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { restoreAuth, selectAttachmentToken } from './store/authSlice';
 import { fetchAttachmentConfig } from './store/attachmentsSlice';
 import { fetchAllPages } from './store/customPagesSlice';
+import { TransparencyProvider } from './contexts/TransparencyContext';
 
 function App() {
   const dispatch = useDispatch();
@@ -40,7 +41,8 @@ function App() {
   }, [dispatch, attachmentToken]);
 
   return (
-    <Routes>
+    <TransparencyProvider>
+      <Routes>
       {/* 登录页面 - 不需要认证 */}
       <Route path="/登录" element={<Login />} />
       
@@ -64,7 +66,8 @@ function App() {
         <Route path="/自定义/:name" element={<CustomPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
-    </Routes>
+      </Routes>
+    </TransparencyProvider>
   );
 }
 

@@ -60,6 +60,7 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
+  opacity: 'var(--transparency-app-bar, 1)',
 }));
 
 // 样式化的工具栏
@@ -488,6 +489,7 @@ const MainLayout = () => {
                 boxSizing: 'border-box',
                 width: drawerWidth,
                 borderRight: `1px solid ${theme.palette.border}`,
+                opacity: 'var(--transparency-sidebar, 1)',
               },
             }}
           >
@@ -512,6 +514,7 @@ const MainLayout = () => {
                 width: drawerWidth,
                 boxSizing: 'border-box',
                 borderRight: `1px solid ${theme.palette.border}`,
+                opacity: 'var(--transparency-sidebar, 1)',
               },
             }}
             open

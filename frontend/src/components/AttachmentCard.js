@@ -39,6 +39,7 @@ const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: 20,
   transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
   cursor: 'pointer',
+  opacity: 'var(--transparency-cards, 1)',
   '&:hover': {
     transform: 'translateY(-4px)',
     boxShadow: theme.shadows[8],

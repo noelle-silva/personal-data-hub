@@ -10,6 +10,7 @@ import authReducer from './authSlice';
 import customPagesReducer from './customPagesSlice';
 import settingsReducer from './settingsSlice';
 import wallpaperReducer from './wallpaperSlice';
+import transparencyReducer from './transparencySlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     customPages: customPagesReducer,
     settings: settingsReducer,
     wallpaper: wallpaperReducer,
+    transparency: transparencyReducer,
   },
 });
 

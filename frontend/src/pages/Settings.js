@@ -77,6 +77,8 @@ import { logout, selectUser, selectAuthLoading } from '../store/authSlice';
 import aiService from '../services/ai';
 import WallpaperUpload from '../components/WallpaperUpload';
 import WallpaperList from '../components/WallpaperList';
+import TransparencyConfigPanel from '../components/TransparencyConfigPanel';
+import { TransparencyProvider } from '../contexts/TransparencyContext';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -661,6 +663,21 @@ const Settings = () => {
           
           {/* 壁纸列表组件 */}
           <WallpaperList />
+        </CardContent>
+      </SettingsCard>
+
+      {/* 透明度配置 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box component="span" sx={{ opacity: 0.7 }}>🎨</Box>
+            透明度配置
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            调整卡片、侧边栏和顶部导航栏的透明度，创建个性化的视觉体验
+          </Typography>
+          
+          <TransparencyConfigPanel />
         </CardContent>
       </SettingsCard>
 
