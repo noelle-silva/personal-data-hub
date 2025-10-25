@@ -280,6 +280,28 @@ export const renderMarkdownToHtml = (content, cacheKey = null) => {
       performanceLog('链接安全处理', linkStartTime, content.length);
     }
 
+    // 5. 为代码块添加复制按钮
+    const codeBlockStartTime = RENDER_CONFIG.ENABLE_PERFORMANCE_LOG ? performance.now() : 0;
+    html = html.replace(/<pre([^>]*)><code([^>]*)>([\s\S]*?)<\/code><\/pre>/gi, (match, preAttrs, codeAttrs, codeContent) => {
+      // 提取代码文本（去除HTML标签）
+      const codeText = codeContent.replace(/<[^>]*>/g, '');
+      return `
+        <div class="code-block-wrapper">
+          <pre${preAttrs}><code${codeAttrs}>${codeContent}</code></pre>
+          <button class="code-copy-button" title="复制代码" data-code="${encodeURIComponent(codeText)}">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M5.75 1a.75.75 0 00-.75.75v3c0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75v-3a.75.75 0 00-.75-.75h-4.5zm.75 3V2.5h3v1.25h-3z"/>
+              <path d="M3.5 3.5v8a2 2 0 002 2h6.5a2 2 0 002-2v-8a2 2 0 00-2-2h-6.5a2 2 0 00-2 2zm2-1h6.5a1 1 0 011 1v8a1 1 0 01-1 1h-6.5a1 1 0 01-1-1v-8a1 1 0 011-1z"/>
+            </svg>
+            <span>复制</span>
+          </button>
+        </div>
+      `;
+    });
+    if (RENDER_CONFIG.ENABLE_PERFORMANCE_LOG) {
+      performanceLog('代码块复制按钮处理', codeBlockStartTime, content.length);
+    }
+
     // 缓存结果
     if (RENDER_CONFIG.ENABLE_CACHE && cacheKey) {
       markdownCache.set(cacheKey, html);
@@ -808,6 +830,7 @@ export const generateHighlightStylesScoped = (scopeClass = 'markdown-body') => {
       overflow: auto;
       font-size: 85%;
       line-height: 1.45;
+      position: relative;
     }
     
     .${scopeClass} code {
@@ -822,6 +845,55 @@ export const generateHighlightStylesScoped = (scopeClass = 'markdown-body') => {
       background-color: transparent;
       padding: 0;
       border-radius: 0;
+    }
+    
+    /* 代码块复制按钮样式 - 作用域化 */
+    .${scopeClass} .code-block-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    
+    .${scopeClass} .code-copy-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background-color: #f6f8fa;
+      border: 1px solid #d1d5da;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: #586069;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .${scopeClass} .code-block-wrapper:hover .code-copy-button {
+      opacity: 1;
+    }
+    
+    .${scopeClass} .code-copy-button:hover {
+      background-color: #e1e4e8;
+      border-color: #959da5;
+    }
+    
+    .${scopeClass} .code-copy-button:active {
+      background-color: #d1d5da;
+    }
+    
+    .${scopeClass} .code-copy-button.copied {
+      background-color: #28a745;
+      border-color: #28a745;
+      color: white;
+    }
+    
+    .${scopeClass} .code-copy-button svg {
+      width: 14px;
+      height: 14px;
     }
     
     /* 高亮主题样式 - 作用域化 */

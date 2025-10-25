@@ -302,6 +302,68 @@ const MarkdownInlineRenderer = ({
     };
   }, [enableAIChatEnhancements]);
 
+  // 处理代码块复制功能
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const handleCodeCopy = async (event) => {
+      const copyButton = event.target.closest('.code-copy-button');
+      if (!copyButton) return;
+      
+      event.preventDefault();
+      event.stopPropagation();
+      
+      try {
+        // 获取要复制的代码
+        const codeText = decodeURIComponent(copyButton.getAttribute('data-code') || '');
+        
+        // 使用现代 clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(codeText);
+        } else {
+          // 降级方案：使用 document.execCommand
+          const textArea = document.createElement('textarea');
+          textArea.value = codeText;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+        
+        // 显示复制成功状态
+        const originalHTML = copyButton.innerHTML;
+        copyButton.classList.add('copied');
+        copyButton.innerHTML = `
+          <svg viewBox="0 0 16 16" fill="currentColor">
+            <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/>
+          </svg>
+          <span>已复制</span>
+        `;
+        
+        // 2秒后恢复原始状态
+        setTimeout(() => {
+          copyButton.classList.remove('copied');
+          copyButton.innerHTML = originalHTML;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('复制代码失败:', error);
+        // 可以在这里添加错误提示
+      }
+    };
+    
+    const container = containerRef.current;
+    container.addEventListener('click', handleCodeCopy);
+    
+    return () => {
+      container.removeEventListener('click', handleCodeCopy);
+    };
+  }, []);
+
   // 收敛文档级标签并解析 HTML 为 React 元素
   const parsedContent = useMemo(() => {
     if (!renderedHtml) return null;
