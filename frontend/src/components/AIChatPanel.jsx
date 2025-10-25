@@ -98,7 +98,7 @@ const PanelHeader = styled(Box)(({ theme }) => ({
   borderBottom: `1px solid ${theme.palette.divider}`,
 }));
 
-const AIChatPanel = ({ onClose }) => {
+const AIChatPanel = ({ onClose, injectionSource }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -136,10 +136,34 @@ const AIChatPanel = ({ onClose }) => {
   // AI功能启用状态
   const [aiEnabled, setAiEnabled] = useState(true);
   
+  // 注入功能状态
+  const [enableInjection, setEnableInjection] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const streamBufferRef = useRef('');
   const streamDebounceRef = useRef(null);
+  
+  // 构建注入内容
+  const buildInjectionContent = useCallback(() => {
+    if (!injectionSource || !injectionSource.available || !enableInjection) {
+      return '';
+    }
+    
+    const { type, content } = injectionSource;
+    
+    if (type === 'document') {
+      return `—————当前笔记————
+${content}
+—————当前笔记如上————`;
+    } else if (type === 'quote') {
+      return `—————当前引用体————
+${content}
+—————当前引用体如上————`;
+    }
+    
+    return '';
+  }, [injectionSource, enableInjection]);
 
   // 加载模型列表
   useEffect(() => {
@@ -322,11 +346,15 @@ const AIChatPanel = ({ onClose }) => {
       return;
     }
 
+    const injectionContent = buildInjectionContent();
+    const originalContent = inputText.trim();
+    
     const userMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: inputText.trim(),
-      timestamp: new Date()
+      content: originalContent, // UI中显示原始内容，也是保存到历史的原始内容
+      timestamp: new Date(),
+      injected: !!injectionContent // 标记是否被注入
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -336,9 +364,10 @@ const AIChatPanel = ({ onClose }) => {
     setCurrentResponse('');
     streamBufferRef.current = '';
 
+    // 构建请求消息数组（只包含原始内容，注入内容通过临时字段发送）
     const requestMessages = [...messages, userMessage].map(msg => ({
       role: msg.role,
-      content: msg.content
+      content: msg.content // 只发送原始内容
     }));
 
     // 准备AI请求参数
@@ -347,6 +376,14 @@ const AIChatPanel = ({ onClose }) => {
       model: selectedModel,
       temperature: temperature
     };
+
+    // 如果有注入内容，添加临时注入字段
+    if (injectionContent) {
+      requestParams.ephemeral_injection = {
+        type: injectionSource.type,
+        content: injectionContent
+      };
+    }
 
     // 添加聊天历史ID（如果已选择）
     if (selectedHistoryId) {
@@ -648,6 +685,21 @@ const AIChatPanel = ({ onClose }) => {
           </Select>
         </FormControl>
 
+        {/* 注入开关 - 仅在有可注入内容时显示 */}
+        {injectionSource && injectionSource.available && (
+          <FormControlLabel
+            control={
+              <Switch
+                checked={enableInjection}
+                onChange={(e) => setEnableInjection(e.target.checked)}
+                size="small"
+              />
+            }
+            label={`注入当前${injectionSource.type === 'document' ? '笔记' : '引用体'}`}
+            sx={{ mb: 2 }}
+          />
+        )}
+
         {/* 高级设置切换 */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Button
@@ -741,12 +793,21 @@ const AIChatPanel = ({ onClose }) => {
                 {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
+                {/* 显示注入标记 */}
+                {message.injected && (
+                  <Chip
+                    label="内容已注入"
+                    size="small"
+                    color="info"
+                    sx={{ mb: 1 }}
+                  />
+                )}
                 {renderMessageContent(message.content)}
                 {message.incomplete && (
-                  <Chip 
-                    label="响应被截断" 
-                    size="small" 
-                    color="warning" 
+                  <Chip
+                    label="响应被截断"
+                    size="small"
+                    color="warning"
                     sx={{ mt: 1 }}
                   />
                 )}

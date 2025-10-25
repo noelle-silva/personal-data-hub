@@ -189,6 +189,14 @@ const DocumentWindow = ({
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
+  // 注入源状态
+  const [injectionSource, setInjectionSource] = useState({
+    type: 'document',
+    subtype: 'text',
+    content: '',
+    available: false
+  });
+  
   // 标题编辑相关状态
   const [headerIsEditing, setHeaderIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(windowData.title || '');
@@ -373,6 +381,16 @@ const DocumentWindow = ({
     e.stopPropagation();
   }, []);
   
+  // 处理视图显示变化（用于注入功能）
+  const handleViewDisplayChange = useCallback((displayInfo) => {
+    setInjectionSource({
+      type: 'document',
+      subtype: displayInfo.subtype || 'text',
+      content: displayInfo.content || '',
+      available: !!(displayInfo.content && displayInfo.content.trim())
+    });
+  }, []);
+  
   // 渲染加载状态
   const renderLoading = () => (
     <LoadingContainer>
@@ -436,6 +454,7 @@ const DocumentWindow = ({
                 isSidebarCollapsed={isSidebarCollapsed}
                 onEditModeChange={handleEditModeChange}
                 externalTitle={headerIsEditing ? editableTitle : undefined}
+                onViewDisplayChange={handleViewDisplayChange}
               />
             </MainContent>
             
@@ -443,6 +462,7 @@ const DocumentWindow = ({
             <AIChatSidebar
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
+              injectionSource={injectionSource}
             />
           </>
         );

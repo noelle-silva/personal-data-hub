@@ -159,6 +159,33 @@ const QuoteWindow = ({
   const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
+  // 注入源状态（引用体）
+  const [injectionSource, setInjectionSource] = useState({
+    type: 'quote',
+    subtype: 'text',
+    content: '',
+    available: false
+  });
+  
+  // 监听引用体内容变化，更新注入源
+  useEffect(() => {
+    if (windowData.quote && windowData.quote.content) {
+      setInjectionSource({
+        type: 'quote',
+        subtype: 'text',
+        content: windowData.quote.content,
+        available: true
+      });
+    } else {
+      setInjectionSource({
+        type: 'quote',
+        subtype: 'text',
+        content: '',
+        available: false
+      });
+    }
+  }, [windowData.quote]);
+  
   const windowRef = useRef(null);
   const headerRef = useRef(null);
   const resizeHandleRef = useRef(null);
@@ -361,6 +388,7 @@ const QuoteWindow = ({
             <AIChatSidebar
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
+              injectionSource={injectionSource}
             />
           </>
         );

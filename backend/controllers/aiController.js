@@ -88,6 +88,37 @@ class AIController {
   }
 
   /**
+   * 剥离注入内容（兜底机制，用于兼容旧前端）
+   * @param {string} content - 可能包含注入的内容
+   * @returns {string} 剥离注入后的内容
+   */
+  stripInjectionContent(content) {
+    if (!content || typeof content !== 'string') {
+      return content;
+    }
+    
+    // 匹配笔记注入标记
+    const notePattern = /—————当前笔记————[\s\S]*?—————当前笔记如上————/g;
+    // 匹配引用体注入标记
+    const quotePattern = /—————当前引用体————[\s\S]*?—————当前引用体如上————/g;
+    
+    let cleaned = content.replace(notePattern, '').replace(quotePattern, '');
+    
+    // 清理可能的空行
+    cleaned = cleaned.replace(/^\n+|\n+$/g, '');
+    
+    if (process.env.DEBUG_EPHEMERAL_INJECTION === 'true' && cleaned !== content) {
+      console.log('[DEBUG] 兜底剥离注入内容:', {
+        originalLength: content.length,
+        cleanedLength: cleaned.length,
+        stripped: content.length - cleaned.length
+      });
+    }
+    
+    return cleaned;
+  }
+
+  /**
    * 获取可用的AI模型列表
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
@@ -180,7 +211,7 @@ class AIController {
         });
       }
 
-      const { messages, model, stream = false, temperature, max_tokens, top_p, top_k, role_id, disable_system_prompt, history_id } = req.body;
+      const { messages, model, stream = false, temperature, max_tokens, top_p, top_k, role_id, disable_system_prompt, history_id, ephemeral_injection } = req.body;
 
       // 验证请求参数
       if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -294,8 +325,11 @@ class AIController {
               }
             }
             
+            // 兜底剥离：如果用户消息中包含注入标记，则剥离后再保存
+            const cleanContent = this.stripInjectionContent(userMessage.content);
+            
             chatHistory = await aiChatHistoryController.createHistory({
-              userMessage: userMessage.content,
+              userMessage: cleanContent,
               roleId: role_id || null,
               systemPrompt,
               model: finalModel || 'gpt-4o-mini'
@@ -311,12 +345,14 @@ class AIController {
 
       // 如果有现有聊天历史，将其消息添加到请求消息中
       if (chatHistory && !isNewHistory) {
-        // 先将新的用户消息添加到历史中
+        // 先将新的用户消息添加到历史中（只保存原始内容，不含注入）
         const userMessage = messages[messages.length - 1];
         if (userMessage && userMessage.role === 'user') {
+          // 兜底剥离：如果用户消息中包含注入标记，则剥离后再保存
+          const cleanContent = this.stripInjectionContent(userMessage.content);
           await chatHistory.addMessage({
             role: 'user',
-            content: userMessage.content,
+            content: cleanContent,
             timestamp: new Date()
           });
         }
@@ -361,6 +397,32 @@ class AIController {
           } else {
             // 如果没有系统消息，添加一个
             processedMessages.unshift({ role: 'system', content: systemPrompt });
+          }
+        }
+      }
+
+      // 应用临时注入（如果有）
+      if (ephemeral_injection && ephemeral_injection.content) {
+        let lastUserMessageIndex = -1;
+        // 从后往前查找最后一个用户消息
+        for (let i = processedMessages.length - 1; i >= 0; i--) {
+          if (processedMessages[i].role === 'user') {
+            lastUserMessageIndex = i;
+            break;
+          }
+        }
+        
+        if (lastUserMessageIndex !== -1) {
+          const originalContent = processedMessages[lastUserMessageIndex].content;
+          processedMessages[lastUserMessageIndex].content = `${ephemeral_injection.content}\n\n${originalContent}`;
+          
+          if (process.env.DEBUG_EPHEMERAL_INJECTION === 'true') {
+            console.log('[DEBUG] 临时注入应用:', {
+              type: ephemeral_injection.type,
+              injectionLength: ephemeral_injection.content.length,
+              originalLength: originalContent.length,
+              finalLength: processedMessages[lastUserMessageIndex].content.length
+            });
           }
         }
       }

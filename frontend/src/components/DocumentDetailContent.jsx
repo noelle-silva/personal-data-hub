@@ -736,6 +736,7 @@ const DocumentDetailContent = ({
   isSidebarCollapsed,
   onEditModeChange,
   externalTitle,
+  onViewDisplayChange,
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -858,6 +859,39 @@ const DocumentDetailContent = ({
       setQuotesPagination(document.referencingQuotesPagination || null);
     }
   }, [document]);
+
+  // 监听显示内容变化，通知父组件（用于注入功能）
+  useEffect(() => {
+    if (!onViewDisplayChange) return;
+    
+    let displayContent = '';
+    let displaySubtype = 'text';
+    
+    if (isEditing) {
+      // 编辑模式：根据当前编辑器类型决定内容
+      if (editorType === 'html') {
+        displayContent = formData.htmlContent || '';
+        displaySubtype = 'html';
+      } else {
+        displayContent = formData.content || '';
+        displaySubtype = 'text';
+      }
+    } else {
+      // 只读模式：根据当前显示类型决定内容
+      if (contentType === 'html') {
+        displayContent = document.htmlContent || '';
+        displaySubtype = 'html';
+      } else {
+        displayContent = document.content || '';
+        displaySubtype = 'text';
+      }
+    }
+    
+    onViewDisplayChange({
+      content: displayContent,
+      subtype: displaySubtype
+    });
+  }, [isEditing, editorType, contentType, formData.content, formData.htmlContent, document.content, document.htmlContent, onViewDisplayChange]);
 
   // 响应式处理预览显示
   useEffect(() => {

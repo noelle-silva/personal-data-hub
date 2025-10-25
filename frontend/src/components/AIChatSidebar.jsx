@@ -64,7 +64,8 @@ const AIChatSidebar = ({
   defaultWidth = 420,
   minWidth = 320,
   maxWidth = 700,
-  children
+  children,
+  injectionSource
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -153,7 +154,7 @@ const AIChatSidebar = ({
           <FloatingCloseButton onClick={onClose}>
             <CloseIcon />
           </FloatingCloseButton>
-          {children || <AIChatPanel onClose={onClose} />}
+          {children || <AIChatPanel onClose={onClose} injectionSource={injectionSource} />}
         </SidebarContainer>
       </>
     );
@@ -168,7 +169,7 @@ const AIChatSidebar = ({
       isOpen={isOpen}
     >
       <DragHandle onMouseDown={handleMouseDown} />
-      {children || <AIChatPanel onClose={onClose} />}
+      {children || <AIChatPanel onClose={onClose} injectionSource={injectionSource} />}
     </SidebarContainer>
   );
 };
