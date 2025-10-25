@@ -79,6 +79,11 @@ import WallpaperUpload from '../components/WallpaperUpload';
 import WallpaperList from '../components/WallpaperList';
 import TransparencyConfigPanel from '../components/TransparencyConfigPanel';
 import { TransparencyProvider } from '../contexts/TransparencyContext';
+import {
+  Palette as PaletteIcon,
+  Refresh as RefreshIcon,
+  Colorize as ColorizeIcon,
+} from '@mui/icons-material';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -95,7 +100,21 @@ const SettingsCard = styled(Card)(({ theme }) => ({
 }));
 
 const Settings = () => {
-  const { mode, toggleColorMode } = useThemeContext();
+  const {
+    mode,
+    toggleColorMode,
+    dynamicColorsEnabled,
+    setDynamicColors,
+    toggleDynamicColors,
+    selectedVariant,
+    setThemeVariant,
+    themeColors,
+    themeLoading,
+    regenerateThemeColors,
+    availableVariants,
+    getVariantDisplayName,
+    currentWallpaper
+  } = useThemeContext();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
@@ -647,6 +666,78 @@ const Settings = () => {
                 color="primary"
               />
             </ListItem>
+            <Divider />
+            <ListItem>
+              <ListItemIcon>
+                <PaletteIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary="莫奈取色"
+                secondary="根据当前壁纸自动生成动态主题颜色"
+              />
+              <Switch
+                checked={dynamicColorsEnabled}
+                onChange={toggleDynamicColors}
+                color="primary"
+              />
+            </ListItem>
+            
+            {/* 动态主题变体选择 */}
+            {dynamicColorsEnabled && (
+              <>
+                <Divider />
+                <ListItem>
+                  <ListItemIcon>
+                    <ColorizeIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="主题变体"
+                    secondary="选择动态主题的颜色风格"
+                  />
+                  <FormControl sx={{ minWidth: 150 }} size="small">
+                    <Select
+                      value={selectedVariant}
+                      label="主题变体"
+                      onChange={(e) => setThemeVariant(e.target.value)}
+                    >
+                      {availableVariants.map((variant) => (
+                        <MenuItem key={variant} value={variant}>
+                          {getVariantDisplayName(variant)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </ListItem>
+                <Divider />
+                <ListItem>
+                  <ListItemIcon>
+                    <RefreshIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="重新生成主题"
+                    secondary={currentWallpaper ? `基于 "${currentWallpaper.originalName}" 重新生成` : '请先设置壁纸'}
+                    secondaryTypographyProps={{
+                      component: 'div',
+                      sx: {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.5
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={themeLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
+                    onClick={() => regenerateThemeColors(currentWallpaper?._id)}
+                    disabled={!currentWallpaper || themeLoading}
+                    sx={{ minWidth: 120 }}
+                  >
+                    {themeLoading ? '生成中...' : '重新生成'}
+                  </Button>
+                </ListItem>
+              </>
+            )}
           </List>
         </CardContent>
       </SettingsCard>

@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const Wallpaper = require('../models/Wallpaper');
+const themeColorService = require('./themeColorService');
 
 /**
  * 壁纸服务类
@@ -197,6 +198,18 @@ class WallpaperService {
     }
 
     await wallpaper.setAsCurrent();
+    
+    // 异步生成主题颜色，不阻塞壁纸设置流程
+    setImmediate(async () => {
+      try {
+        await themeColorService.generateThemeFromWallpaper(wallpaperId, userId);
+        console.log(`为用户 ${userId} 和壁纸 ${wallpaperId} 成功生成主题颜色`);
+      } catch (error) {
+        console.error(`生成主题颜色失败 (用户: ${userId}, 壁纸: ${wallpaperId}):`, error.message);
+        // 不抛出错误，不影响壁纸设置流程
+      }
+    });
+    
     return wallpaper;
   }
 

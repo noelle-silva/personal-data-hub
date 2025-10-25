@@ -7,6 +7,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const WallpaperController = require('../controllers/wallpaperController');
+const ThemeColorController = require('../controllers/themeColorController');
 const requireAuth = require('../middlewares/requireAuth');
 
 /**
@@ -101,5 +102,36 @@ router.patch('/wallpapers/:wallpaperId/description', requireAuth, WallpaperContr
  * @access  Private (需要JWT认证)
  */
 router.get('/wallpapers/stats', requireAuth, WallpaperController.getWallpaperStats);
+
+/**
+ * @route   GET /api/themes/colors/current
+ * @desc    获取用户的当前主题颜色
+ * @access  Private (需要JWT认证)
+ */
+router.get('/colors/current', requireAuth, ThemeColorController.getCurrentThemeColors);
+
+/**
+ * @route   POST /api/themes/colors/regenerate
+ * @desc    重新生成主题颜色
+ * @access  Private (需要JWT认证)
+ * @body    wallpaperId - 壁纸ID (可选，默认使用当前壁纸)
+ */
+router.post('/colors/regenerate', requireAuth, ThemeColorController.regenerateThemeColors);
+
+/**
+ * @route   GET /api/themes/colors/by-wallpaper/:wallpaperId
+ * @desc    获取指定壁纸的主题颜色
+ * @access  Private (需要JWT认证)
+ * @param   wallpaperId - 壁纸ID
+ */
+router.get('/colors/by-wallpaper/:wallpaperId', requireAuth, ThemeColorController.getWallpaperThemeColors);
+
+/**
+ * @route   DELETE /api/themes/colors/by-wallpaper/:wallpaperId
+ * @desc    删除壁纸相关的主题颜色
+ * @access  Private (需要JWT认证)
+ * @param   wallpaperId - 壁纸ID
+ */
+router.delete('/colors/by-wallpaper/:wallpaperId', requireAuth, ThemeColorController.deleteWallpaperThemeColors);
 
 module.exports = router;
