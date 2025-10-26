@@ -128,7 +128,9 @@ const AIChatSidebar = ({
       // 获取父容器宽度作为动态上限
       const parentElement = sidebarRef.current?.parentElement;
       let dynamicMaxWidth = maxWidth;
-      if (parentElement) {
+      
+      // 只有在非无限阈值时才应用宽度限制
+      if (overlayThreshold !== Infinity && parentElement) {
         dynamicMaxWidth = parentElement.clientWidth - overlayGap;
       }
       

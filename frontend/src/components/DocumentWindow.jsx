@@ -464,9 +464,9 @@ const DocumentWindow = ({
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
               injectionSource={injectionSource}
-              // 对于 Markdown 内容，禁用叠加模式并保留内容区最小宽度 320px
-              overlayThreshold={injectionSource.subtype === 'text' ? Infinity : 0.96}
-              overlayGap={injectionSource.subtype === 'text' ? 320 : 0}
+              // 完全无级调节：禁用叠加模式，移除所有宽度限制
+              overlayThreshold={Infinity}
+              overlayGap={0}
             />
           </>
         );

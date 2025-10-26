@@ -390,9 +390,9 @@ const QuoteWindow = ({
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
               injectionSource={injectionSource}
-              // 引用体为纯文本，禁用叠加模式并保留内容区最小宽度 320px
+              // 完全无级调节：禁用叠加模式，移除所有宽度限制
               overlayThreshold={Infinity}
-              overlayGap={320}
+              overlayGap={0}
             />
           </>
         );
