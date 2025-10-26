@@ -7,20 +7,20 @@ import AIChatPanel from './AIChatPanel';
 
 // 侧边栏容器
 const SidebarContainer = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isMobile' && prop !== 'width' && prop !== 'isOpen'
-})(({ theme, isMobile, width, isOpen }) => ({
-  position: isMobile ? 'fixed' : 'relative',
-  top: isMobile ? 0 : 'auto',
-  left: isMobile ? 'auto' : 0,
-  right: 0,
-  bottom: 0,
+  shouldForwardProp: (prop) => prop !== 'isMobile' && prop !== 'width' && prop !== 'isOpen' && prop !== 'isOverlay'
+})(({ theme, isMobile, width, isOpen, isOverlay }) => ({
+  position: isMobile ? 'fixed' : (isOverlay ? 'absolute' : 'relative'),
+  top: isMobile ? 0 : (isOverlay ? 0 : 'auto'),
+  left: isMobile ? 'auto' : (isOverlay ? 0 : 0),
+  right: isMobile ? 'auto' : (isOverlay ? 0 : 0),
+  bottom: isMobile ? 0 : (isOverlay ? 0 : 0),
   width: isMobile ? '100%' : `${width}px`,
-  height: isMobile ? '100vh' : '100%',
+  height: isMobile ? '100vh' : (isOverlay ? '100%' : '100%'),
   backgroundColor: theme.palette.background.paper,
   borderLeft: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
-  boxShadow: isMobile ? theme.shadows[8] : 'none',
-  zIndex: theme.zIndex.modal,
-  transform: isMobile 
+  boxShadow: isMobile ? theme.shadows[8] : (isOverlay ? theme.shadows[8] : 'none'),
+  zIndex: theme.zIndex.modal + (isOverlay ? 1 : 0),
+  transform: isMobile
     ? (isOpen ? 'translateX(0)' : 'translateX(100%)')
     : 'translateX(0)',
   transition: 'transform 0.3s ease, width 0.2s ease',
@@ -63,18 +63,34 @@ const AIChatSidebar = ({
   onClose,
   defaultWidth = 420,
   minWidth = 320,
-  maxWidth = 700,
+  maxWidth, // 移除默认值，改为动态计算
   children,
-  injectionSource
+  injectionSource,
+  overlayThreshold = 0.96, // 叠加模式阈值
+  overlayGap = 0 // 叠加模式间隙
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [width, setWidth] = useState(defaultWidth);
   const [isDragging, setIsDragging] = useState(false);
+  const [isOverlay, setIsOverlay] = useState(false);
   const sidebarRef = useRef(null);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
   const isDraggingRef = useRef(false);
+
+  // 检查是否应该进入叠加模式
+  const checkOverlayMode = useCallback((currentWidth) => {
+    if (isMobile) return false;
+    
+    const parentElement = sidebarRef.current?.parentElement;
+    if (!parentElement) return false;
+    
+    const parentWidth = parentElement.clientWidth;
+    const threshold = parentWidth * overlayThreshold;
+    
+    return currentWidth >= threshold;
+  }, [isMobile, overlayThreshold]);
 
   // 重置宽度为默认值（当窗口大小变化时）
   useEffect(() => {
@@ -82,6 +98,13 @@ const AIChatSidebar = ({
       setWidth(defaultWidth);
     }
   }, [isMobile, defaultWidth]);
+
+  // 监听宽度变化，检查是否需要进入叠加模式
+  useEffect(() => {
+    if (!isMobile) {
+      setIsOverlay(checkOverlayMode(width));
+    }
+  }, [width, isMobile, checkOverlayMode]);
 
   // 处理拖拽开始
   const handleMouseDown = useCallback((e) => {
@@ -102,9 +125,19 @@ const AIChatSidebar = ({
       const deltaX = e.clientX - dragStartX.current;
       const newWidth = dragStartWidth.current - deltaX; // 向左拖拽增加宽度
       
+      // 获取父容器宽度作为动态上限
+      const parentElement = sidebarRef.current?.parentElement;
+      let dynamicMaxWidth = maxWidth;
+      if (parentElement) {
+        dynamicMaxWidth = parentElement.clientWidth - overlayGap;
+      }
+      
       // 限制宽度范围
-      const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      const clampedWidth = Math.max(minWidth, Math.min(dynamicMaxWidth || Infinity, newWidth));
       setWidth(clampedWidth);
+      
+      // 检查是否需要进入叠加模式
+      setIsOverlay(checkOverlayMode(clampedWidth));
     };
     
     // 内联定义鼠标释放处理函数
@@ -126,7 +159,7 @@ const AIChatSidebar = ({
     
     // 禁用文本选择
     document.body.style.userSelect = 'none';
-  }, [width, isMobile, minWidth, maxWidth]);
+  }, [width, isMobile, minWidth, maxWidth, overlayGap, checkOverlayMode]);
 
   // 处理背景点击（仅移动端）
   const handleBackdropClick = useCallback(() => {
@@ -162,11 +195,12 @@ const AIChatSidebar = ({
 
   // 桌面端使用内嵌侧边栏
   return (
-    <SidebarContainer 
+    <SidebarContainer
       ref={sidebarRef}
-      isMobile={isMobile} 
-      width={width} 
+      isMobile={isMobile}
+      width={width}
       isOpen={isOpen}
+      isOverlay={isOverlay}
     >
       <DragHandle onMouseDown={handleMouseDown} />
       {children || <AIChatPanel onClose={onClose} injectionSource={injectionSource} />}

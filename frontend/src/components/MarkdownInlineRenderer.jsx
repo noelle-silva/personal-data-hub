@@ -14,6 +14,7 @@ const RendererContainer = styled(Box)(({ theme }) => ({
   width: '100%',
   position: 'relative',
   minHeight: 100,
+  minWidth: 0, // 允许 Flex 收缩
 }));
 
 // 样式化的加载状态

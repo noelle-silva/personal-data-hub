@@ -94,6 +94,7 @@ const WindowControlButton = styled(IconButton)(({ theme }) => ({
 
 // 窗口内容区域
 const WindowContent = styled(Box)(({ theme }) => ({
+  position: 'relative', // 添加相对定位以承载叠加模式
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'row',
@@ -389,6 +390,9 @@ const QuoteWindow = ({
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
               injectionSource={injectionSource}
+              // 引用体为纯文本，禁用叠加模式并保留内容区最小宽度 320px
+              overlayThreshold={Infinity}
+              overlayGap={320}
             />
           </>
         );

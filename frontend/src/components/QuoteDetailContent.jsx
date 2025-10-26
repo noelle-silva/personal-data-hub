@@ -68,6 +68,7 @@ const ContentBox = styled(Box)(({ theme }) => ({
   flexDirection: 'row',
   flexGrow: 1,
   overflow: 'hidden',
+  minWidth: 0, // 允许flex子项收缩
 }));
 
 // 左侧关系区域
@@ -103,6 +104,7 @@ const RightContentBox = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'column',
+  minWidth: 0, // 允许flex子项收缩
 }));
 
 // 关系模块容器

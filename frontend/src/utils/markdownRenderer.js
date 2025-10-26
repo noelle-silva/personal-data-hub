@@ -631,6 +631,46 @@ export const generateBaseStylesScoped = (scopeClass = 'markdown-body') => {
       line-height: 1.6;
       color: #333;
       word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+    
+    /* 正文元素强制折行 - 作用域化 */
+    .${scopeClass} p,
+    .${scopeClass} li,
+    .${scopeClass} blockquote,
+    .${scopeClass} td,
+    .${scopeClass} th,
+    .${scopeClass} h1,
+    .${scopeClass} h2,
+    .${scopeClass} h3,
+    .${scopeClass} h4,
+    .${scopeClass} h5,
+    .${scopeClass} h6 {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      hyphens: auto;
+    }
+    
+    /* 代码块保持横向滚动 - 作用域化 */
+    .${scopeClass} pre {
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: pre;
+      word-wrap: normal;
+      overflow-wrap: normal;
+    }
+    
+    .${scopeClass} code {
+      white-space: pre;
+      word-wrap: normal;
+      overflow-wrap: normal;
+    }
+    
+    /* 内联代码允许折行 - 作用域化 */
+    .${scopeClass} :not(pre) > code {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
     }
     
     /* 标题样式 - 作用域化 */

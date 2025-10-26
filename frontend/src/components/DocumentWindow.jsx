@@ -124,6 +124,7 @@ const WindowControlButton = styled(IconButton)(({ theme }) => ({
 
 // 窗口内容区域
 const WindowContent = styled(Box)(({ theme }) => ({
+  position: 'relative', // 添加相对定位以承载叠加模式
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'row',
@@ -463,6 +464,9 @@ const DocumentWindow = ({
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
               injectionSource={injectionSource}
+              // 对于 Markdown 内容，禁用叠加模式并保留内容区最小宽度 320px
+              overlayThreshold={injectionSource.subtype === 'text' ? Infinity : 0.96}
+              overlayGap={injectionSource.subtype === 'text' ? 320 : 0}
             />
           </>
         );

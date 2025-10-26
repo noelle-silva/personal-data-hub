@@ -78,6 +78,7 @@ const ContentBox = styled(Box)(({ theme }) => ({
   flexDirection: 'row',
   flexGrow: 1,
   overflow: 'hidden',
+  minWidth: 0, // 允许flex子项收缩
 }));
 
 // 左侧关系区域
@@ -113,6 +114,7 @@ const RightContentBox = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'column',
+  minWidth: 0, // 允许flex子项收缩
 }));
 
 // 关系模块容器
@@ -276,6 +278,7 @@ const EditorContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexGrow: 1,
   overflow: 'visible',
+  minWidth: 0, // 允许flex子项收缩
   [theme.breakpoints.up('lg')]: {
     display: 'grid',
     gridTemplateColumns: '60% 40%',
@@ -298,6 +301,7 @@ const EditorMiddleColumn = styled(Box)(({ theme }) => ({
   overflowY: 'visible',
   display: 'flex',
   flexDirection: 'column',
+  minWidth: 0, // 允许flex子项收缩
   [theme.breakpoints.up('lg')]: {
     gridArea: 'editor',
     borderRight: `1px solid ${theme.palette.border}`,
@@ -315,6 +319,7 @@ const EditorRightColumn = styled(Box)(({ theme }) => ({
   overflowY: 'visible',
   display: 'flex',
   flexDirection: 'column',
+  minWidth: 0, // 允许flex子项收缩
   [theme.breakpoints.up('lg')]: {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -354,6 +359,7 @@ const PreviewContent = styled(Box)(({ theme }) => ({
   borderRadius: 12,
   padding: theme.spacing(1),
   backgroundColor: theme.palette.background.default,
+  minWidth: 0, // 允许flex子项收缩
   [theme.breakpoints.up('lg')]: {
     gridArea: 'preview-content',
   },
