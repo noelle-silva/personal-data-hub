@@ -14,6 +14,9 @@ const apiClient = axios.create({
   },
 });
 
+// 防止重复跳转登录页的标志
+let redirectingToLogin = false;
+
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
   (config) => {
@@ -56,11 +59,22 @@ apiClient.interceptors.response.use(
         detail: { message: '需要重新登录' }
       }));
       
-      // 如果不是登录请求，则重定向到登录页面
-      if (!error.config.url?.includes('/auth/login')) {
+      const currentPath = window.location.pathname;
+      const isAuthRequest = error.config.url?.includes('/auth/');
+      
+      // 如果不是登录请求且当前不在登录页，且没有正在重定向中，则重定向到登录页面
+      if (!isAuthRequest && currentPath !== '/登录' && !redirectingToLogin) {
+        // 设置重定向标志，防止重复跳转
+        redirectingToLogin = true;
+        
         // 延迟重定向，让组件有时间处理错误
         setTimeout(() => {
           window.location.href = '/登录';
+          
+          // 1.5秒后重置重定向标志，允许后续的401可以再次触发重定向
+          setTimeout(() => {
+            redirectingToLogin = false;
+          }, 1500);
         }, 100);
       }
     }

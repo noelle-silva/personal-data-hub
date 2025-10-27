@@ -3,7 +3,8 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { GlobalStyles } from '@mui/material';
 import { lightTheme, darkTheme } from '../theme';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectCurrentWallpaper, fetchCurrentWallpaper } from '../store/wallpaperSlice';
+import { selectCurrentWallpaper, fetchCurrentWallpaper, resetWallpaperState } from '../store/wallpaperSlice';
+import { selectIsAuthenticated } from '../store/authSlice';
 import themesService from '../services/themes';
 import { mdToMuiPalette } from '../utils/mdToMuiPalette';
 import { createTheme } from '@mui/material/styles';
@@ -92,6 +93,7 @@ const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => (
 export const ThemeProvider = ({ children }) => {
   const dispatch = useDispatch();
   const currentWallpaper = useSelector(selectCurrentWallpaper);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
   
   // 从localStorage获取保存的主题模式，默认为light
   const [mode, setMode] = useState(() => {
@@ -242,17 +244,34 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('selectedVariant', variant);
   };
 
-  // 组件挂载时获取当前壁纸和主题颜色
+  // 组件挂载时获取当前壁纸和主题颜色（仅在已认证时）
   useEffect(() => {
-    dispatch(fetchCurrentWallpaper());
-  }, [dispatch]);
-
-  // 当动态主题开关或当前壁纸变化时，重新加载主题颜色
-  useEffect(() => {
-    if (currentWallpaper) {
-      loadThemeColors();
+    if (isAuthenticated) {
+      dispatch(fetchCurrentWallpaper());
+    } else {
+      // 未认证时清空主题颜色，避免使用旧会话数据
+      setThemeColors(null);
     }
-  }, [dynamicColorsEnabled, currentWallpaper]);
+  }, [dispatch, isAuthenticated]);
+
+  // 当动态主题开关或当前壁纸变化时，重新加载主题颜色（仅在已认证时）
+  useEffect(() => {
+    if (isAuthenticated && currentWallpaper) {
+      loadThemeColors();
+    } else if (!isAuthenticated) {
+      // 未认证时清空主题颜色
+      setThemeColors(null);
+    }
+  }, [dynamicColorsEnabled, currentWallpaper, isAuthenticated]);
+
+  // 监控认证状态变化，从已认证变为未认证时重置壁纸状态
+  useEffect(() => {
+    // 这里使用 ref 来跟踪上一次的认证状态
+    if (!isAuthenticated) {
+      // 未认证时重置壁纸状态，清空旧会话残留
+      dispatch(resetWallpaperState());
+    }
+  }, [isAuthenticated, dispatch]);
 
   const value = {
     mode,
