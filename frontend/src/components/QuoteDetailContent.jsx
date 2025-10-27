@@ -50,6 +50,8 @@ import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import CodeEditor from './CodeEditor';
+import MarkdownPreview from './MarkdownPreview';
+import { useMediaQuery } from '@mui/material';
 import {
   DndContext,
   closestCenter,
@@ -326,6 +328,108 @@ const ReferencedQuotesTitle = styled(Typography)(({ theme }) => ({
 const ReferencedQuotesList = styled(Box)(({ theme }) => ({
   display: 'grid',
   gap: theme.spacing(2),
+}));
+
+// 编辑器容器 - 大屏使用 Grid，小屏使用 Flex
+const EditorContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexGrow: 1,
+  overflow: 'visible',
+  minWidth: 0, // 允许flex子项收缩
+  [theme.breakpoints.up('lg')]: {
+    display: 'grid',
+    gridTemplateColumns: '60% 40%',
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: `
+      "editor preview-header"
+      "editor preview-content"
+    `,
+    gap: 0,
+  },
+  [theme.breakpoints.down('lg')]: {
+    flexDirection: 'column',
+  },
+}));
+
+// 编辑器左侧栏
+const EditorLeftColumn = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1),
+  borderRight: `1px solid ${theme.palette.border}`,
+  overflowY: 'visible',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0, // 确保容器可以正确收缩
+  minWidth: 0, // 允许flex子项收缩
+  [theme.breakpoints.up('lg')]: {
+    gridArea: 'editor',
+    borderRight: `1px solid ${theme.palette.border}`,
+    borderBottom: 'none',
+  },
+  [theme.breakpoints.down('lg')]: {
+    borderRight: 'none',
+    borderBottom: `1px solid ${theme.palette.border}`,
+  },
+}));
+
+// 编辑器右侧栏
+const EditorRightColumn = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1),
+  overflowY: 'visible',
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0, // 确保容器可以正确收缩
+  minWidth: 0, // 允许flex子项收缩
+  [theme.breakpoints.up('lg')]: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: `
+      "preview-header"
+      "preview-content"
+    `,
+    gap: theme.spacing(1),
+  },
+}));
+
+// 预览区域标题
+const PreviewHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingBottom: theme.spacing(1),
+  borderBottom: `1px solid ${theme.palette.border}`,
+  [theme.breakpoints.up('lg')]: {
+    gridArea: 'preview-header',
+    marginBottom: 0,
+  },
+  [theme.breakpoints.down('lg')]: {
+    marginBottom: theme.spacing(1),
+  },
+}));
+
+// 预览内容区域
+const PreviewContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  overflow: 'auto',
+  border: `1px solid ${theme.palette.border}`,
+  borderRadius: 12,
+  padding: theme.spacing(1),
+  backgroundColor: theme.palette.background.default,
+  minHeight: 0, // 确保容器可以正确收缩
+  minWidth: 0, // 允许flex子项收缩
+  [theme.breakpoints.up('lg')]: {
+    gridArea: 'preview-content',
+  },
+  '&::-webkit-scrollbar': {
+    width: 8,
+  },
+  '&::-webkit-scrollbar-track': {
+    background: theme.palette.background.default,
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: theme.palette.primary.main,
+    borderRadius: 4,
+  },
 }));
 
 // 格式化相对时间
@@ -704,6 +808,7 @@ const QuoteDetailContent = ({
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     description: '',
@@ -1777,50 +1882,71 @@ const QuoteDetailContent = ({
 
           {/* 编辑表单 */}
           {isEditing ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* 描述字段已移至元信息区域编辑 */}
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
-                    内容 *
-                  </Typography>
-                  {/* 移除了内容区域的切换按钮，现在只在顶部有切换按钮 */}
+            <EditorContainer>
+              {/* 左侧编辑区域 */}
+              <EditorLeftColumn>
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+                      内容 *
+                    </Typography>
+                    {/* 移除了内容区域的切换按钮，现在只在顶部有切换按钮 */}
+                  </Box>
+                  <Box sx={{ flexGrow: 1, minHeight: 0 }}>
+                    {editorType === 'code' ? (
+                      <CodeEditor
+                        value={editForm.content}
+                        onChange={(value) => handleFieldChange('content', value)}
+                        language="markdown"
+                        mode="fillContainer"
+                        minHeight={160}
+                        maxHeight="none"
+                        debounceMs={300}
+                      />
+                    ) : (
+                      <TextField
+                        value={editForm.content}
+                        onChange={(e) => handleFieldChange('content', e.target.value)}
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        minRows={6}
+                        sx={{
+                          height: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            height: '100%',
+                            alignItems: 'flex-start', // 确保文本从顶部开始
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            lineHeight: 1.5,
+                          },
+                          '& .MuiOutlinedInput-multiline': {
+                            alignItems: 'flex-start', // 确保多行文本从顶部开始
+                          },
+                        }}
+                        placeholder="请输入内容..."
+                      />
+                    )}
+                  </Box>
                 </Box>
-                {editorType === 'code' ? (
-                  <CodeEditor
-                    value={editForm.content}
-                    onChange={(value) => handleFieldChange('content', value)}
-                    language="markdown"
-                    mode="autoSize"
-                    minHeight={160}
-                    maxHeight="40vh"
-                    debounceMs={300}
-                  />
-                ) : (
-                  <TextField
-                    value={editForm.content}
-                    onChange={(e) => handleFieldChange('content', e.target.value)}
-                    fullWidth
-                    variant="outlined"
-                    multiline
-                    minRows={6}
-                    placeholder="请输入内容..."
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        fontFamily: 'monospace',
-                        fontSize: '14px',
-                        lineHeight: 1.5,
-                      },
-                    }}
-                  />
-                )}
-              </Box>
+              </EditorLeftColumn>
               
-              {/* 移除重复的标签输入字段，已在标签区域提供编辑功能 */}
-              
-              {/* 取消按钮已移到顶部栏 */}
-            </Box>
+              {/* 右侧预览区域 */}
+              <EditorRightColumn>
+                <PreviewHeader>
+                  <Typography variant="h6">
+                    预览
+                  </Typography>
+                </PreviewHeader>
+                <PreviewContent>
+                  <MarkdownInlineRenderer
+                    content={editForm.content}
+                    cacheKey={quote._id && editForm.content ? `${quote._id}|edit|${editForm.content.length}` : null}
+                    scopeClass="quote-markdown-preview"
+                  />
+                </PreviewContent>
+              </EditorRightColumn>
+            </EditorContainer>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* 内容 */}
