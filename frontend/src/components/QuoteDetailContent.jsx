@@ -1659,20 +1659,21 @@ const QuoteDetailContent = ({
 
       {/* 右侧内容区域 */}
       <RightContentBox>
-          {/* 编辑模式下的顶部切换按钮栏 */}
-          {isEditing && (
-            <Box sx={{
-              position: 'sticky',
-              top: -24, // 修改为负值，向上移动24px（相当于RightContentBox的padding值）
-              zIndex: 10,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 2,
-              p: 1,
-              backgroundColor: theme.palette.background.paper,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-            }}>
+          {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
+          <Box sx={{
+            position: 'sticky',
+            top: -24, // 修改为负值，向上移动24px（相当于RightContentBox的padding值）
+            zIndex: 10,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            p: 1,
+            backgroundColor: theme.palette.background.paper,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}>
+            {/* 左侧按钮组 */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
               {/* 编辑/保存按钮 */}
               <Button
                 variant={isEditing ? "contained" : "outlined"}
@@ -1692,6 +1693,77 @@ const QuoteDetailContent = ({
                 {isEditing ? '保存' : '编辑'}
               </Button>
               
+              {/* 编辑模式下的取消按钮 */}
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleToggleEdit}
+                  sx={{
+                    borderRadius: 16,
+                    fontSize: '0.8rem',
+                    px: 2,
+                    py: 0.5,
+                    minWidth: 'auto',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  取消
+                </Button>
+              )}
+            </Box>
+            
+            {/* 右侧按钮组 */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* 非编辑模式下的更多操作按钮 */}
+              {!isEditing && (
+                <IconButton
+                  onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
+                  title="更多操作"
+                  sx={{
+                    borderRadius: 16,
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'light'
+                        ? 'rgba(0, 0, 0, 0.04)'
+                        : 'rgba(255, 255, 255, 0.08)',
+                    },
+                  }}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              )}
+              
+              {/* 编辑模式下的UI模式切换按钮 */}
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={editorType === 'code' ? <EditNoteIcon /> : <CodeIcon />}
+                  onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
+                  sx={{
+                    borderRadius: 16,
+                    fontSize: '0.8rem',
+                    px: 2,
+                    py: 0.5,
+                    minWidth: 'auto',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  {editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
+                </Button>
+              )}
+            </Box>
+          </Box>
+          
+          {/* 保留原有的编辑模式下的顶部切换按钮栏，但移除编辑按钮（已移到上面） */}
+          {isEditing && (
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 2,
+            }}>
+              {/* 只保留编辑模式下的UI模式切换按钮 */}
               <Button
                 variant="outlined"
                 size="small"
@@ -1890,15 +1962,7 @@ const QuoteDetailContent = ({
                 helperText="用逗号分隔多个标签"
               />
               
-              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                <Button
-                  onClick={handleToggleEdit}
-                  variant="outlined"
-                  sx={{ borderRadius: 12 }}
-                >
-                  取消
-                </Button>
-              </Box>
+              {/* 取消按钮已移到顶部栏 */}
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1930,41 +1994,7 @@ const QuoteDetailContent = ({
               )}
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 非编辑模式下的编辑按钮 */}
-              {!isEditing && (
-                <IconButton
-                  onClick={handleToggleEdit}
-                  color={isEditing ? 'primary' : 'default'}
-                  title={isEditing ? '取消编辑' : '编辑'}
-                  sx={{
-                    borderRadius: 16,
-                    backgroundColor: 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'light'
-                        ? 'rgba(0, 0, 0, 0.04)'
-                        : 'rgba(255, 255, 255, 0.08)',
-                    },
-                  }}
-                >
-                  <EditIcon />
-                </IconButton>
-              )}
-              
-              <IconButton
-                onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
-                title="更多操作"
-                sx={{
-                  borderRadius: 16,
-                  backgroundColor: 'transparent',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'light'
-                      ? 'rgba(0, 0, 0, 0.04)'
-                      : 'rgba(255, 255, 255, 0.08)',
-                  },
-                }}
-              >
-                <MoreVertIcon />
-              </IconButton>
+              {/* 编辑按钮和更多操作按钮已移到顶部栏 */}
             </Box>
           </MetaInfoContainer>
 
