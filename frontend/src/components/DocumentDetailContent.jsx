@@ -46,6 +46,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
+import QuoteCopyButton from './QuoteCopyButton';
 import {
   DndContext,
   closestCenter,
@@ -1424,6 +1425,7 @@ const DocumentDetailContent = ({
                           更新于 {formatDate(quote.updatedAt)}
                         </Typography>
                       </Box>
+                      <QuoteCopyButton quote={quote} />
                       <Tooltip title="查看引用体详情">
                         <IconButton
                           size="small"

@@ -35,6 +35,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
+import QuoteCopyButton from './QuoteCopyButton';
 import { useDispatch } from 'react-redux';
 import {
   fetchDocumentById,
@@ -653,58 +654,10 @@ const SortableReferencedQuoteItem = ({ quote, index, onRemove, onView, isEditing
     isDragging,
   } = useSortable({ id: quote._id || quote });
 
-  const [copyTooltip, setCopyTooltip] = useState('复制标记');
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
-
-  // HTML 转义函数
-  const escapeHtml = (text) => {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
-  // 处理复制标记
-  const handleCopyAction = async (e) => {
-    e.stopPropagation();
-    const quoteId = quote._id || quote;
-    const quoteTitle = quote.title || '查看详情';
-    const escapedTitle = escapeHtml(quoteTitle);
-    
-    // 生成包含 data-label 和引用体标题的标记
-    const actionMarkup = `<x-tab-action data-action="open-quote" data-quote-id="${quoteId}" data-label="${escapedTitle}">${escapedTitle}</x-tab-action>`;
-    
-    try {
-      // 优先使用现代 clipboard API
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(actionMarkup);
-      } else {
-        // 降级方案：使用传统方法
-        const textArea = document.createElement('textarea');
-        textArea.value = actionMarkup;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      
-      // 显示成功反馈
-      setCopyTooltip('已复制');
-      setTimeout(() => setCopyTooltip('复制标记'), 2000);
-    } catch (err) {
-      console.error('复制失败:', err);
-      setCopyTooltip('复制失败');
-      setTimeout(() => setCopyTooltip('复制标记'), 2000);
-    }
   };
 
   return (
@@ -775,19 +728,7 @@ const SortableReferencedQuoteItem = ({ quote, index, onRemove, onView, isEditing
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         {!isEditing && (
-          <Tooltip title={copyTooltip}>
-            <IconButton
-              size="small"
-              onClick={handleCopyAction}
-              sx={{
-                borderRadius: 16,
-                mr: 0.5,
-              }}
-              aria-label="复制标记"
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <QuoteCopyButton quote={quote} />
         )}
         <Tooltip title="查看引用体详情">
           <IconButton
