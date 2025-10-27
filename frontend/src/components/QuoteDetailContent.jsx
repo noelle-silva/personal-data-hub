@@ -32,6 +32,7 @@ import {
   FormatQuote as FormatQuoteIcon,
   Code as CodeIcon,
   EditNote as EditNoteIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
 import { useDispatch } from 'react-redux';
@@ -850,18 +851,21 @@ const QuoteDetailContent = ({
   const [originalReferencedIds, setOriginalReferencedIds] = useState([]);
   const [isReferencesDirty, setIsReferencesDirty] = useState(false);
   const [isDocumentPickerOpen, setIsDocumentPickerOpen] = useState(false);
+  const [isReferencesEditing, setIsReferencesEditing] = useState(false);
   
   // 引用附件相关状态
   const [referencedAttachments, setReferencedAttachments] = useState([]);
   const [originalAttachmentIds, setOriginalAttachmentIds] = useState([]);
   const [isAttachmentReferencesDirty, setIsAttachmentReferencesDirty] = useState(false);
   const [isAttachmentPickerOpen, setIsAttachmentPickerOpen] = useState(false);
+  const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   
   // 引用引用体相关状态
   const [referencedQuotes, setReferencedQuotes] = useState([]);
   const [originalReferencedQuoteIds, setOriginalReferencedQuoteIds] = useState([]);
   const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
   const [isQuotePickerOpen, setIsQuotePickerOpen] = useState(false);
+  const [isQuoteReferencesEditing, setIsQuoteReferencesEditing] = useState(false);
   
   // 展开/收起状态管理
   const [documentsExpanded, setDocumentsExpanded] = useState(true);
@@ -1347,16 +1351,71 @@ const QuoteDetailContent = ({
           expanded={documentsExpanded}
           onExpandedChange={setDocumentsExpanded}
           actions={
-            isEditing && (
-              <Tooltip title="编辑引用">
-                <IconButton
+            isReferencesEditing ? (
+              <>
+                <Button
                   size="small"
+                  startIcon={<AddIcon />}
                   onClick={() => setIsDocumentPickerOpen(true)}
                   sx={{
                     borderRadius: 16,
                   }}
                 >
-                  <AddIcon fontSize="small" />
+                  添加引用
+                </Button>
+                {isReferencesDirty && (
+                  <>
+                    <Tooltip title="保存引用">
+                      <IconButton
+                        size="small"
+                        onClick={handleSaveReferences}
+                        sx={{
+                          borderRadius: 16,
+                          color: 'success.main',
+                        }}
+                      >
+                        <SaveIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="撤销更改">
+                      <IconButton
+                        size="small"
+                        onClick={handleResetReferences}
+                        sx={{
+                          borderRadius: 16,
+                          color: 'action.active',
+                        }}
+                      >
+                        <UndoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+                <Tooltip title="取消编辑">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setIsReferencesEditing(false);
+                      handleResetReferences();
+                    }}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="编辑引用">
+                <IconButton
+                  size="small"
+                  onClick={() => setIsReferencesEditing(true)}
+                  sx={{
+                    borderRadius: 16,
+                  }}
+                >
+                  <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )
@@ -1380,7 +1439,7 @@ const QuoteDetailContent = ({
                       index={index}
                       onRemove={handleRemoveReference}
                       onView={handleViewReferencedDoc}
-                      isEditing={isEditing}
+                      isEditing={isReferencesEditing}
                     />
                   ))}
                 </ReferencedDocsContainer>
@@ -1394,38 +1453,45 @@ const QuoteDetailContent = ({
             </EmptyStateContainer>
           )}
           
-          {isEditing && (
-            <ActionsContainer>
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setIsDocumentPickerOpen(true)}
-                sx={{
-                  borderRadius: 16,
-                }}
-              >
-                添加引用
-              </Button>
-              <Box>
-                {isReferencesDirty && (
+        </CollapsibleRelationModule>
+        
+        {/* 引用的附件模块 */}
+        <CollapsibleRelationModule
+          title="引用的附件"
+          count={referencedAttachments.length}
+          expanded={attachmentsExpanded}
+          onExpandedChange={setAttachmentsExpanded}
+          actions={
+            isAttachmentReferencesEditing ? (
+              <>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => setIsAttachmentPickerOpen(true)}
+                  sx={{
+                    borderRadius: 16,
+                  }}
+                >
+                  添加附件
+                </Button>
+                {isAttachmentReferencesDirty && onSaveAttachmentReferences && (
                   <>
-                    <Tooltip title="保存引用">
+                    <Tooltip title="保存附件">
                       <IconButton
                         size="small"
-                        onClick={handleSaveReferences}
+                        onClick={handleSaveAttachmentReferences}
                         sx={{
                           borderRadius: 16,
-                          mr: 1,
                           color: 'success.main',
                         }}
                       >
                         <SaveIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="撤销更改">
+                    <Tooltip title="重置附件">
                       <IconButton
                         size="small"
-                        onClick={handleResetReferences}
+                        onClick={handleResetAttachmentReferences}
                         sx={{
                           borderRadius: 16,
                           color: 'action.active',
@@ -1436,28 +1502,31 @@ const QuoteDetailContent = ({
                     </Tooltip>
                   </>
                 )}
-              </Box>
-            </ActionsContainer>
-          )}
-        </CollapsibleRelationModule>
-        
-        {/* 引用的附件模块 */}
-        <CollapsibleRelationModule
-          title="引用的附件"
-          count={referencedAttachments.length}
-          expanded={attachmentsExpanded}
-          onExpandedChange={setAttachmentsExpanded}
-          actions={
-            isEditing && (
+                <Tooltip title="取消编辑">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setIsAttachmentReferencesEditing(false);
+                      handleResetAttachmentReferences();
+                    }}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
               <Tooltip title="编辑引用">
                 <IconButton
                   size="small"
-                  onClick={() => setIsAttachmentPickerOpen(true)}
+                  onClick={() => setIsAttachmentReferencesEditing(true)}
                   sx={{
                     borderRadius: 16,
                   }}
                 >
-                  <AddIcon fontSize="small" />
+                  <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )
@@ -1482,7 +1551,7 @@ const QuoteDetailContent = ({
                       onRemove={handleRemoveAttachmentReference}
                       onView={handleViewAttachment}
                       onCopy={handleCopyAttachmentLink}
-                      isEditing={isEditing}
+                      isEditing={isAttachmentReferencesEditing}
                     />
                   ))}
                 </ReferencedAttachmentsContainer>
@@ -1496,48 +1565,6 @@ const QuoteDetailContent = ({
             </EmptyStateContainer>
           )}
           
-          {isEditing && (
-            <ActionsContainer>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setIsAttachmentPickerOpen(true)}
-                sx={{
-                  borderRadius: 16,
-                }}
-              >
-                添加附件
-              </Button>
-              
-              {isAttachmentReferencesDirty && onSaveAttachmentReferences && (
-                <>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSaveAttachmentReferences}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    保存附件
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<UndoIcon />}
-                    onClick={handleResetAttachmentReferences}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    重置
-                  </Button>
-                </>
-              )}
-            </ActionsContainer>
-          )}
         </CollapsibleRelationModule>
         
         {/* 引用的引用体模块 */}
@@ -1547,16 +1574,71 @@ const QuoteDetailContent = ({
           expanded={quotesExpanded}
           onExpandedChange={setQuotesExpanded}
           actions={
-            isEditing && (
-              <Tooltip title="编辑引用">
-                <IconButton
+            isQuoteReferencesEditing ? (
+              <>
+                <Button
                   size="small"
+                  startIcon={<AddIcon />}
                   onClick={() => setIsQuotePickerOpen(true)}
                   sx={{
                     borderRadius: 16,
                   }}
                 >
-                  <AddIcon fontSize="small" />
+                  添加引用体
+                </Button>
+                {isQuoteReferencesDirty && onSaveQuoteReferences && (
+                  <>
+                    <Tooltip title="保存引用体">
+                      <IconButton
+                        size="small"
+                        onClick={handleSaveQuoteReferences}
+                        sx={{
+                          borderRadius: 16,
+                          color: 'success.main',
+                        }}
+                      >
+                        <SaveIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="重置引用体">
+                      <IconButton
+                        size="small"
+                        onClick={handleResetQuoteReferences}
+                        sx={{
+                          borderRadius: 16,
+                          color: 'action.active',
+                        }}
+                      >
+                        <UndoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+                <Tooltip title="取消编辑">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setIsQuoteReferencesEditing(false);
+                      handleResetQuoteReferences();
+                    }}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="编辑引用">
+                <IconButton
+                  size="small"
+                  onClick={() => setIsQuoteReferencesEditing(true)}
+                  sx={{
+                    borderRadius: 16,
+                  }}
+                >
+                  <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )
@@ -1580,7 +1662,7 @@ const QuoteDetailContent = ({
                       index={index}
                       onRemove={handleRemoveQuoteReference}
                       onView={handleViewReferencedQuote}
-                      isEditing={isEditing}
+                      isEditing={isQuoteReferencesEditing}
                     />
                   ))}
                 </ReferencedQuotesContainer>
@@ -1594,48 +1676,6 @@ const QuoteDetailContent = ({
             </EmptyStateContainer>
           )}
           
-          {isEditing && (
-            <ActionsContainer>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => setIsQuotePickerOpen(true)}
-                sx={{
-                  borderRadius: 16,
-                }}
-              >
-                添加引用体
-              </Button>
-              
-              {isQuoteReferencesDirty && onSaveQuoteReferences && (
-                <>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSaveQuoteReferences}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    保存引用体
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<UndoIcon />}
-                    onClick={handleResetQuoteReferences}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    重置
-                  </Button>
-                </>
-              )}
-            </ActionsContainer>
-          )}
         </CollapsibleRelationModule>
       </RelationsBox>
 
