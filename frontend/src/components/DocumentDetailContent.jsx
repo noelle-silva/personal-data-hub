@@ -825,7 +825,13 @@ const DocumentDetailContent = ({
       
       // 初始化引用列表
       const refs = document.referencedDocumentIds || [];
-      setReferencedDocuments(refs);
+      const normalizedRefs = refs.map(ref => {
+        if (typeof ref === 'string') {
+          return { _id: ref, title: '加载中...', tags: [] };
+        }
+        return ref;
+      });
+      setReferencedDocuments(normalizedRefs);
       setOriginalReferencedIds(refs.map(ref => typeof ref === 'string' ? ref : ref._id));
       setIsReferencesDirty(false);
       setIsReferencesEditing(false);
@@ -1177,10 +1183,19 @@ const DocumentDetailContent = ({
 
   // 处理重置引用
   const handleResetReferences = useCallback(() => {
-    setReferencedDocuments(originalReferencedIds.map(id => ({ _id: id, title: '加载中...' })));
+    // 恢复到原始状态
+    const refs = document.referencedDocumentIds || [];
+    const normalizedRefs = refs.map(ref => {
+      if (typeof ref === 'string') {
+        return { _id: ref, title: '加载中...', tags: [] };
+      }
+      return ref;
+    });
+    
+    setReferencedDocuments(normalizedRefs);
     setIsReferencesDirty(false);
     setIsReferencesEditing(false);
-  }, [originalReferencedIds]);
+  }, [document.referencedDocumentIds]);
 
   // 处理查看引用体详情
   const handleViewQuoteDetail = async (quote) => {
