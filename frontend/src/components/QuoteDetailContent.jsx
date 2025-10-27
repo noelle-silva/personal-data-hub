@@ -30,6 +30,8 @@ import {
   AttachFile as AttachFileIcon,
   ContentCopy as ContentCopyIcon,
   FormatQuote as FormatQuoteIcon,
+  Code as CodeIcon,
+  EditNote as EditNoteIcon,
 } from '@mui/icons-material';
 import { useDispatch } from 'react-redux';
 import {
@@ -867,6 +869,7 @@ const QuoteDetailContent = ({
   const [error, setError] = useState('');
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
   const isActionsMenuOpen = Boolean(actionsMenuAnchorEl);
+  const [editorType, setEditorType] = useState('code'); // 'code' 或 'text'
   
   // 引用列表相关状态
   const [referencedDocuments, setReferencedDocuments] = useState([]);
@@ -1656,6 +1659,38 @@ const QuoteDetailContent = ({
 
       {/* 右侧内容区域 */}
       <RightContentBox>
+          {/* 编辑模式下的顶部切换按钮栏 */}
+          {isEditing && (
+            <Box sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 2,
+              p: 1,
+              backgroundColor: theme.palette.background.paper,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+            }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={editorType === 'code' ? <EditNoteIcon /> : <CodeIcon />}
+                onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
+                sx={{
+                  borderRadius: 16,
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  fontWeight: 'medium',
+                }}
+              >
+                {editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
+              </Button>
+            </Box>
+          )}
+          
           {/* 标签 */}
           <Box>
             <Typography variant="subtitle1" gutterBottom>
@@ -1789,18 +1824,56 @@ const QuoteDetailContent = ({
               />
               
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                  内容 *
-                </Typography>
-                <CodeEditor
-                  value={editForm.content}
-                  onChange={(value) => handleFieldChange('content', value)}
-                  language="markdown"
-                  mode="autoSize"
-                  minHeight={160}
-                  maxHeight="40vh"
-                  debounceMs={300}
-                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
+                    内容 *
+                  </Typography>
+                  <Tooltip title={editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}>
+                    <IconButton
+                      size="small"
+                      onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
+                      sx={{
+                        borderRadius: 16,
+                        backgroundColor: 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'light'
+                            ? 'rgba(0, 0, 0, 0.04)'
+                            : 'rgba(255, 255, 255, 0.08)',
+                        },
+                      }}
+                    >
+                      {editorType === 'code' ? <EditNoteIcon fontSize="small" /> : <CodeIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                {editorType === 'code' ? (
+                  <CodeEditor
+                    value={editForm.content}
+                    onChange={(value) => handleFieldChange('content', value)}
+                    language="markdown"
+                    mode="autoSize"
+                    minHeight={160}
+                    maxHeight="40vh"
+                    debounceMs={300}
+                  />
+                ) : (
+                  <TextField
+                    value={editForm.content}
+                    onChange={(e) => handleFieldChange('content', e.target.value)}
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    rows={8}
+                    placeholder="请输入内容..."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                      },
+                    }}
+                  />
+                )}
               </Box>
               
               <TextField

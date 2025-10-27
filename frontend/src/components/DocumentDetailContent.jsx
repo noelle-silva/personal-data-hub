@@ -44,6 +44,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import {
   DndContext,
   closestCenter,
@@ -754,6 +755,7 @@ const DocumentDetailContent = ({
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   const [contentType, setContentType] = useState('html'); // 'html' 或 'text'
   const [editorType, setEditorType] = useState('markdown'); // 'markdown' 或 'html'
+  const [editorUIMode, setEditorUIMode] = useState('code'); // 'code' 或 'text'
   const [showPreview, setShowPreview] = useState(isLargeScreen);
   const [previewContent, setPreviewContent] = useState('');
   const previewTimeoutRef = useRef(null);
@@ -1696,6 +1698,38 @@ const DocumentDetailContent = ({
 
         {/* 右侧内容区域 */}
         <RightContentBox>
+          {/* 编辑模式下的顶部切换按钮栏 */}
+          {isEditing && (
+            <Box sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mb: 2,
+              p: 1,
+              backgroundColor: theme.palette.background.paper,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+            }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={editorUIMode === 'code' ? <EditNoteIcon /> : <CodeIcon />}
+                onClick={() => setEditorUIMode(editorUIMode === 'code' ? 'text' : 'code')}
+                sx={{
+                  borderRadius: 16,
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  fontWeight: 'medium',
+                }}
+              >
+                {editorUIMode === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
+              </Button>
+            </Box>
+          )}
+          
           {/* 标签 */}
           <Box>
             <Typography variant="subtitle1" gutterBottom>
@@ -1864,14 +1898,33 @@ const DocumentDetailContent = ({
                 
                 {/* 左侧编辑器 */}
                 <EditorMiddleColumn>
-                  <CodeEditor
-                    value={editorType === 'markdown' ? formData.content : formData.htmlContent}
-                    onChange={(value) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', value)}
-                    language={editorType === 'markdown' ? 'markdown' : 'html'}
-                    mode="fillContainer"
-                    minHeight={200}
-                    debounceMs={300}
-                  />
+                  {editorUIMode === 'code' ? (
+                    <CodeEditor
+                      value={editorType === 'markdown' ? formData.content : formData.htmlContent}
+                      onChange={(value) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', value)}
+                      language={editorType === 'markdown' ? 'markdown' : 'html'}
+                      mode="fillContainer"
+                      minHeight={200}
+                      debounceMs={300}
+                    />
+                  ) : (
+                    <TextField
+                      value={editorType === 'markdown' ? formData.content : formData.htmlContent}
+                      onChange={(e) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      multiline
+                      rows={12}
+                      placeholder={editorType === 'markdown' ? '请输入 Markdown 内容...' : '请输入 HTML 内容...'}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          lineHeight: 1.5,
+                        },
+                      }}
+                    />
+                  )}
                 </EditorMiddleColumn>
                 
                 {/* 右侧预览 */}
