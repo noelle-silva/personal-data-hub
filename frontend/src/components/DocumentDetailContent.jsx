@@ -1701,7 +1701,7 @@ const DocumentDetailContent = ({
           {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
           <Box sx={{
             position: 'sticky',
-            top: 0,
+            top: -24, // 修改为负值，向上移动24px（相当于RightContentBox的padding值）
             zIndex: 10,
             display: 'flex',
             justifyContent: 'space-between',
