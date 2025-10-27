@@ -1683,32 +1683,7 @@ const QuoteDetailContent = ({
             </Box>
           </Box>
           
-          {/* 保留原有的编辑模式下的顶部切换按钮栏，但移除编辑按钮（已移到上面） */}
-          {isEditing && (
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              mb: 2,
-            }}>
-              {/* 只保留编辑模式下的UI模式切换按钮 */}
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={editorType === 'code' ? <EditNoteIcon /> : <CodeIcon />}
-                onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
-                sx={{
-                  borderRadius: 16,
-                  fontSize: '0.8rem',
-                  px: 2,
-                  py: 0.5,
-                  minWidth: 'auto',
-                  fontWeight: 'medium',
-                }}
-              >
-                {editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
-              </Button>
-            </Box>
-          )}
+          {/* 移除了重复的切换编辑器按钮，现在只在顶部固定条上有切换按钮 */}
           
           {/* 标签 */}
           <Box>
