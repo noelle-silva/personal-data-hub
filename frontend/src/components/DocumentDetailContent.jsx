@@ -45,6 +45,7 @@ import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditNoteIcon from '@mui/icons-material/EditNote';
+import CollapsibleRelationModule from './CollapsibleRelationModule';
 import {
   DndContext,
   closestCenter,
@@ -143,18 +144,9 @@ const QuotesListContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用体项
@@ -176,18 +168,9 @@ const ReferencedDocsContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用文档项
@@ -209,18 +192,9 @@ const ReferencedAttachmentsContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用附件项
@@ -782,6 +756,11 @@ const DocumentDetailContent = ({
   const [referencingQuotes, setReferencingQuotes] = useState([]);
   const [quotesPagination, setQuotesPagination] = useState(null);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
+  
+  // 展开/收起状态管理
+  const [quotesExpanded, setQuotesExpanded] = useState(true);
+  const [referencesExpanded, setReferencesExpanded] = useState(true);
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(true);
   
   // 引用附件相关状态
   const [referencedAttachments, setReferencedAttachments] = useState([]);
@@ -1378,10 +1357,12 @@ const DocumentDetailContent = ({
         {/* 左侧关系区域 */}
         <RelationsBox isCollapsed={isSidebarCollapsed}>
           {/* 引用此笔记的引用体 */}
-          <RelationModule>
-            <RelationModuleTitle variant="subtitle2">
-              引用此笔记的引用体
-            </RelationModuleTitle>
+          <CollapsibleRelationModule
+            title="引用此笔记的引用体"
+            count={referencingQuotes.length}
+            expanded={quotesExpanded}
+            onExpandedChange={setQuotesExpanded}
+          >
             {referencingQuotes.length > 0 ? (
               <>
                 <QuotesListContainer>
@@ -1465,15 +1446,16 @@ const DocumentDetailContent = ({
                 </Typography>
               </EmptyStateContainer>
             )}
-          </RelationModule>
+          </CollapsibleRelationModule>
 
           {/* 此笔记引用的笔记 */}
-          <RelationModule>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <RelationModuleTitle variant="subtitle2">
-                此笔记引用的笔记
-              </RelationModuleTitle>
-              {!isReferencesEditing && (
+          <CollapsibleRelationModule
+            title="此笔记引用的笔记"
+            count={referencedDocuments.length}
+            expanded={referencesExpanded}
+            onExpandedChange={setReferencesExpanded}
+            actions={
+              !isReferencesEditing && (
                 <Tooltip title="编辑引用">
                   <IconButton
                     size="small"
@@ -1485,9 +1467,9 @@ const DocumentDetailContent = ({
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-              )}
-            </Box>
-            
+              )
+            }
+          >
             {referencedDocuments.length > 0 ? (
               <DndContext
                 sensors={sensors}
@@ -1579,15 +1561,16 @@ const DocumentDetailContent = ({
                 </Box>
               </ActionsContainer>
             )}
-          </RelationModule>
+          </CollapsibleRelationModule>
 
           {/* 此笔记引用的附件 */}
-          <RelationModule>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <RelationModuleTitle variant="subtitle2">
-                引用的附件 ({referencedAttachments.length})
-              </RelationModuleTitle>
-              {!isAttachmentReferencesEditing && (
+          <CollapsibleRelationModule
+            title="引用的附件"
+            count={referencedAttachments.length}
+            expanded={attachmentsExpanded}
+            onExpandedChange={setAttachmentsExpanded}
+            actions={
+              !isAttachmentReferencesEditing && (
                 <Tooltip title="编辑引用">
                   <IconButton
                     size="small"
@@ -1599,23 +1582,9 @@ const DocumentDetailContent = ({
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-              )}
-              
-              {isReferencesEditing && (
-                <Tooltip title="完成编辑">
-                  <IconButton
-                    size="small"
-                    onClick={() => setIsReferencesEditing(false)}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-            </Box>
-            
+              )
+            }
+          >
             {isAttachmentReferencesEditing && (
               <ActionsContainer>
                 <Button
@@ -1693,7 +1662,7 @@ const DocumentDetailContent = ({
                 </SortableContext>
               </DndContext>
             )}
-          </RelationModule>
+          </CollapsibleRelationModule>
         </RelationsBox>
 
         {/* 右侧内容区域 */}

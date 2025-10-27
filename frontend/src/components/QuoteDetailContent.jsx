@@ -33,6 +33,7 @@ import {
   Code as CodeIcon,
   EditNote as EditNoteIcon,
 } from '@mui/icons-material';
+import CollapsibleRelationModule from './CollapsibleRelationModule';
 import { useDispatch } from 'react-redux';
 import {
   fetchDocumentById,
@@ -134,18 +135,9 @@ const ReferencedDocsContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用文档项
@@ -167,18 +159,9 @@ const ReferencedAttachmentsContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用附件项
@@ -200,18 +183,9 @@ const ReferencedQuotesContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(1),
-  maxHeight: 200,
-  overflowY: 'auto',
-  '&::-webkit-scrollbar': {
-    width: 6,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 3,
-  },
+  // 移除 maxHeight: 200,
+  // 移除 overflowY: 'auto',
+  // 移除滚动条相关样式
 }));
 
 // 引用引用体项
@@ -889,6 +863,11 @@ const QuoteDetailContent = ({
   const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
   const [isQuotePickerOpen, setIsQuotePickerOpen] = useState(false);
   
+  // 展开/收起状态管理
+  const [documentsExpanded, setDocumentsExpanded] = useState(true);
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(true);
+  const [quotesExpanded, setQuotesExpanded] = useState(true);
+  
   // 拖拽传感器
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1362,12 +1341,13 @@ const QuoteDetailContent = ({
       {/* 左侧关系区域 */}
       <RelationsBox isCollapsed={isSidebarCollapsed}>
         {/* 引用的笔记模块 */}
-        <RelationModule>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <RelationModuleTitle variant="subtitle2">
-              引用的笔记 ({referencedDocuments.length})
-            </RelationModuleTitle>
-            {isEditing && (
+        <CollapsibleRelationModule
+          title="引用的笔记"
+          count={referencedDocuments.length}
+          expanded={documentsExpanded}
+          onExpandedChange={setDocumentsExpanded}
+          actions={
+            isEditing && (
               <Tooltip title="编辑引用">
                 <IconButton
                   size="small"
@@ -1379,9 +1359,9 @@ const QuoteDetailContent = ({
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-            )}
-          </Box>
-          
+            )
+          }
+        >
           {referencedDocuments.length > 0 ? (
             <DndContext
               sensors={sensors}
@@ -1459,15 +1439,16 @@ const QuoteDetailContent = ({
               </Box>
             </ActionsContainer>
           )}
-        </RelationModule>
+        </CollapsibleRelationModule>
         
         {/* 引用的附件模块 */}
-        <RelationModule>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <RelationModuleTitle variant="subtitle2">
-              引用的附件 ({referencedAttachments.length})
-            </RelationModuleTitle>
-            {isEditing && (
+        <CollapsibleRelationModule
+          title="引用的附件"
+          count={referencedAttachments.length}
+          expanded={attachmentsExpanded}
+          onExpandedChange={setAttachmentsExpanded}
+          actions={
+            isEditing && (
               <Tooltip title="编辑引用">
                 <IconButton
                   size="small"
@@ -1479,9 +1460,9 @@ const QuoteDetailContent = ({
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-            )}
-          </Box>
-          
+            )
+          }
+        >
           {referencedAttachments.length > 0 ? (
             <DndContext
               sensors={sensors}
@@ -1557,15 +1538,16 @@ const QuoteDetailContent = ({
               )}
             </ActionsContainer>
           )}
-        </RelationModule>
+        </CollapsibleRelationModule>
         
         {/* 引用的引用体模块 */}
-        <RelationModule>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <RelationModuleTitle variant="subtitle2">
-              引用的引用体 ({referencedQuotes.length})
-            </RelationModuleTitle>
-            {isEditing && (
+        <CollapsibleRelationModule
+          title="引用的引用体"
+          count={referencedQuotes.length}
+          expanded={quotesExpanded}
+          onExpandedChange={setQuotesExpanded}
+          actions={
+            isEditing && (
               <Tooltip title="编辑引用">
                 <IconButton
                   size="small"
@@ -1577,9 +1559,9 @@ const QuoteDetailContent = ({
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-            )}
-          </Box>
-          
+            )
+          }
+        >
           {referencedQuotes.length > 0 ? (
             <DndContext
               sensors={sensors}
@@ -1654,7 +1636,7 @@ const QuoteDetailContent = ({
               )}
             </ActionsContainer>
           )}
-        </RelationModule>
+        </CollapsibleRelationModule>
       </RelationsBox>
 
       {/* 右侧内容区域 */}
