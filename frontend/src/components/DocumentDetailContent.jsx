@@ -438,18 +438,6 @@ const SortableReferencedDocItem = ({ doc, index, onRemove, isEditing, onViewDocu
         {!isEditing && (
           <DocumentCopyButton document={doc} />
         )}
-        <Tooltip title="查看笔记详情">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onViewDocument) onViewDocument(doc);
-            }}
-            aria-label="查看笔记详情"
-          >
-            <LaunchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         {isEditing && (
           <Tooltip title="删除引用">
             <IconButton
@@ -620,18 +608,6 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
             </Tooltip>
           </>
         )}
-        <Tooltip title="查看附件详情">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onViewAttachment) onViewAttachment(attachment);
-            }}
-            aria-label="查看附件详情"
-          >
-            <LaunchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         {isEditing && (
           <Tooltip title="删除引用">
             <IconButton
@@ -1387,18 +1363,6 @@ const DocumentDetailContent = ({
                         </Typography>
                       </Box>
                       <QuoteCopyButton quote={quote} />
-                      <Tooltip title="查看引用体详情">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewQuoteDetail(quote);
-                          }}
-                          aria-label="查看引用体详情"
-                        >
-                          <LaunchIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
                     </QuoteItem>
                   ))}
                 </QuotesListContainer>

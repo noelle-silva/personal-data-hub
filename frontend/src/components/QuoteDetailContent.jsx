@@ -368,6 +368,7 @@ const SortableReferencedDocItem = ({ doc, index, onRemove, onView, isEditing }) 
         cursor: isEditing ? 'grab' : 'pointer',
         '&:active': { cursor: isEditing ? 'grabbing' : 'pointer' }
       }}
+      onClick={() => !isEditing && onView && onView(doc._id || doc)}
     >
       {isEditing && (
         <Box
@@ -425,18 +426,6 @@ const SortableReferencedDocItem = ({ doc, index, onRemove, onView, isEditing }) 
         {!isEditing && (
           <DocumentCopyButton document={doc} />
         )}
-        <Tooltip title="查看笔记详情">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView(doc._id || doc);
-            }}
-            aria-label="查看笔记详情"
-          >
-            <LaunchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         {isEditing && (
           <Tooltip title="删除引用">
             <IconButton
@@ -501,6 +490,7 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, onView,
         cursor: isEditing ? 'grab' : 'pointer',
         '&:active': { cursor: isEditing ? 'grabbing' : 'pointer' }
       }}
+      onClick={() => !isEditing && onView && onView(attachment._id || attachment)}
     >
       {isEditing && (
         <Box
@@ -573,18 +563,6 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, onView,
             </Tooltip>
           </>
         )}
-        <Tooltip title="查看附件详情">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView(attachment._id || attachment);
-            }}
-            aria-label="查看附件详情"
-          >
-            <LaunchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         {isEditing && (
           <Tooltip title="删除引用">
             <IconButton
@@ -629,6 +607,7 @@ const SortableReferencedQuoteItem = ({ quote, index, onRemove, onView, isEditing
         cursor: isEditing ? 'grab' : 'pointer',
         '&:active': { cursor: isEditing ? 'grabbing' : 'pointer' }
       }}
+      onClick={() => !isEditing && onView && onView(quote._id || quote)}
     >
       {isEditing && (
         <Box
@@ -691,18 +670,6 @@ const SortableReferencedQuoteItem = ({ quote, index, onRemove, onView, isEditing
         {!isEditing && (
           <QuoteCopyButton quote={quote} />
         )}
-        <Tooltip title="查看引用体详情">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView(quote._id || quote);
-            }}
-            aria-label="查看引用体详情"
-          >
-            <LaunchIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
         {isEditing && (
           <Tooltip title="删除引用">
             <IconButton
