@@ -698,16 +698,18 @@ const QuoteDetailContent = ({
   onSaveQuoteReferences,
   onViewDocument,
   selectedQuoteStatus,
-  isSidebarCollapsed
+  isSidebarCollapsed,
+  onEditModeChange,
+  externalTitle,
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    title: '',
     description: '',
     content: '',
-    tags: []
+    tags: [],
+    tagInput: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -753,10 +755,10 @@ const QuoteDetailContent = ({
   useEffect(() => {
     if (quote) {
       setEditForm({
-        title: quote.title || '',
         description: quote.description || '',
         content: quote.content || '',
-        tags: quote.tags || []
+        tags: quote.tags || [],
+        tagInput: '',
       });
       
       // 初始化引用列表，兼容已填充对象和ID两种形态
@@ -805,14 +807,19 @@ const QuoteDetailContent = ({
     if (isEditing) {
       // 取消编辑，重置表单
       setEditForm({
-        title: quote.title || '',
         description: quote.description || '',
         content: quote.content || '',
-        tags: quote.tags || []
+        tags: quote.tags || [],
+        tagInput: '',
       });
       setError('');
     }
     setIsEditing(!isEditing);
+    
+    // 通知父组件编辑模式变化
+    if (onEditModeChange) {
+      onEditModeChange(!isEditing);
+    }
   };
 
   // 处理表单字段变化
@@ -851,11 +858,7 @@ const QuoteDetailContent = ({
 
   // 处理保存
   const handleSave = async () => {
-    // 验证表单
-    if (!editForm.title.trim()) {
-      setError('标题不能为空');
-      return;
-    }
+    // 标题验证由 QuoteWindow 处理
     if (!editForm.content.trim()) {
       setError('内容不能为空');
       return;
@@ -1704,7 +1707,10 @@ const QuoteDetailContent = ({
                   value={editForm.tagInput || ''}
                   onChange={(e) => {
                     handleFieldChange('tagInput', e.target.value);
+                  }}
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
                       const tagValue = e.target.value.trim();
                       if (tagValue && !editForm.tags.includes(tagValue)) {
                         handleFieldChange('tags', [...editForm.tags, tagValue]);
@@ -1785,15 +1791,6 @@ const QuoteDetailContent = ({
           {/* 编辑表单 */}
           {isEditing ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="标题"
-                value={editForm.title}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
-                fullWidth
-                variant="outlined"
-                size="small"
-              />
-              
               <TextField
                 label="描述"
                 value={editForm.description}
