@@ -1666,12 +1666,32 @@ const QuoteDetailContent = ({
               top: 0,
               zIndex: 10,
               display: 'flex',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               mb: 2,
               p: 1,
               backgroundColor: theme.palette.background.paper,
               borderBottom: `1px solid ${theme.palette.divider}`,
             }}>
+              {/* 编辑/保存按钮 */}
+              <Button
+                variant={isEditing ? "contained" : "outlined"}
+                size="small"
+                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+                onClick={isEditing ? handleSave : handleToggleEdit}
+                disabled={loading}
+                sx={{
+                  borderRadius: 16,
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  fontWeight: 'medium',
+                }}
+              >
+                {isEditing ? '保存' : '编辑'}
+              </Button>
+              
               <Button
                 variant="outlined"
                 size="small"
@@ -1828,23 +1848,7 @@ const QuoteDetailContent = ({
                   <Typography variant="subtitle2" sx={{ color: 'text.secondary' }}>
                     内容 *
                   </Typography>
-                  <Tooltip title={editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}>
-                    <IconButton
-                      size="small"
-                      onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
-                      sx={{
-                        borderRadius: 16,
-                        backgroundColor: 'transparent',
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'light'
-                            ? 'rgba(0, 0, 0, 0.04)'
-                            : 'rgba(255, 255, 255, 0.08)',
-                        },
-                      }}
-                    >
-                      {editorType === 'code' ? <EditNoteIcon fontSize="small" /> : <CodeIcon fontSize="small" />}
-                    </IconButton>
-                  </Tooltip>
+                  {/* 移除了内容区域的切换按钮，现在只在顶部有切换按钮 */}
                 </Box>
                 {editorType === 'code' ? (
                   <CodeEditor
@@ -1894,15 +1898,6 @@ const QuoteDetailContent = ({
                 >
                   取消
                 </Button>
-                <Button
-                  onClick={handleSave}
-                  variant="contained"
-                  disabled={loading}
-                  startIcon={loading ? <CircularProgress size={16} /> : <SaveIcon />}
-                  sx={{ borderRadius: 12 }}
-                >
-                  保存
-                </Button>
               </Box>
             </Box>
           ) : (
@@ -1935,22 +1930,25 @@ const QuoteDetailContent = ({
               )}
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton
-                onClick={handleToggleEdit}
-                color={isEditing ? 'primary' : 'default'}
-                title={isEditing ? '取消编辑' : '编辑'}
-                sx={{
-                  borderRadius: 16,
-                  backgroundColor: 'transparent',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'light'
-                      ? 'rgba(0, 0, 0, 0.04)'
-                      : 'rgba(255, 255, 255, 0.08)',
-                  },
-                }}
-              >
-                {isEditing ? <CancelIcon /> : <EditIcon />}
-              </IconButton>
+              {/* 非编辑模式下的编辑按钮 */}
+              {!isEditing && (
+                <IconButton
+                  onClick={handleToggleEdit}
+                  color={isEditing ? 'primary' : 'default'}
+                  title={isEditing ? '取消编辑' : '编辑'}
+                  sx={{
+                    borderRadius: 16,
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'light'
+                        ? 'rgba(0, 0, 0, 0.04)'
+                        : 'rgba(255, 255, 255, 0.08)',
+                    },
+                  }}
+                >
+                  <EditIcon />
+                </IconButton>
+              )}
               
               <IconButton
                 onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}

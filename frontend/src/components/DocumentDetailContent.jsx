@@ -1698,19 +1698,39 @@ const DocumentDetailContent = ({
 
         {/* 右侧内容区域 */}
         <RightContentBox>
-          {/* 编辑模式下的顶部切换按钮栏 */}
-          {isEditing && (
-            <Box sx={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              mb: 2,
-              p: 1,
-              backgroundColor: theme.palette.background.paper,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-            }}>
+          {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
+          <Box sx={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            p: 1,
+            backgroundColor: theme.palette.background.paper,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}>
+            {/* 编辑/保存按钮 */}
+            <Button
+              variant={isEditing ? "contained" : "outlined"}
+              size="small"
+              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+              onClick={isEditing ? handleSave : toggleEditMode}
+              sx={{
+                borderRadius: 16,
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.5,
+                minWidth: 'auto',
+                fontWeight: 'medium',
+              }}
+            >
+              {isEditing ? '保存' : '编辑'}
+            </Button>
+            
+            {/* 编辑模式下的UI模式切换按钮 */}
+            {isEditing && (
               <Button
                 variant="outlined"
                 size="small"
@@ -1727,8 +1747,27 @@ const DocumentDetailContent = ({
               >
                 {editorUIMode === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
               </Button>
-            </Box>
-          )}
+            )}
+            
+            {/* 非编辑模式下的内容类型切换按钮 */}
+            {!isEditing && document.content && document.htmlContent && (
+              <ToggleButtonGroup
+                value={contentType}
+                exclusive
+                onChange={(e, newType) => newType && setContentType(newType)}
+                size="small"
+              >
+                <ToggleButton value="html" sx={{ px: 1, py: 0.5 }}>
+                  <HtmlIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  HTML
+                </ToggleButton>
+                <ToggleButton value="text" sx={{ px: 1, py: 0.5 }}>
+                  <CodeIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                  文本
+                </ToggleButton>
+              </ToggleButtonGroup>
+            )}
+          </Box>
           
           {/* 标签 */}
           <Box>
@@ -1844,25 +1883,7 @@ const DocumentDetailContent = ({
                 </ToggleButtonGroup>
               )}
               
-              {/* 只读模式：HTML/文本 切换 - 仅在两种内容都存在时显示 */}
-              {!isEditing && document.content && document.htmlContent && (
-                <ToggleButtonGroup
-                  value={contentType}
-                  exclusive
-                  onChange={(e, newType) => newType && setContentType(newType)}
-                  size="small"
-                  sx={{ mb: 1 }}
-                >
-                  <ToggleButton value="html" sx={{ px: 1, py: 0.5 }}>
-                    <HtmlIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    HTML
-                  </ToggleButton>
-                  <ToggleButton value="text" sx={{ px: 1, py: 0.5 }}>
-                    <CodeIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    文本
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              )}
+              {/* HTML/文本切换按钮已移动到顶部按钮栏 */}
             </Box>
             
             {isEditing ? (
@@ -2082,23 +2103,25 @@ const DocumentDetailContent = ({
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {/* 编辑/保存按钮 */}
-          <IconButton
-            onClick={isEditing ? handleSave : toggleEditMode}
-            aria-label={isEditing ? "保存" : "编辑"}
-            sx={(theme) => ({
-              color: isEditing ? 'success.main' : theme.palette.text.secondary,
-              borderRadius: 16,
-              backgroundColor: 'transparent',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'light'
-                  ? 'rgba(0, 0, 0, 0.04)'
-                  : 'rgba(255, 255, 255, 0.08)',
-              },
-            })}
-          >
-            {isEditing ? <SaveIcon /> : <EditIcon />}
-          </IconButton>
+          {/* 非编辑模式下的编辑按钮 */}
+          {!isEditing && (
+            <IconButton
+              onClick={toggleEditMode}
+              aria-label="编辑"
+              sx={(theme) => ({
+                color: theme.palette.text.secondary,
+                borderRadius: 16,
+                backgroundColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'light'
+                    ? 'rgba(0, 0, 0, 0.04)'
+                    : 'rgba(255, 255, 255, 0.08)',
+                },
+              })}
+            >
+              <EditIcon />
+            </IconButton>
+          )}
 
           {/* 更多操作按钮 */}
           <IconButton
