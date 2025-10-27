@@ -1569,7 +1569,6 @@ const DocumentDetailContent = ({
               isAttachmentReferencesEditing ? (
                 <>
                   <Button
-                    variant="outlined"
                     size="small"
                     startIcon={<AddIcon />}
                     onClick={() => setIsAttachmentPickerOpen(true)}
@@ -1581,28 +1580,30 @@ const DocumentDetailContent = ({
                   </Button>
                   {isAttachmentReferencesDirty && onSaveAttachmentReferences && (
                     <>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<SaveIcon />}
-                        onClick={handleSaveAttachmentReferences}
-                        sx={{
-                          borderRadius: 16,
-                        }}
-                      >
-                        保存附件
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<UndoIcon />}
-                        onClick={handleResetAttachmentReferences}
-                        sx={{
-                          borderRadius: 16,
-                        }}
-                      >
-                        重置
-                      </Button>
+                      <Tooltip title="保存附件">
+                        <IconButton
+                          size="small"
+                          onClick={handleSaveAttachmentReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'success.main',
+                          }}
+                        >
+                          <SaveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="重置附件">
+                        <IconButton
+                          size="small"
+                          onClick={handleResetAttachmentReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'action.active',
+                          }}
+                        >
+                          <UndoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </>
                   )}
                   <Tooltip title="取消编辑">
