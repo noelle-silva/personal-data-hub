@@ -118,12 +118,13 @@ const formatRelativeTime = (dateString) => {
   return `${Math.floor(diffDays / 365)}年前`;
 };
 
-const QuotePickerDialog = ({ 
-  open, 
-  handleClose, 
-  onConfirm, 
-  excludeIds = [], 
-  initialSelectedIds = [] 
+const QuotePickerDialog = ({
+  open,
+  handleClose,
+  onConfirm,
+  excludeIds = [],
+  hiddenIds = [],
+  initialSelectedIds = []
 }) => {
   // 状态管理
   const [quotes, setQuotes] = useState([]);
@@ -329,18 +330,23 @@ const QuotePickerDialog = ({
   const filteredQuotes = React.useMemo(() => {
     let result = quotes;
     
+    // 首先过滤掉完全隐藏的引用体
+    if (hiddenIds.length > 0) {
+      result = result.filter(quote => !hiddenIds.includes(quote._id));
+    }
+    
     // 如果同时有搜索和标签，做客户端交集过滤
     if (searchQuery.trim() && selectedTags.length > 0) {
-      result = quotes.filter(quote => {
+      result = result.filter(quote => {
         // 检查引用体是否包含所有选中的标签
-        return selectedTags.every(tag => 
+        return selectedTags.every(tag =>
           quote.tags && quote.tags.includes(tag)
         );
       });
     }
     
     return result;
-  }, [quotes, searchQuery, selectedTags]);
+  }, [quotes, searchQuery, selectedTags, hiddenIds]);
   
   // 渲染引用体项
   const renderQuoteItem = (quote) => {

@@ -2057,6 +2057,7 @@ const QuoteDetailContent = ({
         handleClose={() => setIsQuotePickerOpen(false)}
         onConfirm={handleAddQuoteReferences}
         excludeIds={referencedQuotes.map(quote => quote._id)}
+        hiddenIds={[quote._id]} // 传递当前引用体的ID，使其不在列表中显示
       />
     </RightContentBox>
   </ContentBox>
