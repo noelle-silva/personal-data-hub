@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
 import QuoteCopyButton from './QuoteCopyButton';
+import DocumentCopyButton from './DocumentCopyButton';
 import { useDispatch } from 'react-redux';
 import {
   fetchDocumentById,
@@ -352,58 +353,10 @@ const SortableReferencedDocItem = ({ doc, index, onRemove, onView, isEditing }) 
     isDragging,
   } = useSortable({ id: doc._id || doc });
 
-  const [copyTooltip, setCopyTooltip] = useState('复制标记');
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
-
-  // HTML 转义函数
-  const escapeHtml = (text) => {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
-  // 处理复制标记
-  const handleCopyAction = async (e) => {
-    e.stopPropagation();
-    const docId = doc._id || doc;
-    const docTitle = doc.title || '查看详情';
-    const escapedTitle = escapeHtml(docTitle);
-    
-    // 生成包含 data-label 和笔记标题的标记
-    const actionMarkup = `<x-tab-action data-action="open-document" data-doc-id="${docId}" data-label="${escapedTitle}">${escapedTitle}</x-tab-action>`;
-    
-    try {
-      // 优先使用现代 clipboard API
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(actionMarkup);
-      } else {
-        // 降级方案：使用传统方法
-        const textArea = document.createElement('textarea');
-        textArea.value = actionMarkup;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      
-      // 显示成功反馈
-      setCopyTooltip('已复制');
-      setTimeout(() => setCopyTooltip('复制标记'), 2000);
-    } catch (err) {
-      console.error('复制失败:', err);
-      setCopyTooltip('复制失败');
-      setTimeout(() => setCopyTooltip('复制标记'), 2000);
-    }
   };
 
   return (
@@ -469,19 +422,7 @@ const SortableReferencedDocItem = ({ doc, index, onRemove, onView, isEditing }) 
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         {!isEditing && (
-          <Tooltip title={copyTooltip}>
-            <IconButton
-              size="small"
-              onClick={handleCopyAction}
-              sx={{
-                borderRadius: 16,
-                mr: 0.5,
-              }}
-              aria-label="复制标记"
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <DocumentCopyButton document={doc} />
         )}
         <Tooltip title="查看笔记详情">
           <IconButton
