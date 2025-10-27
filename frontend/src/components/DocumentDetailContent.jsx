@@ -1455,7 +1455,62 @@ const DocumentDetailContent = ({
             expanded={referencesExpanded}
             onExpandedChange={setReferencesExpanded}
             actions={
-              !isReferencesEditing && (
+              isReferencesEditing ? (
+                <>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setIsDocumentPickerOpen(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    添加引用
+                  </Button>
+                  {isReferencesDirty && (
+                    <>
+                      <Tooltip title="保存引用">
+                        <IconButton
+                          size="small"
+                          onClick={handleSaveReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'success.main',
+                          }}
+                        >
+                          <SaveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="撤销更改">
+                        <IconButton
+                          size="small"
+                          onClick={handleResetReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'action.active',
+                          }}
+                        >
+                          <UndoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                  <Tooltip title="取消编辑">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setIsReferencesEditing(false);
+                        handleResetReferences();
+                      }}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
                 <Tooltip title="编辑引用">
                   <IconButton
                     size="small"
@@ -1502,65 +1557,6 @@ const DocumentDetailContent = ({
               </EmptyStateContainer>
             )}
             
-            {isReferencesEditing && (
-              <ActionsContainer>
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => setIsDocumentPickerOpen(true)}
-                  sx={{
-                    borderRadius: 16,
-                  }}
-                >
-                  添加引用
-                </Button>
-                <Box>
-                  {isReferencesDirty && (
-                    <>
-                      <Tooltip title="保存引用">
-                        <IconButton
-                          size="small"
-                          onClick={handleSaveReferences}
-                          sx={{
-                            borderRadius: 16,
-                            mr: 1,
-                            color: 'success.main',
-                          }}
-                        >
-                          <SaveIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="撤销更改">
-                        <IconButton
-                          size="small"
-                          onClick={handleResetReferences}
-                          sx={{
-                            borderRadius: 16,
-                            color: 'action.active',
-                          }}
-                        >
-                          <UndoIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </>
-                  )}
-                  <Tooltip title="取消编辑">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setIsReferencesEditing(false);
-                        handleResetReferences();
-                      }}
-                      sx={{
-                        borderRadius: 16,
-                      }}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </ActionsContainer>
-            )}
           </CollapsibleRelationModule>
 
           {/* 此笔记引用的附件 */}
@@ -1570,7 +1566,61 @@ const DocumentDetailContent = ({
             expanded={attachmentsExpanded}
             onExpandedChange={setAttachmentsExpanded}
             actions={
-              !isAttachmentReferencesEditing && (
+              isAttachmentReferencesEditing ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setIsAttachmentPickerOpen(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    添加附件
+                  </Button>
+                  {isAttachmentReferencesDirty && onSaveAttachmentReferences && (
+                    <>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<SaveIcon />}
+                        onClick={handleSaveAttachmentReferences}
+                        sx={{
+                          borderRadius: 16,
+                        }}
+                      >
+                        保存附件
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<UndoIcon />}
+                        onClick={handleResetAttachmentReferences}
+                        sx={{
+                          borderRadius: 16,
+                        }}
+                      >
+                        重置
+                      </Button>
+                    </>
+                  )}
+                  <Tooltip title="取消编辑">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setIsAttachmentReferencesEditing(false);
+                        handleResetAttachmentReferences();
+                      }}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
                 <Tooltip title="编辑引用">
                   <IconButton
                     size="small"
@@ -1585,48 +1635,6 @@ const DocumentDetailContent = ({
               )
             }
           >
-            {isAttachmentReferencesEditing && (
-              <ActionsContainer>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => setIsAttachmentPickerOpen(true)}
-                  sx={{
-                    borderRadius: 16,
-                  }}
-                >
-                  添加附件
-                </Button>
-                
-                {isAttachmentReferencesDirty && onSaveAttachmentReferences && (
-                  <>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<SaveIcon />}
-                      onClick={handleSaveAttachmentReferences}
-                      sx={{
-                        borderRadius: 16,
-                      }}
-                    >
-                      保存附件
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      startIcon={<UndoIcon />}
-                      onClick={handleResetAttachmentReferences}
-                      sx={{
-                        borderRadius: 16,
-                      }}
-                    >
-                      重置
-                    </Button>
-                  </>
-                )}
-              </ActionsContainer>
-            )}
             
             {referencedAttachments.length === 0 ? (
               <EmptyStateContainer>

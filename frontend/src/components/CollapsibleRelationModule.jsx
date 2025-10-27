@@ -102,7 +102,14 @@ const CollapsibleRelationModule = ({
           </RelationModuleTitle>
         </Box>
         {/* 防止点击操作按钮时触发展开/收起 */}
-        <Box onClick={(e) => e.stopPropagation()}>
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5
+          }}
+        >
           {actions}
         </Box>
       </Box>
