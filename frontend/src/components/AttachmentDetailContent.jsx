@@ -35,6 +35,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { renderAsync } from 'docx-preview';
 import EpubViewer from './EpubViewer';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
+import AttachmentCopyButton from './AttachmentCopyButton';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   selectSelectedAttachment,
@@ -830,6 +831,28 @@ const AttachmentDetailContent = ({
               >
                 新窗口打开
               </Button>
+            </>
+          )}
+          
+          {/* 附件引用复制按钮 */}
+          {!isEditing && attachment && (
+            <>
+              {attachment.category === 'image' && (
+                <AttachmentCopyButton
+                  attachment={attachment}
+                  type="image"
+                  tooltip="复制图片HTML引用"
+                  size="medium"
+                />
+              )}
+              {attachment.category === 'video' && (
+                <AttachmentCopyButton
+                  attachment={attachment}
+                  type="video"
+                  tooltip="复制视频HTML引用"
+                  size="medium"
+                />
+              )}
             </>
           )}
           

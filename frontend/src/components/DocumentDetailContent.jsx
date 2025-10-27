@@ -48,6 +48,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
 import QuoteCopyButton from './QuoteCopyButton';
 import DocumentCopyButton from './DocumentCopyButton';
+import AttachmentCopyButton from './AttachmentCopyButton';
 import {
   DndContext,
   closestCenter,
@@ -586,19 +587,38 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         {!isEditing && (
-          <Tooltip title={copyTooltip}>
-            <IconButton
-              size="small"
-              onClick={handleCopyAction}
-              sx={{
-                borderRadius: 16,
-                mr: 0.5,
-              }}
-              aria-label="复制链接"
-            >
-              <ContentCopyIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <>
+            {attachment.category === 'image' && (
+              <AttachmentCopyButton
+                attachment={attachment}
+                type="image"
+                tooltip="复制图片HTML引用"
+                size="small"
+              />
+            )}
+            {attachment.category === 'video' && (
+              <AttachmentCopyButton
+                attachment={attachment}
+                type="video"
+                tooltip="复制视频HTML引用"
+                size="small"
+              />
+            )}
+            {/* 保留原有的attach://复制功能作为备选 */}
+            <Tooltip title={copyTooltip}>
+              <IconButton
+                size="small"
+                onClick={handleCopyAction}
+                sx={{
+                  borderRadius: 16,
+                  mr: 0.5,
+                }}
+                aria-label="复制链接"
+              >
+                <ContentCopyIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
         )}
         <Tooltip title="查看附件详情">
           <IconButton

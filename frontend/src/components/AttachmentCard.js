@@ -30,6 +30,7 @@ import {
   deleteAttachmentById
 } from '../store/attachmentsSlice';
 import { getPlaceholderImage } from '../services/attachments';
+import AttachmentCopyButton from './AttachmentCopyButton';
 
 // 样式化卡片
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -623,6 +624,45 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
           <MenuItem onClick={handleCopyUrl}>
             <CopyIcon fontSize="small" sx={{ mr: 1 }} />
             复制URL
+          </MenuItem>
+        )}
+        
+        {/* 复制引用菜单项 */}
+        {attachment.category === 'image' && (
+          <MenuItem onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClose();
+            // 生成图片HTML表达式
+            const expression = `<img src="attach://${attachment._id}" alt="${attachment.originalName}" title="${attachment.originalName}" />`;
+            navigator.clipboard.writeText(expression)
+              .then(() => {
+                console.log('图片引用已复制到剪贴板');
+              })
+              .catch(err => {
+                console.error('复制失败:', err);
+              });
+          }}>
+            <CopyIcon fontSize="small" sx={{ mr: 1 }} />
+            复制图片引用
+          </MenuItem>
+        )}
+        
+        {attachment.category === 'video' && (
+          <MenuItem onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClose();
+            // 生成视频HTML表达式
+            const expression = `<video src="attach://${attachment._id}" title="${attachment.originalName}" controls></video>`;
+            navigator.clipboard.writeText(expression)
+              .then(() => {
+                console.log('视频引用已复制到剪贴板');
+              })
+              .catch(err => {
+                console.error('复制失败:', err);
+              });
+          }}>
+            <CopyIcon fontSize="small" sx={{ mr: 1 }} />
+            复制视频引用
           </MenuItem>
         )}
         
