@@ -709,8 +709,9 @@ const QuoteDetailContent = ({
     description: '',
     content: '',
     tags: [],
-    tagInput: '',
   });
+  
+  const [tagInput, setTagInput] = useState(''); // 独立的tagInput状态，与DocumentDetailContent保持一致
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
@@ -758,8 +759,8 @@ const QuoteDetailContent = ({
         description: quote.description || '',
         content: quote.content || '',
         tags: quote.tags || [],
-        tagInput: '',
       });
+      setTagInput(''); // 初始化独立的tagInput状态
       
       // 初始化引用列表，兼容已填充对象和ID两种形态
       const refs = quote.referencedDocumentIds || [];
@@ -810,8 +811,8 @@ const QuoteDetailContent = ({
         description: quote.description || '',
         content: quote.content || '',
         tags: quote.tags || [],
-        tagInput: '',
       });
+      setTagInput('');
       setError('');
     }
     setIsEditing(!isEditing);
@@ -837,6 +838,33 @@ const QuoteDetailContent = ({
     const tagsString = event.target.value;
     const tags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag);
     handleFieldChange('tags', tags);
+  };
+  
+  // 添加标签 - 与DocumentDetailContent保持一致
+  const handleAddTag = () => {
+    if (tagInput.trim() && !editForm.tags.includes(tagInput.trim())) {
+      setEditForm(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
+    }
+  };
+
+  // 删除标签 - 与DocumentDetailContent保持一致
+  const handleDeleteTag = (tagToDelete) => {
+    setEditForm(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToDelete)
+    }));
+  };
+
+  // 处理标签输入框回车 - 与DocumentDetailContent保持一致
+  const handleTagInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   // 处理查看文档
@@ -870,7 +898,12 @@ const QuoteDetailContent = ({
 
     setLoading(true);
     try {
-      await onSave(quote._id, editForm);
+      // 确保tags是数组格式
+      const saveData = {
+        ...editForm,
+        tags: Array.isArray(editForm.tags) ? editForm.tags : [],
+      };
+      await onSave(quote._id, saveData);
       setIsEditing(false);
       setError('');
     } catch (err) {
@@ -1688,15 +1721,11 @@ const QuoteDetailContent = ({
                   <Chip
                     key={index}
                     label={tag}
-                    onDelete={() => {
-                      const newTags = [...editForm.tags];
-                      newTags.splice(index, 1);
-                      handleFieldChange('tags', newTags);
-                    }}
+                    onDelete={() => handleDeleteTag(tag)} // 使用统一的删除函数
                     size="small"
                     sx={{
                       fontSize: '0.8rem',
-                      borderRadius: 12,
+                      borderRadius: 12, // 设置为 12px 圆角，符合辅助组件规范
                     }}
                   />
                 ))}
@@ -1704,22 +1733,11 @@ const QuoteDetailContent = ({
                   size="small"
                   variant="standard"
                   placeholder="添加标签"
-                  value={editForm.tagInput || ''}
-                  onChange={(e) => {
-                    handleFieldChange('tagInput', e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      const tagValue = e.target.value.trim();
-                      if (tagValue && !editForm.tags.includes(tagValue)) {
-                        handleFieldChange('tags', [...editForm.tags, tagValue]);
-                        handleFieldChange('tagInput', '');
-                      }
-                    }
-                  }}
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={handleTagInputKeyPress} // 使用统一的按键处理函数
                   sx={{
-                    minWidth: 120,
+                    minWidth: 300, // 增加输入框宽度到300px
                     '& .MuiInput-underline:before': {
                       borderBottomColor: 'primary.main',
                     },
@@ -1732,14 +1750,8 @@ const QuoteDetailContent = ({
                     endAdornment: (
                       <IconButton
                         size="small"
-                        onClick={() => {
-                          const tagValue = editForm.tagInput?.trim();
-                          if (tagValue && !editForm.tags.includes(tagValue)) {
-                            handleFieldChange('tags', [...editForm.tags, tagValue]);
-                            handleFieldChange('tagInput', '');
-                          }
-                        }}
-                        disabled={!editForm.tagInput?.trim()}
+                        onClick={handleAddTag} // 使用统一的添加函数
+                        disabled={!tagInput.trim()}
                         sx={{
                           borderRadius: 16,
                           padding: 0.5,
@@ -1757,8 +1769,8 @@ const QuoteDetailContent = ({
                   <Chip
                     key={index}
                     label={tag}
-                    size="small"
                     variant="outlined"
+                    size="small"
                     sx={{
                       fontSize: '0.8rem',
                       borderColor: 'secondary.main',
@@ -1791,17 +1803,7 @@ const QuoteDetailContent = ({
           {/* 编辑表单 */}
           {isEditing ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="描述"
-                value={editForm.description}
-                onChange={(e) => handleFieldChange('description', e.target.value)}
-                fullWidth
-                variant="outlined"
-                size="small"
-                multiline
-                rows={2}
-                helperText={`${editForm.description.length}/300`}
-              />
+              {/* 描述字段已移至元信息区域编辑 */}
               
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -1840,27 +1842,12 @@ const QuoteDetailContent = ({
                 )}
               </Box>
               
-              <TextField
-                label="标签 (用逗号分隔)"
-                value={editForm.tags.join(', ')}
-                onChange={handleTagsChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                helperText="用逗号分隔多个标签"
-              />
+              {/* 移除重复的标签输入字段，已在标签区域提供编辑功能 */}
               
               {/* 取消按钮已移到顶部栏 */}
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* 描述 */}
-              {quote.description && (
-                <Typography variant="body2" color="text.secondary">
-                  {quote.description}
-                </Typography>
-              )}
-              
               {/* 内容 */}
               <Box>
                 <MarkdownInlineRenderer content={quote.content} />
@@ -1871,19 +1858,70 @@ const QuoteDetailContent = ({
 
           {/* 底部元信息区域 */}
           <MetaInfoContainer>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                创建时间: {quote.createdAt ? formatRelativeTime(quote.createdAt) : '未知'}
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  mb: 1,
+                }}
+              >
+                <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
+                  描述:
+                </Box>
+                {isEditing ? (
+                  <TextField
+                    name="description"
+                    value={editForm.description}
+                    onChange={(e) => handleFieldChange('description', e.target.value)}
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      width: 600, // 设置描述输入框宽度为600px
+                      '& .MuiInput-underline:before': {
+                        borderBottomColor: 'primary.main',
+                      },
+                      '& .MuiInput-underline:after': {
+                        borderBottomColor: 'primary.main',
+                      },
+                    }}
+                  />
+                ) : (
+                  quote.description || '未设置'
+                )}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
+                  创建时间:
+                </Box>
+                {quote.createdAt ? formatRelativeTime(quote.createdAt) : '未知'}
               </Typography>
               {quote.updatedAt && quote.updatedAt !== quote.createdAt && (
-                <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                  更新时间: {formatRelativeTime(quote.updatedAt)}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
+                    更新时间:
+                  </Box>
+                  {formatRelativeTime(quote.updatedAt)}
                 </Typography>
               )}
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 编辑按钮和更多操作按钮已移到顶部栏 */}
-            </Box>
+            {/* 编辑按钮和更多操作按钮已移到顶部栏 */}
           </MetaInfoContainer>
 
       {/* 操作菜单 */}
