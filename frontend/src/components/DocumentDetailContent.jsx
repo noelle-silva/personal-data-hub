@@ -1711,31 +1711,14 @@ const DocumentDetailContent = ({
             backgroundColor: theme.palette.background.paper,
             borderBottom: `1px solid ${theme.palette.divider}`,
           }}>
-            {/* 编辑/保存按钮 */}
-            <Button
-              variant={isEditing ? "contained" : "outlined"}
-              size="small"
-              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-              onClick={isEditing ? handleSave : toggleEditMode}
-              sx={{
-                borderRadius: 16,
-                fontSize: '0.8rem',
-                px: 2,
-                py: 0.5,
-                minWidth: 'auto',
-                fontWeight: 'medium',
-              }}
-            >
-              {isEditing ? '保存' : '编辑'}
-            </Button>
-            
-            {/* 编辑模式下的UI模式切换按钮 */}
-            {isEditing && (
+            {/* 左侧按钮组 */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* 编辑/保存按钮 */}
               <Button
-                variant="outlined"
+                variant={isEditing ? "contained" : "outlined"}
                 size="small"
-                startIcon={editorUIMode === 'code' ? <EditNoteIcon /> : <CodeIcon />}
-                onClick={() => setEditorUIMode(editorUIMode === 'code' ? 'text' : 'code')}
+                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+                onClick={isEditing ? handleSave : toggleEditMode}
                 sx={{
                   borderRadius: 16,
                   fontSize: '0.8rem',
@@ -1745,28 +1728,96 @@ const DocumentDetailContent = ({
                   fontWeight: 'medium',
                 }}
               >
-                {editorUIMode === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
+                {isEditing ? '保存' : '编辑'}
               </Button>
-            )}
+              
+              {/* 编辑模式下的取消按钮 */}
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={toggleEditMode}
+                  sx={{
+                    borderRadius: 16,
+                    fontSize: '0.8rem',
+                    px: 2,
+                    py: 0.5,
+                    minWidth: 'auto',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  取消
+                </Button>
+              )}
+            </Box>
             
-            {/* 非编辑模式下的内容类型切换按钮 */}
-            {!isEditing && document.content && document.htmlContent && (
-              <ToggleButtonGroup
-                value={contentType}
-                exclusive
-                onChange={(e, newType) => newType && setContentType(newType)}
-                size="small"
-              >
-                <ToggleButton value="html" sx={{ px: 1, py: 0.5 }}>
-                  <HtmlIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  HTML
-                </ToggleButton>
-                <ToggleButton value="text" sx={{ px: 1, py: 0.5 }}>
-                  <CodeIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                  文本
-                </ToggleButton>
-              </ToggleButtonGroup>
-            )}
+            {/* 右侧按钮组 */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* 非编辑模式下的更多操作按钮 */}
+              {!isEditing && (
+                <IconButton
+                  onClick={handleOpenActionsMenu}
+                  aria-controls={isActionsMenuOpen ? 'detail-actions-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={isActionsMenuOpen ? 'true' : undefined}
+                  sx={(theme) => ({
+                    transition: theme.transitions.create('transform', {
+                      duration: theme.transitions.duration.shortest,
+                    }),
+                    transform: isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    color: theme.palette.text.secondary,
+                    borderRadius: 16,
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'light'
+                        ? 'rgba(0, 0, 0, 0.04)'
+                        : 'rgba(255, 255, 255, 0.08)',
+                    },
+                  })}
+                >
+                  <ExpandMoreIcon />
+                </IconButton>
+              )}
+              
+              {/* 编辑模式下的UI模式切换按钮 */}
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={editorUIMode === 'code' ? <EditNoteIcon /> : <CodeIcon />}
+                  onClick={() => setEditorUIMode(editorUIMode === 'code' ? 'text' : 'code')}
+                  sx={{
+                    borderRadius: 16,
+                    fontSize: '0.8rem',
+                    px: 2,
+                    py: 0.5,
+                    minWidth: 'auto',
+                    fontWeight: 'medium',
+                  }}
+                >
+                  {editorUIMode === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
+                </Button>
+              )}
+              
+              {/* 非编辑模式下的内容类型切换按钮 */}
+              {!isEditing && document.content && document.htmlContent && (
+                <ToggleButtonGroup
+                  value={contentType}
+                  exclusive
+                  onChange={(e, newType) => newType && setContentType(newType)}
+                  size="small"
+                >
+                  <ToggleButton value="html" sx={{ px: 1, py: 0.5 }}>
+                    <HtmlIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    HTML
+                  </ToggleButton>
+                  <ToggleButton value="text" sx={{ px: 1, py: 0.5 }}>
+                    <CodeIcon sx={{ fontSize: 16, mr: 0.5 }} />
+                    文本
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              )}
+            </Box>
           </Box>
           
           {/* 标签 */}
@@ -2102,51 +2153,7 @@ const DocumentDetailContent = ({
             {formatDate(document.updatedAt)}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {/* 非编辑模式下的编辑按钮 */}
-          {!isEditing && (
-            <IconButton
-              onClick={toggleEditMode}
-              aria-label="编辑"
-              sx={(theme) => ({
-                color: theme.palette.text.secondary,
-                borderRadius: 16,
-                backgroundColor: 'transparent',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'light'
-                    ? 'rgba(0, 0, 0, 0.04)'
-                    : 'rgba(255, 255, 255, 0.08)',
-                },
-              })}
-            >
-              <EditIcon />
-            </IconButton>
-          )}
-
-          {/* 更多操作按钮 */}
-          <IconButton
-            onClick={handleOpenActionsMenu}
-            aria-controls={isActionsMenuOpen ? 'detail-actions-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={isActionsMenuOpen ? 'true' : undefined}
-            sx={(theme) => ({
-              transition: theme.transitions.create('transform', {
-                duration: theme.transitions.duration.shortest,
-              }),
-              transform: isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              color: theme.palette.text.secondary,
-              borderRadius: 16,
-              backgroundColor: 'transparent',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'light'
-                  ? 'rgba(0, 0, 0, 0.04)'
-                  : 'rgba(255, 255, 255, 0.08)',
-              },
-            })}
-          >
-            <ExpandMoreIcon />
-          </IconButton>
-        </Box>
+        {/* 编辑按钮和更多操作按钮已移到顶部栏 */}
       </MetaInfoContainer>
 
       <Menu
