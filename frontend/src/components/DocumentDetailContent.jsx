@@ -2176,6 +2176,7 @@ const DocumentDetailContent = ({
         handleClose={() => setIsDocumentPickerOpen(false)}
         onConfirm={handleAddReferences}
         excludeIds={referencedDocuments.map(doc => typeof doc === 'string' ? doc : doc._id)}
+        hiddenIds={[document._id]} // 隐藏当前笔记，防止自我引用
       />
       
       {/* 附件选择对话框 */}

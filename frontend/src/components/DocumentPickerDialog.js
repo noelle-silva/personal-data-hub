@@ -118,12 +118,13 @@ const formatRelativeTime = (dateString) => {
   return `${Math.floor(diffDays / 365)}年前`;
 };
 
-const DocumentPickerDialog = ({ 
-  open, 
-  handleClose, 
-  onConfirm, 
-  excludeIds = [], 
-  initialSelectedIds = [] 
+const DocumentPickerDialog = ({
+  open,
+  handleClose,
+  onConfirm,
+  excludeIds = [],
+  hiddenIds = [],
+  initialSelectedIds = []
 }) => {
   // 状态管理
   const [documents, setDocuments] = useState([]);
@@ -329,18 +330,23 @@ const DocumentPickerDialog = ({
   const filteredDocuments = React.useMemo(() => {
     let result = documents;
     
+    // 首先过滤掉完全隐藏的文档
+    if (hiddenIds.length > 0) {
+      result = result.filter(doc => !hiddenIds.includes(doc._id));
+    }
+    
     // 如果同时有搜索和标签，做客户端交集过滤
     if (searchQuery.trim() && selectedTags.length > 0) {
-      result = documents.filter(doc => {
+      result = result.filter(doc => {
         // 检查文档是否包含所有选中的标签
-        return selectedTags.every(tag => 
+        return selectedTags.every(tag =>
           doc.tags && doc.tags.includes(tag)
         );
       });
     }
     
     return result;
-  }, [documents, searchQuery, selectedTags]);
+  }, [documents, searchQuery, selectedTags, hiddenIds]);
   
   // 渲染文档项
   const renderDocumentItem = (document) => {
