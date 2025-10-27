@@ -63,6 +63,7 @@ import DocumentPickerDialog from './DocumentPickerDialog';
 import QuoteDetailModal from './QuoteDetailModal';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import CodeEditor from './CodeEditor';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -1250,40 +1251,36 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                 {isEditing ? (
                   <Box>
                     {/* 文本内容编辑 */}
-                    <TextField
-                      name="content"
-                      value={formData.content}
-                      onChange={handleChange}
-                      multiline
-                      rows={8}
-                      fullWidth
-                      variant="outlined"
-                      placeholder="文本内容（可选）"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 6,
-                        },
-                        mb: 2,
-                      }}
-                    />
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                        文本内容（可选）
+                      </Typography>
+                      <CodeEditor
+                        value={formData.content}
+                        onChange={(value) => handleChange({ target: { name: 'content', value } })}
+                        language="markdown"
+                        mode="autoSize"
+                        minHeight={160}
+                        maxHeight="40vh"
+                        debounceMs={300}
+                      />
+                    </Box>
                     
                     {/* HTML内容编辑 */}
-                    <TextField
-                      name="htmlContent"
-                      value={formData.htmlContent}
-                      onChange={handleChange}
-                      multiline
-                      rows={8}
-                      fullWidth
-                      variant="outlined"
-                      placeholder="HTML内容（可选）"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 6,
-                        },
-                        fontFamily: 'monospace',
-                      }}
-                    />
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                        HTML内容（可选）
+                      </Typography>
+                      <CodeEditor
+                        value={formData.htmlContent}
+                        onChange={(value) => handleChange({ target: { name: 'htmlContent', value } })}
+                        language="html"
+                        mode="autoSize"
+                        minHeight={160}
+                        maxHeight="40vh"
+                        debounceMs={300}
+                      />
+                    </Box>
                     
                     {/* HTML预览 */}
                     {previewHtml && formData.htmlContent && (

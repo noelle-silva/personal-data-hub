@@ -71,6 +71,7 @@ import { openAttachmentWindowAndFetch, openQuoteWindowAndFetch } from '../store/
 import { getAttachmentMetadata } from '../services/attachments';
 import QuoteFormModal from './QuoteFormModal';
 import { createQuote } from '../store/quotesSlice';
+import CodeEditor from './CodeEditor';
 
 // 内容区域
 const ContentBox = styled(Box)(({ theme }) => ({
@@ -713,23 +714,23 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
   );
 };
 
-// 自适应 textarea 高度的 hook
-const useAutoResizeTextarea = () => {
-  const textareaRef = useRef(null);
-  
-  const resizeTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      // 重置高度以获取正确的 scrollHeight
-      textarea.style.height = '0px';
-      // 设置最小高度为 100px，最大高度为容器的可用高度
-      const newHeight = Math.max(100, Math.min(textarea.scrollHeight, textarea.parentElement.clientHeight - 32));
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, []);
-  
-  return { textareaRef, resizeTextarea };
-};
+// 自适应 textarea 高度的 hook - 已废弃，改用 CodeEditor
+// const useAutoResizeTextarea = () => {
+//   const textareaRef = useRef(null);
+//
+//   const resizeTextarea = useCallback(() => {
+//     const textarea = textareaRef.current;
+//     if (textarea) {
+//       // 重置高度以获取正确的 scrollHeight
+//       textarea.style.height = '0px';
+//       // 设置最小高度为 100px，最大高度为容器的可用高度
+//       const newHeight = Math.max(100, Math.min(textarea.scrollHeight, textarea.parentElement.clientHeight - 32));
+//       textarea.style.height = `${newHeight}px`;
+//     }
+//   }, []);
+//
+//   return { textareaRef, resizeTextarea };
+// };
 
 const DocumentDetailContent = ({
   document,
@@ -748,7 +749,7 @@ const DocumentDetailContent = ({
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   const [isEditing, setIsEditing] = useState(false);
-  const { textareaRef, resizeTextarea } = useAutoResizeTextarea();
+  // const { textareaRef, resizeTextarea } = useAutoResizeTextarea(); // 已废弃，改用 CodeEditor
   const [isReferencesEditing, setIsReferencesEditing] = useState(false);
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   const [contentType, setContentType] = useState('html'); // 'html' 或 'text'
@@ -919,8 +920,7 @@ const DocumentDetailContent = ({
   }, [updatePreviewContent]);
 
   // 处理内容变化，带节流更新预览
-  const handleContentChange = (e) => {
-    const { name, value } = e.target;
+  const handleContentChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -940,8 +940,6 @@ const DocumentDetailContent = ({
     }
     previewTimeoutRef.current = setTimeout(() => {
       updatePreviewContent();
-      // 调整 textarea 高度
-      setTimeout(resizeTextarea, 0);
     }, 300);
   };
 
@@ -954,40 +952,40 @@ const DocumentDetailContent = ({
     };
   }, []);
 
-  // 监听容器大小变化和进入编辑模式时调整 textarea 高度
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      // 初始调整
-      setTimeout(resizeTextarea, 0);
-      
-      // 监听容器大小变化
-      let resizeObserver;
-      if (window.ResizeObserver) {
-        resizeObserver = new ResizeObserver(() => {
-          setTimeout(resizeTextarea, 0);
-        });
-        
-        // 监听 textarea 的父容器
-        const parentElement = textareaRef.current.parentElement;
-        if (parentElement) {
-          resizeObserver.observe(parentElement);
-        }
-      }
-      
-      // 监听窗口大小变化
-      const handleResize = () => {
-        setTimeout(resizeTextarea, 0);
-      };
-      window.addEventListener('resize', handleResize);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (resizeObserver && textareaRef.current?.parentElement) {
-          resizeObserver.unobserve(textareaRef.current.parentElement);
-        }
-      };
-    }
-  }, [isEditing, resizeTextarea]);
+  // 监听容器大小变化和进入编辑模式时调整 textarea 高度 - 已废弃，CodeEditor 自动处理
+  // useEffect(() => {
+  //   if (isEditing && textareaRef.current) {
+  //     // 初始调整
+  //     setTimeout(resizeTextarea, 0);
+  //
+  //     // 监听容器大小变化
+  //     let resizeObserver;
+  //     if (window.ResizeObserver) {
+  //       resizeObserver = new ResizeObserver(() => {
+  //         setTimeout(resizeTextarea, 0);
+  //       });
+  //
+  //       // 监听 textarea 的父容器
+  //       const parentElement = textareaRef.current.parentElement;
+  //       if (parentElement) {
+  //         resizeObserver.observe(parentElement);
+  //       }
+  //     }
+  //
+  //     // 监听窗口大小变化
+  //     const handleResize = () => {
+  //       setTimeout(resizeTextarea, 0);
+  //     };
+  //     window.addEventListener('resize', handleResize);
+  //
+  //     return () => {
+  //       window.removeEventListener('resize', handleResize);
+  //       if (resizeObserver && textareaRef.current?.parentElement) {
+  //         resizeObserver.unobserve(textareaRef.current.parentElement);
+  //       }
+  //     };
+  //   }
+  // }, [isEditing, resizeTextarea]);
 
   // 处理表单字段变化
   const handleChange = (e) => {
@@ -1049,10 +1047,10 @@ const DocumentDetailContent = ({
         setPreviewContent(formData.htmlContent);
       }
       
-      // 进入编辑模式时调整 textarea 高度
-      if (!isEditing) {
-        setTimeout(resizeTextarea, 0);
-      }
+      // 进入编辑模式时调整 textarea 高度 - 已废弃，CodeEditor 自动处理
+      // if (!isEditing) {
+      //   setTimeout(resizeTextarea, 0);
+      // }
     }
     const newIsEditing = !isEditing;
     setIsEditing(newIsEditing);
@@ -1866,44 +1864,13 @@ const DocumentDetailContent = ({
                 
                 {/* 左侧编辑器 */}
                 <EditorMiddleColumn>
-                  <TextField
-                    name={editorType === 'markdown' ? 'content' : 'htmlContent'}
+                  <CodeEditor
                     value={editorType === 'markdown' ? formData.content : formData.htmlContent}
-                    onChange={handleContentChange}
-                    fullWidth
-                    multiline
-                    minRows={1}
-                    maxRows={null}
-                    variant="outlined"
-                    placeholder={editorType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
-                    inputRef={textareaRef}
-                    InputProps={{
-                      style: {
-                        height: '100%',
-                        overflow: 'hidden',
-                        resize: 'none',
-                      },
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 6,
-                        height: '100%',
-                        alignItems: 'flex-start',
-                      },
-                      '& .MuiOutlinedInput-input': {
-                        height: '100% !important',
-                        overflow: 'hidden !important',
-                        resize: 'none',
-                        scrollbarWidth: 'none', // Firefox
-                        '&::-webkit-scrollbar': {
-                          display: 'none', // Chrome, Safari, Edge
-                        },
-                      },
-                      fontFamily: editorType === 'html' ? 'monospace' : 'inherit',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
+                    onChange={(value) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', value)}
+                    language={editorType === 'markdown' ? 'markdown' : 'html'}
+                    mode="fillContainer"
+                    minHeight={200}
+                    debounceMs={300}
                   />
                 </EditorMiddleColumn>
                 

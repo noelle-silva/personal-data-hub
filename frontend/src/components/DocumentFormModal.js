@@ -24,6 +24,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import CodeEditor from './CodeEditor';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -293,8 +294,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
   }, [editorType, formData.content, formData.htmlContent]);
 
   // 处理内容变化，带节流更新预览
-  const handleContentChange = (e) => {
-    const { name, value } = e.target;
+  const handleContentChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -532,48 +532,47 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
             <Stack spacing={1} sx={{ height: '100%' }}>
               {/* 内容输入 - 根据编辑器类型条件渲染 */}
               {editorType === 'markdown' && (
-                <TextField
-                  label="Markdown 内容"
-                  name="content"
-                  value={formData.content}
-                  onChange={handleContentChange}
-                  fullWidth
-                  multiline
-                  rows={25}
-                  variant="outlined"
-                  error={!!errors.content}
-                  helperText={errors.content || '支持 Markdown 语法'}
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 6, // 设置为 6px 圆角
-                    },
-                    flexGrow: 1,
-                  }}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', flexGrow: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                    Markdown 内容
+                  </Typography>
+                  <CodeEditor
+                    value={formData.content}
+                    onChange={(value) => handleContentChange('content', value)}
+                    language="markdown"
+                    mode="autoSize"
+                    minHeight={200}
+                    maxHeight="60vh"
+                    debounceMs={300}
+                  />
+                  {errors.content && (
+                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                      {errors.content}
+                    </Typography>
+                  )}
+                </Box>
               )}
 
               {editorType === 'html' && (
-                <TextField
-                  label="HTML 内容"
-                  name="htmlContent"
-                  value={formData.htmlContent}
-                  onChange={handleContentChange}
-                  fullWidth
-                  multiline
-                  rows={25}
-                  variant="outlined"
-                  error={!!errors.content}
-                  helperText={errors.content || '支持原生 HTML, CSS 和 JavaScript'}
-                  required
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 6, // 设置为 6px 圆角
-                    },
-                    fontFamily: 'monospace', // 为HTML内容提供等宽字体
-                    flexGrow: 1,
-                  }}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', flexGrow: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                    HTML 内容
+                  </Typography>
+                  <CodeEditor
+                    value={formData.htmlContent}
+                    onChange={(value) => handleContentChange('htmlContent', value)}
+                    language="html"
+                    mode="autoSize"
+                    minHeight={200}
+                    maxHeight="60vh"
+                    debounceMs={300}
+                  />
+                  {errors.content && (
+                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                      {errors.content}
+                    </Typography>
+                  )}
+                </Box>
               )}
             </Stack>
           </MiddleColumn>

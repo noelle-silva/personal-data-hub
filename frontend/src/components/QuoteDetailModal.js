@@ -67,6 +67,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useSelector } from 'react-redux';
 import DocumentPickerDialog from './DocumentPickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
+import CodeEditor from './CodeEditor';
 
 // 样式化的对话框
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -954,17 +955,25 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
                 {/* 内容 */}
                 <Box>
                   {isEditing ? (
-                    <TextField
-                      fullWidth
-                      label="内容"
-                      value={editForm.content}
-                      onChange={(e) => handleFieldChange('content', e.target.value)}
-                      variant="outlined"
-                      multiline
-                      rows={12}
-                      error={!editForm.content.trim()}
-                      helperText={!editForm.content.trim() ? '内容不能为空' : ''}
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                        内容 *
+                      </Typography>
+                      <CodeEditor
+                        value={editForm.content}
+                        onChange={(value) => handleFieldChange('content', value)}
+                        language="markdown"
+                        mode="autoSize"
+                        minHeight={200}
+                        maxHeight="50vh"
+                        debounceMs={300}
+                      />
+                      {!editForm.content.trim() && (
+                        <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                          内容不能为空
+                        </Typography>
+                      )}
+                    </Box>
                   ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 100 }}>
                       <MarkdownInlineRenderer

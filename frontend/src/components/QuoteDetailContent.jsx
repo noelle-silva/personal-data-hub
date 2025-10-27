@@ -42,6 +42,7 @@ import DocumentPickerDialog from './DocumentPickerDialog';
 import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
+import CodeEditor from './CodeEditor';
 import {
   DndContext,
   closestCenter,
@@ -1787,16 +1788,20 @@ const QuoteDetailContent = ({
                 helperText={`${editForm.description.length}/300`}
               />
               
-              <TextField
-                label="内容"
-                value={editForm.content}
-                onChange={(e) => handleFieldChange('content', e.target.value)}
-                fullWidth
-                variant="outlined"
-                multiline
-                rows={8}
-                required
-              />
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                  内容 *
+                </Typography>
+                <CodeEditor
+                  value={editForm.content}
+                  onChange={(value) => handleFieldChange('content', value)}
+                  language="markdown"
+                  mode="autoSize"
+                  minHeight={160}
+                  maxHeight="40vh"
+                  debounceMs={300}
+                />
+              </Box>
               
               <TextField
                 label="标签 (用逗号分隔)"
