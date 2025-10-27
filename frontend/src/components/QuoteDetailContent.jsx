@@ -1863,7 +1863,7 @@ const QuoteDetailContent = ({
                     fullWidth
                     variant="outlined"
                     multiline
-                    rows={8}
+                    minRows={6}
                     placeholder="请输入内容..."
                     sx={{
                       '& .MuiOutlinedInput-root': {

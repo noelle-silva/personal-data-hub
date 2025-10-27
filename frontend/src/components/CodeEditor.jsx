@@ -87,6 +87,9 @@ const CodeEditor = ({
       fontFamily: theme.typography.fontFamily,
       lineNumbers: 'on',
       readOnly: disabled,
+      scrollbar: {
+        alwaysConsumeMouseWheel: false, // 允许滚动透传到外层容器
+      },
       ...options,
     });
 
@@ -180,6 +183,9 @@ const CodeEditor = ({
             fontFamily: theme.typography.fontFamily,
             lineNumbers: 'on',
             readOnly: disabled,
+            scrollbar: {
+              alwaysConsumeMouseWheel: false, // 允许滚动透传到外层容器
+            },
             ...options,
           }}
         />

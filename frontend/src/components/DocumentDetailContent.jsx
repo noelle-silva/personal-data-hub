@@ -1914,15 +1914,16 @@ const DocumentDetailContent = ({
                       fullWidth
                       variant="outlined"
                       multiline
-                      rows={12}
-                      placeholder={editorType === 'markdown' ? '请输入 Markdown 内容...' : '请输入 HTML 内容...'}
+                      minRows={6}
                       sx={{
                         '& .MuiOutlinedInput-root': {
+                          borderRadius: 16,
                           fontFamily: 'monospace',
                           fontSize: '14px',
                           lineHeight: 1.5,
                         },
                       }}
+                      placeholder={editorType === 'markdown' ? '请输入 Markdown 内容...' : '请输入 HTML 内容...'}
                     />
                   )}
                 </EditorMiddleColumn>
