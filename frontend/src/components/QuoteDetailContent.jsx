@@ -93,6 +93,7 @@ const RelationsBox = styled(Box, {
   flexDirection: 'column',
   gap: theme.spacing(2),
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
   transition: 'width 0.3s ease, padding 0.3s ease, border-right 0.3s ease',
   '&::-webkit-scrollbar': {
     width: 8,
@@ -111,6 +112,7 @@ const RightContentBox = styled(Box)(({ theme }) => ({
   width: '100%',
   padding: theme.spacing(3),
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
   flexGrow: 1,
   display: 'flex',
   flexDirection: 'column',
@@ -279,6 +281,7 @@ const RightPanelContainer = styled(Box)(({ theme }) => ({
 const RightPanelContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
   '&::-webkit-scrollbar': {
     width: 8,
   },
@@ -411,6 +414,7 @@ const PreviewHeader = styled(Box)(({ theme }) => ({
 const PreviewContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
+  overscrollBehavior: 'contain',
   border: `1px solid ${theme.palette.border}`,
   borderRadius: 12,
   padding: theme.spacing(1),

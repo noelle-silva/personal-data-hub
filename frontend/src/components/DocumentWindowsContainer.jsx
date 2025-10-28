@@ -128,6 +128,24 @@ const DocumentWindowsContainer = () => {
   const isLimitPromptOpen = useSelector(selectIsLimitPromptOpen);
   const minimizedWindows = useSelector(selectMinimizedWindows);
   
+  // 管理背景滚动锁定状态
+  useEffect(() => {
+    // 检查是否存在活动且未最小化的窗口
+    const activeWindow = windows.find(w => w.id === activeWindowId);
+    const hasActiveWindow = activeWindow && !activeWindow.minimized;
+    
+    if (hasActiveWindow) {
+      document.body.classList.add('has-active-floating-window');
+    } else {
+      document.body.classList.remove('has-active-floating-window');
+    }
+    
+    // 清理函数：组件卸载时移除类名
+    return () => {
+      document.body.classList.remove('has-active-floating-window');
+    };
+  }, [windows, activeWindowId]);
+  
   // 处理文档窗口保存
   const handleSaveDocument = async (id, documentData) => {
     try {

@@ -25,6 +25,7 @@ const PreviewHeader = styled(Box)(({ theme }) => ({
 const PreviewContent = styled(Box)(({ theme }) => ({
   flexGrow: 1,
   overflow: 'auto',
+  overscrollBehavior: 'contain',
   border: `1px solid ${theme.palette.border}`,
   borderRadius: 12,
   padding: theme.spacing(1),
