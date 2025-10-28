@@ -983,14 +983,28 @@ console.log("视频URL:", videoUrl);
     <h4>说明文本</h4>
     <p>这是在 Markdown 中嵌入的 HTML 容器，其中包含 attach:// 引用的图片和视频。</p>
     <p>两种引用方式都应该正常工作，并使用相同的签名URL机制。</p>
+    <h4>x-tab-action 附件按钮测试</h4>
+    <x-tab-action data-action="open-attachment" data-attachment-id="68e4ae62577d02adc74896d4" data-label="HTML中的测试附件1">HTML中的测试附件1</x-tab-action>
+    <x-tab-action data-action="open-attachment" data-attachment-id="68e4af5eb57d7ecd1aec5078" data-label="HTML中的测试附件2" data-variant="secondary">HTML中的测试附件2</x-tab-action>
   </div>
 </div>
+ 
+### x-tab-action 附件按钮测试
+
+<x-tab-action data-action="open-attachment" data-attachment-id="68e4ae62577d02adc74896d4" data-label="测试附件1">测试附件1</x-tab-action>
+
+<x-tab-action data-action="open-attachment" data-attachment-id="68e4af5eb57d7ecd1aec5078" data-label="测试附件2" data-variant="secondary">测试附件2</x-tab-action>
+
+<x-tab-action data-action="open-attachment" data-attachment-id="68e4af5eb57d7ecd1aec5078" data-label="测试附件3" data-variant="success">测试附件3</x-tab-action>
+
+这些按钮应该渲染为浅绿色渐变按钮，点击后会发送 postMessage。
 
 ## 测试特性
 
 - ✅ Markdown 中的 attach:// 引用
 - ✅ HTML 中的 attach:// 引用
 - ✅ 混合内容中的样式应用
+- ✅ x-tab-action 附件按钮渲染
 - ✅ 签名URL的缓存机制
 - ✅ 错误处理和占位图显示`}
                   cacheKey="mixed-attachment-test"

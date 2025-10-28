@@ -470,7 +470,7 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
     isDragging,
   } = useSortable({ id: attachment._id || attachment });
 
-  const [copyTooltip, setCopyTooltip] = useState('复制链接');
+  const [copyTooltip, setCopyTooltip] = useState('复制打开附件按钮');
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -502,16 +502,29 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
   const handleCopyAction = async (e) => {
     e.stopPropagation();
     const attachmentId = attachment._id || attachment;
-    const link = `attach://${attachmentId}`;
+    const attachmentName = attachment.originalName || attachment.name || '附件';
+    
+    // HTML 转义处理
+    const escapeHtml = (text) => {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    const escapedName = escapeHtml(attachmentName);
+    
+    // 生成 x-tab-action 标记
+    const actionMarkup = `<x-tab-action data-action="open-attachment" data-attachment-id="${attachmentId}" data-label="${escapedName}">${escapedName}</x-tab-action>`;
     
     try {
       // 优先使用现代 clipboard API
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(actionMarkup);
       } else {
         // 降级方案：使用传统方法
         const textArea = document.createElement('textarea');
-        textArea.value = link;
+        textArea.value = actionMarkup;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         textArea.style.top = '-999999px';
@@ -524,11 +537,11 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
       
       // 显示成功反馈
       setCopyTooltip('已复制');
-      setTimeout(() => setCopyTooltip('复制链接'), 2000);
+      setTimeout(() => setCopyTooltip('复制打开附件按钮'), 2000);
     } catch (err) {
       console.error('复制失败:', err);
       setCopyTooltip('复制失败');
-      setTimeout(() => setCopyTooltip('复制链接'), 2000);
+      setTimeout(() => setCopyTooltip('复制打开附件按钮'), 2000);
     }
   };
 
@@ -594,7 +607,7 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
                 size="small"
               />
             )}
-            {/* 保留原有的attach://复制功能作为备选 */}
+            {/* 复制打开附件按钮 */}
             <Tooltip title={copyTooltip}>
               <IconButton
                 size="small"
@@ -603,7 +616,7 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
                   borderRadius: 16,
                   mr: 0.5,
                 }}
-                aria-label="复制链接"
+                aria-label="复制打开附件按钮"
               >
                 <ContentCopyIcon fontSize="small" />
               </IconButton>

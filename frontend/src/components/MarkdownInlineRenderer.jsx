@@ -3,7 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import parse from 'html-react-parser';
 import { renderMarkdownToHtml, generateBaseStylesScoped, generateHighlightStylesScoped, generateKatexStylesScoped } from '../utils/markdownRenderer';
-import { generateTabActionFancyCssScoped, generateQuoteActionFancyCssScoped } from '../utils/tabActionStyles';
+import { generateTabActionFancyCssScoped, generateQuoteActionFancyCssScoped, generateAttachmentActionFancyCssScoped } from '../utils/tabActionStyles';
 import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyles';
 import { preprocessAIMessageContent } from '../utils/aiChatPreprocessor';
 import AttachmentImage from './AttachmentImage';
@@ -120,8 +120,9 @@ const MarkdownInlineRenderer = ({
     const katexStyles = generateKatexStylesScoped(scopeClass);
     const tabActionStyles = generateTabActionFancyCssScoped(scopeClass);
     const quoteActionStyles = generateQuoteActionFancyCssScoped(scopeClass);
+    const attachmentActionStyles = generateAttachmentActionFancyCssScoped(scopeClass);
     
-    let styles = `${baseStyles}\n${highlightStyles}\n${katexStyles}\n${tabActionStyles}\n${quoteActionStyles}`;
+    let styles = `${baseStyles}\n${highlightStyles}\n${katexStyles}\n${tabActionStyles}\n${quoteActionStyles}\n${attachmentActionStyles}`;
     
     // 如果启用AI聊天增强功能，添加增强样式
     if (enableAIChatEnhancements) {
@@ -138,6 +139,7 @@ const MarkdownInlineRenderer = ({
     if (node.name === 'x-tab-action') {
       const docId = node.attribs && node.attribs['data-doc-id'];
       const quoteId = node.attribs && node.attribs['data-quote-id'];
+      const attachmentId = node.attribs && node.attribs['data-attachment-id'];
       const action = node.attribs && node.attribs['data-action'];
       const label = node.attribs && node.attribs['data-label'];
       const variant = node.attribs && node.attribs['data-variant'] || 'primary';
@@ -185,6 +187,33 @@ const MarkdownInlineRenderer = ({
                 type: 'tab-action',
                 action: 'open-quote',
                 quoteId: quoteId,
+                label: buttonText,
+                variant: variant,
+                source: 'md-inline'
+              }, '*');
+            }}
+          >
+            {buttonText}
+          </button>
+        );
+      }
+      
+      // 处理 open-attachment 动作
+      if (action === 'open-attachment' && attachmentId) {
+        const buttonText = label || node.children && node.children[0] && node.children[0].data || '查看附件';
+        
+        // 创建一个原生按钮元素，使用附件专用的炫酷样式
+        return (
+          <button
+            className="attachment-action-button"
+            data-variant={variant}
+            title={`打开附件: ${attachmentId}`}
+            onClick={() => {
+              // 发送消息到父窗口
+              window.postMessage({
+                type: 'tab-action',
+                action: 'open-attachment',
+                attachmentId: attachmentId,
                 label: buttonText,
                 variant: variant,
                 source: 'md-inline'

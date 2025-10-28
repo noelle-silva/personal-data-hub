@@ -956,3 +956,480 @@ export const generateQuoteActionFancyCssScoped = (scopeClass = 'markdown-body') 
     }
   `;
 };
+
+/**
+ * 生成非作用域化的附件专用炫酷按钮 CSS
+ * 用于 HTML 沙盒环境
+ * @returns {string} CSS 样式字符串
+ */
+export const generateAttachmentActionFancyCssUnscoped = () => {
+  return `
+    /* 附件专用动作按钮样式 */
+    .attachment-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      margin: 4px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #A7F3D0 0%, #34D399 100%);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      min-height: 36px;
+      box-sizing: border-box;
+      box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .attachment-action-button::before {
+      content: "";
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      position: relative;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 70%, transparent 100%);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.3),
+        0 0 20px rgba(52, 211, 153, 0.6),
+        inset 0 0 10px rgba(255,255,255,0.2);
+      animation: attachment-action-pulse 2s infinite;
+    }
+    
+    .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 50%;
+      box-shadow:
+        0 0 6px rgba(255,255,255,0.8),
+        0 0 12px rgba(52, 211, 153, 0.6);
+    }
+    
+    .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 10px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%);
+      border-radius: 1px;
+      animation: attachment-action-rotate 3s linear infinite;
+    }
+    
+    .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      width: 10px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%);
+      border-radius: 1px;
+      animation: attachment-action-rotate-reverse 3s linear infinite;
+    }
+    
+    .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-vertical-pulse 1.5s infinite;
+    }
+    
+    .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-vertical-pulse 1.5s infinite 0.75s;
+    }
+    
+    .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 2px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-horizontal-pulse 1.5s infinite 0.375s;
+    }
+    
+    .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 2px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-horizontal-pulse 1.5s infinite 1.125s;
+    }
+    
+    @keyframes attachment-action-pulse {
+      0%, 100% {
+        box-shadow:
+          0 0 0 2px rgba(255,255,255,0.3),
+          0 0 20px rgba(52, 211, 153, 0.6),
+          inset 0 0 10px rgba(255,255,255,0.2);
+      }
+      50% {
+        box-shadow:
+          0 0 0 2px rgba(255,255,255,0.6),
+          0 0 30px rgba(52, 211, 153, 0.8),
+          inset 0 0 15px rgba(255,255,255,0.4);
+      }
+    }
+    
+    @keyframes attachment-action-rotate {
+      from { transform: translate(-50%, -50%) rotate(45deg); }
+      to { transform: translate(-50%, -50%) rotate(405deg); }
+    }
+    
+    @keyframes attachment-action-rotate-reverse {
+      from { transform: translate(-50%, -50%) rotate(-45deg); }
+      to { transform: translate(-50%, -50%) rotate(315deg); }
+    }
+    
+    @keyframes attachment-action-vertical-pulse {
+      0%, 100% {
+        height: 6px;
+        opacity: 0.7;
+      }
+      50% {
+        height: 8px;
+        opacity: 1;
+      }
+    }
+    
+    @keyframes attachment-action-horizontal-pulse {
+      0%, 100% {
+        width: 6px;
+        opacity: 0.7;
+      }
+      50% {
+        width: 8px;
+        opacity: 1;
+      }
+    }
+    
+    .attachment-action-button:hover {
+      background: linear-gradient(135deg, #34D399 0%, #A7F3D0 100%);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(52, 211, 153, 0.5);
+    }
+    
+    .attachment-action-button:active {
+      transform: translateY(-1px) scale(1.01);
+      box-shadow: 0 3px 12px rgba(52, 211, 153, 0.4);
+    }
+    
+    .attachment-action-button[data-variant="secondary"] {
+      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .attachment-action-button[data-variant="secondary"]:hover {
+      background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+    
+    .attachment-action-button[data-variant="success"] {
+      background: linear-gradient(135deg, #FDE047 0%, #FACC15 100%);
+      box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4);
+    }
+    
+    .attachment-action-button[data-variant="success"]:hover {
+      background: linear-gradient(135deg, #FACC15 0%, #FDE047 100%);
+      box-shadow: 0 6px 20px rgba(250, 204, 21, 0.5);
+    }
+    
+    /* 动画光效 */
+    .attachment-action-button::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    .attachment-action-button:hover::after {
+      left: 100%;
+    }
+  `;
+};
+
+/**
+ * 生成作用域化的附件专用炫酷按钮 CSS
+ * 用于 Markdown 内联渲染环境
+ * @param {string} scopeClass - 作用域类名，默认为 'markdown-body'
+ * @returns {string} 作用域化的 CSS 样式字符串
+ */
+export const generateAttachmentActionFancyCssScoped = (scopeClass = 'markdown-body') => {
+  return `
+    /* 附件专用动作按钮样式 - 作用域化 */
+    .${scopeClass} .attachment-action-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      margin: 4px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #A7F3D0 0%, #34D399 100%);
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      min-height: 36px;
+      box-sizing: border-box;
+      box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .${scopeClass} .attachment-action-button::before {
+      content: "";
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-right: 10px;
+      position: relative;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 70%, transparent 100%);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.3),
+        0 0 20px rgba(52, 211, 153, 0.6),
+        inset 0 0 10px rgba(255,255,255,0.2);
+      animation: attachment-action-pulse 2s infinite;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 50%;
+      box-shadow:
+        0 0 6px rgba(255,255,255,0.8),
+        0 0 12px rgba(52, 211, 153, 0.6);
+    }
+    
+    .${scopeClass} .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 10px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%);
+      border-radius: 1px;
+      animation: attachment-action-rotate 3s linear infinite;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      width: 10px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%);
+      border-radius: 1px;
+      animation: attachment-action-rotate-reverse 3s linear infinite;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-vertical-pulse 1.5s infinite;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-vertical-pulse 1.5s infinite 0.75s;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 2px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-horizontal-pulse 1.5s infinite 0.375s;
+    }
+    
+    .${scopeClass} .attachment-action-button::before::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 2px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 1px;
+      animation: attachment-action-horizontal-pulse 1.5s infinite 1.125s;
+    }
+    
+    @keyframes attachment-action-pulse {
+      0%, 100% {
+        box-shadow:
+          0 0 0 2px rgba(255,255,255,0.3),
+          0 0 20px rgba(52, 211, 153, 0.6),
+          inset 0 0 10px rgba(255,255,255,0.2);
+      }
+      50% {
+        box-shadow:
+          0 0 0 2px rgba(255,255,255,0.6),
+          0 0 30px rgba(52, 211, 153, 0.8),
+          inset 0 0 15px rgba(255,255,255,0.4);
+      }
+    }
+    
+    @keyframes attachment-action-rotate {
+      from { transform: translate(-50%, -50%) rotate(45deg); }
+      to { transform: translate(-50%, -50%) rotate(405deg); }
+    }
+    
+    @keyframes attachment-action-rotate-reverse {
+      from { transform: translate(-50%, -50%) rotate(-45deg); }
+      to { transform: translate(-50%, -50%) rotate(315deg); }
+    }
+    
+    @keyframes attachment-action-vertical-pulse {
+      0%, 100% {
+        height: 6px;
+        opacity: 0.7;
+      }
+      50% {
+        height: 8px;
+        opacity: 1;
+      }
+    }
+    
+    @keyframes attachment-action-horizontal-pulse {
+      0%, 100% {
+        width: 6px;
+        opacity: 0.7;
+      }
+      50% {
+        width: 8px;
+        opacity: 1;
+      }
+    }
+    
+    .${scopeClass} .attachment-action-button:hover {
+      background: linear-gradient(135deg, #34D399 0%, #A7F3D0 100%);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(52, 211, 153, 0.5);
+    }
+    
+    .${scopeClass} .attachment-action-button:active {
+      transform: translateY(-1px) scale(1.01);
+      box-shadow: 0 3px 12px rgba(52, 211, 153, 0.4);
+    }
+    
+    .${scopeClass} .attachment-action-button[data-variant="secondary"] {
+      background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .${scopeClass} .attachment-action-button[data-variant="secondary"]:hover {
+      background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+    
+    .${scopeClass} .attachment-action-button[data-variant="success"] {
+      background: linear-gradient(135deg, #FDE047 0%, #FACC15 100%);
+      box-shadow: 0 4px 15px rgba(250, 204, 21, 0.4);
+    }
+    
+    .${scopeClass} .attachment-action-button[data-variant="success"]:hover {
+      background: linear-gradient(135deg, #FACC15 0%, #FDE047 100%);
+      box-shadow: 0 6px 20px rgba(250, 204, 21, 0.5);
+    }
+    
+    /* 动画光效 - 作用域化 */
+    .${scopeClass} .attachment-action-button::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    .${scopeClass} .attachment-action-button:hover::after {
+      left: 100%;
+    }
+  `;
+};

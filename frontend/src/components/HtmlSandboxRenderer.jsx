@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useLayoutEffect, useState, useMemo, useCallback } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { generateTabActionFancyCssUnscoped, generateQuoteActionFancyCssUnscoped } from '../utils/tabActionStyles';
+import { generateTabActionFancyCssUnscoped, generateQuoteActionFancyCssUnscoped, generateAttachmentActionFancyCssUnscoped } from '../utils/tabActionStyles';
 import { replaceWithSignedUrls, extractAttachmentIds } from '../services/attachmentUrlCache';
 
 // 样式化的容器
@@ -305,6 +305,9 @@ const HtmlSandboxRenderer = ({
           
           /* 引用体专用动作按钮样式 */
           ${generateQuoteActionFancyCssUnscoped()}
+          
+          /* 附件专用动作按钮样式 */
+          ${generateAttachmentActionFancyCssUnscoped()}
         </style>
       </head>
       <body>
@@ -394,6 +397,7 @@ const HtmlSandboxRenderer = ({
                 const action = element.getAttribute('data-action');
                 const docId = element.getAttribute('data-doc-id');
                 const quoteId = element.getAttribute('data-quote-id');
+                const attachmentId = element.getAttribute('data-attachment-id');
                 const variant = element.getAttribute('data-variant') || 'primary';
                 // 优先使用 data-label，然后是元素内容，最后回退到默认文本
                 const text = element.getAttribute('data-label')?.trim() ||
@@ -452,6 +456,40 @@ const HtmlSandboxRenderer = ({
                       id: sandboxId,
                       action: action,
                       quoteId: quoteId,
+                      label: text,
+                      variant: variant,
+                      source: 'html-sandbox'
+                    };
+                    
+                    // 同时向 parent 和 top 发送，确保在嵌套场景下也能收到消息
+                    window.parent.postMessage(messageData, '*');
+                    if (window.top !== window.parent) {
+                      window.top.postMessage(messageData, '*');
+                    }
+                  });
+                  
+                  // 替换原始元素
+                  element.parentNode.replaceChild(button, element);
+                  button.setAttribute('data-processed', 'true');
+                }
+                
+                // 处理 open-attachment 动作
+                if (action === 'open-attachment' && attachmentId) {
+                  // 创建按钮元素，使用附件专用样式
+                  const button = document.createElement('button');
+                  button.className = 'attachment-action-button';
+                  button.setAttribute('data-variant', variant);
+                  button.textContent = text;
+                  button.setAttribute('title', '打开附件: ' + attachmentId);
+                  
+                  // 添加点击事件
+                  button.addEventListener('click', () => {
+                    // 发送消息到父窗口和顶层窗口，增强鲁棒性
+                    const messageData = {
+                      type: 'tab-action',
+                      id: sandboxId,
+                      action: action,
+                      attachmentId: attachmentId,
                       label: text,
                       variant: variant,
                       source: 'html-sandbox'

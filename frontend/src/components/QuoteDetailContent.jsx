@@ -652,19 +652,19 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, onView,
                 size="small"
               />
             )}
-            {/* 保留原有的attach://复制功能作为备选 */}
-            <Tooltip title="复制 attach:// 链接">
+            {/* 复制打开附件按钮 */}
+            <Tooltip title="复制打开附件按钮">
               <IconButton
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onCopy(attachment._id);
+                  onCopy(attachment._id, attachment.originalName);
                 }}
                 sx={{
                   borderRadius: 16,
                   mr: 0.5,
                 }}
-                aria-label="复制链接"
+                aria-label="复制打开附件按钮"
               >
                 <ContentCopyIcon fontSize="small" />
               </IconButton>
@@ -1219,12 +1219,24 @@ const QuoteDetailContent = ({
   };
 
   // 处理复制附件链接
-  const handleCopyAttachmentLink = async (attachmentId) => {
+  const handleCopyAttachmentLink = async (attachmentId, attachmentName = '附件') => {
     try {
-      const link = `attach://${attachmentId}`;
-      await navigator.clipboard.writeText(link);
+      // HTML 转义处理
+      const escapeHtml = (text) => {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      };
+      
+      const escapedName = escapeHtml(attachmentName);
+      
+      // 生成 x-tab-action 标记
+      const actionMarkup = `<x-tab-action data-action="open-attachment" data-attachment-id="${attachmentId}" data-label="${escapedName}">${escapedName}</x-tab-action>`;
+      
+      await navigator.clipboard.writeText(actionMarkup);
       // 可以添加一个提示，这里使用简单的控制台日志
-      console.log('已复制到剪贴板:', link);
+      console.log('已复制到剪贴板:', actionMarkup);
     } catch (error) {
       console.error('复制失败:', error);
     }

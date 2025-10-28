@@ -41,7 +41,8 @@ import {
 } from '../store/documentsSlice';
 import {
   openWindowAndFetch,
-  openQuoteWindowAndFetch
+  openQuoteWindowAndFetch,
+  openAttachmentWindowAndFetch
 } from '../store/windowsSlice';
 import { selectAllPages } from '../store/customPagesSlice';
 import {
@@ -278,6 +279,48 @@ const MainLayout = () => {
         };
 
         handleOpenQuote(event.data.quoteId, event.data.label, event.data.source);
+      }
+      
+      // 验证消息来源和格式 - 处理 open-attachment 动作
+      else if (event.data &&
+               event.data.type === 'tab-action' &&
+               event.data.action === 'open-attachment' &&
+               event.data.attachmentId) {
+        
+        console.debug('MainLayout: 收到 tab-action 事件（open-attachment）', {
+          source: event.source,
+          origin: event.origin,
+          data: event.data
+        });
+
+        // 使用多窗口系统打开附件
+        const handleOpenAttachment = async (attachmentId, label, source) => {
+          try {
+            console.debug('MainLayout: 开始打开附件窗口', { attachmentId, label, source });
+            
+            // 使用 openAttachmentWindowAndFetch thunk，原子化创建窗口和获取附件
+            await dispatch(openAttachmentWindowAndFetch({
+              attachmentId,
+              label: label || '加载中...',
+              source: source || 'tab-action'
+            })).unwrap();
+            
+            console.debug('MainLayout: 附件窗口打开成功', { attachmentId });
+          } catch (error) {
+            console.error('MainLayout: 打开附件失败', {
+              attachmentId,
+              error: error.message,
+              stack: error.stack
+            });
+            
+            // 如果是网络或服务器错误，提供更友好的错误提示
+            if (error.message?.includes('404') || error.message?.includes('500')) {
+              alert('打开附件失败，请稍后重试');
+            }
+          }
+        };
+
+        handleOpenAttachment(event.data.attachmentId, event.data.label, event.data.source);
       }
       
       else if (event.data && event.data.type === 'tab-action') {
