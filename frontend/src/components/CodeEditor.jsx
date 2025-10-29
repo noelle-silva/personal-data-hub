@@ -82,8 +82,8 @@ const CodeEditor = ({
       wordWrap: 'on', // 软换行
       minimap: { enabled: false }, // 禁用 minimap
       scrollBeyondLastLine: false,
-      // 仅在非 autoSize 模式下启用 automaticLayout，避免与自定义高度自适应冲突
-      automaticLayout: mode !== 'autoSize',
+      // 统一关闭 automaticLayout，改用容器 ResizeObserver + 手动 layout
+      automaticLayout: false,
       fontSize: 14,
       fontFamily: theme.typography.fontFamily,
       lineNumbers: 'on',
@@ -94,7 +94,30 @@ const CodeEditor = ({
       ...options,
     });
 
+    // 容器 ResizeObserver - 用于手动触发布局，替代 automaticLayout
+    let containerResizeObserver = null;
+    let layoutFrameId = null;
+    
+    if (containerRef.current) {
+      containerResizeObserver = new ResizeObserver(() => {
+        // 防止同一帧内重复触发布局
+        if (layoutFrameId) {
+          cancelAnimationFrame(layoutFrameId);
+        }
+        
+        layoutFrameId = requestAnimationFrame(() => {
+          if (editorRef.current) {
+            editorRef.current.layout();
+          }
+          layoutFrameId = null;
+        });
+      });
+      
+      containerResizeObserver.observe(containerRef.current);
+    }
+
     // 自适应高度逻辑（仅在 autoSize 模式下）
+    let heightDisposable = null;
     if (mode === 'autoSize') {
       let resizeTimeout = null;
       const updateHeight = () => {
@@ -118,7 +141,7 @@ const CodeEditor = ({
       };
 
       // 监听内容变化，但限制频率避免循环
-      const disposable = editor.onDidContentSizeChange(() => {
+      heightDisposable = editor.onDidContentSizeChange(() => {
         // 增加检查避免无限循环
         if (editor && editor.getContentHeight) {
           updateHeight();
@@ -127,14 +150,20 @@ const CodeEditor = ({
       
       // 初始高度计算
       setTimeout(updateHeight, 200);
-
-      return () => {
-        if (resizeTimeout) {
-          clearTimeout(resizeTimeout);
-        }
-        disposable.dispose();
-      };
     }
+
+    // 返回清理函数
+    return () => {
+      if (containerResizeObserver) {
+        containerResizeObserver.disconnect();
+      }
+      if (layoutFrameId) {
+        cancelAnimationFrame(layoutFrameId);
+      }
+      if (heightDisposable) {
+        heightDisposable.dispose();
+      }
+    };
   }, [mode, minHeight, maxHeight, options, disabled, theme.typography.fontFamily]);
 
   // 主题变更处理
@@ -178,8 +207,8 @@ const CodeEditor = ({
     borderColor: 'divider',
     borderRadius: 1,
     overflow: 'hidden',
-    // 在 autoSize 模式下使用 contain 隔离布局变化，减少 ResizeObserver 级联风险
-    contain: mode === 'autoSize' ? 'content' : 'none',
+    // 两种模式都使用 contain 隔离布局变化，减少 ResizeObserver 级联风险
+    contain: 'layout paint',
   };
 
   return (
@@ -197,8 +226,8 @@ const CodeEditor = ({
             wordWrap: 'on',
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            // 仅在非 autoSize 模式下启用 automaticLayout，避免与自定义高度自适应冲突
-            automaticLayout: mode !== 'autoSize',
+            // 统一关闭 automaticLayout，改用容器 ResizeObserver + 手动 layout
+            automaticLayout: false,
             fontSize: 14,
             fontFamily: theme.typography.fontFamily,
             lineNumbers: 'on',
