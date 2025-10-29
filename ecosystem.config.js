@@ -43,6 +43,10 @@ module.exports = {
       "instances": 1,
       "watch": false,
       "autorestart": false,
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "error_file": "./logs/err.log",
+      "out_file": "./logs/out.log",
+      "log_file": "./logs/combined.log",
       "env": {
         "PORT": "8333"
       }
