@@ -38,6 +38,8 @@ const EditorLoadingFallback = () => (
  * @param {Object} props.options - 额外的 Monaco 选项
  * @param {number} props.debounceMs - 防抖毫秒数，0表示不防抖
  * @param {boolean} props.disabled - 是否禁用编辑器
+ * @param {boolean} props.shieldExtensionShortcuts - 是否启用扩展快捷键防护（默认true）
+ *                                            注意：只能阻止内容脚本型扩展，无法阻止浏览器层全局快捷键
  */
 const CodeEditor = ({
   value = '',
@@ -49,6 +51,7 @@ const CodeEditor = ({
   options = {},
   debounceMs = 300,
   disabled = false,
+  shieldExtensionShortcuts = true,
   ...rest
 }) => {
   const theme = useTheme();
@@ -56,7 +59,9 @@ const CodeEditor = ({
   const containerRef = useRef(null);
   const [editorHeight, setEditorHeight] = useState(minHeight);
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [isEditorFocused, setIsEditorFocused] = useState(false);
   const debounceTimerRef = useRef(null);
+  const keydownHandlerRef = useRef(null);
 
   // 处理编辑器内容变化，支持防抖
   const handleChange = useCallback((val) => {
@@ -91,8 +96,52 @@ const CodeEditor = ({
       scrollbar: {
         alwaysConsumeMouseWheel: false, // 允许滚动透传到外层容器
       },
+      // 增强可访问性标识，帮助浏览器识别为可编辑区域
+      ariaLabel: `代码编辑器 - ${language}`,
+      accessibilitySupport: 'on',
       ...options,
     });
+
+    // 设置编辑器聚焦/失焦事件处理
+    const handleEditorFocus = () => {
+      setIsEditorFocused(true);
+      if (shieldExtensionShortcuts) {
+        // 添加捕获阶段的按键事件监听器，阻止扩展快捷键
+        keydownHandlerRef.current = (e) => {
+          // 不调用 preventDefault()，确保 Monaco 仍能处理输入
+          // 但通过 stopPropagation() 阻止事件冒泡到扩展
+          e.stopPropagation();
+          
+          // 对于一些特殊组合键，允许默认行为但阻止冒泡
+          if (e.ctrlKey || e.metaKey || e.altKey) {
+            e.stopPropagation();
+          }
+        };
+        
+        // 使用捕获阶段监听，确保在扩展之前拦截
+        document.addEventListener('keydown', keydownHandlerRef.current, true);
+      }
+    };
+
+    const handleEditorBlur = () => {
+      setIsEditorFocused(false);
+      // 移除按键事件监听器
+      if (keydownHandlerRef.current) {
+        document.removeEventListener('keydown', keydownHandlerRef.current, true);
+        keydownHandlerRef.current = null;
+      }
+    };
+
+    // 添加编辑器事件监听
+    editor.onDidFocusEditorText(handleEditorFocus);
+    editor.onDidBlurEditorText(handleEditorBlur);
+    
+    // 初始聚焦编辑器（如果需要）
+    setTimeout(() => {
+      if (editor && !disabled) {
+        editor.focus();
+      }
+    }, 100);
 
     // 容器 ResizeObserver - 用于手动触发布局，替代 automaticLayout
     let containerResizeObserver = null;
@@ -163,8 +212,13 @@ const CodeEditor = ({
       if (heightDisposable) {
         heightDisposable.dispose();
       }
+      // 清理按键事件监听器
+      if (keydownHandlerRef.current) {
+        document.removeEventListener('keydown', keydownHandlerRef.current, true);
+        keydownHandlerRef.current = null;
+      }
     };
-  }, [mode, minHeight, maxHeight, options, disabled, theme.typography.fontFamily]);
+  }, [mode, minHeight, maxHeight, options, disabled, theme.typography.fontFamily, language, shieldExtensionShortcuts]);
 
   // 主题变更处理
   useEffect(() => {
@@ -211,8 +265,35 @@ const CodeEditor = ({
     contain: 'layout paint',
   };
 
+  // 组件卸载时的清理
+  useEffect(() => {
+    return () => {
+      // 确保在组件卸载时清理所有事件监听器
+      if (keydownHandlerRef.current) {
+        document.removeEventListener('keydown', keydownHandlerRef.current, true);
+        keydownHandlerRef.current = null;
+      }
+    };
+  }, []);
+
   return (
-    <Box ref={containerRef} sx={containerStyle} {...rest}>
+    <Box
+      ref={containerRef}
+      sx={containerStyle}
+      role="textbox"
+      aria-multiline="true"
+      aria-label={`代码编辑器 - ${language}`}
+      tabIndex={disabled ? -1 : 0}
+      contentEditable={!disabled}
+      suppressContentEditableWarning={true}
+      onFocus={() => {
+        // 当容器获得焦点时，立即将焦点转交给 Monaco 编辑器
+        if (editorRef.current && !disabled) {
+          editorRef.current.focus();
+        }
+      }}
+      {...rest}
+    >
       <Suspense fallback={<EditorLoadingFallback />}>
         <Editor
           height="100%"
@@ -235,6 +316,9 @@ const CodeEditor = ({
             scrollbar: {
               alwaysConsumeMouseWheel: false, // 允许滚动透传到外层容器
             },
+            // 增强可访问性标识，帮助浏览器识别为可编辑区域
+            ariaLabel: `代码编辑器 - ${language}`,
+            accessibilitySupport: 'on',
             ...options,
           }}
         />
