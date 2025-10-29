@@ -15,9 +15,10 @@ import reportWebVitals from './reportWebVitals';
 // 全局抑制 ResizeObserver 循环错误
 // 这是一个已知的浏览器问题，通常在组件卸载时发生，不影响功能
 const resizeObserverErrorHandler = (event) => {
+  const message = event.message || (event.error && event.error.message) || '';
   if (
-    event.message === 'ResizeObserver loop completed with undelivered notifications.' ||
-    event.message === 'ResizeObserver loop limit exceeded'
+    message.includes('ResizeObserver loop completed with undelivered notifications.') ||
+    message.includes('ResizeObserver loop limit exceeded')
   ) {
     event.stopImmediatePropagation();
     event.preventDefault();
@@ -25,7 +26,18 @@ const resizeObserverErrorHandler = (event) => {
   }
 };
 
-window.addEventListener('error', resizeObserverErrorHandler);
+// 使用捕获阶段监听错误，确保在错误覆盖层之前处理
+window.addEventListener('error', resizeObserverErrorHandler, { capture: true });
+// 同时监听未处理的 Promise 拒绝
+window.addEventListener('unhandledrejection', (event) => {
+  const message = event.reason && event.reason.message ? event.reason.message : String(event.reason);
+  if (
+    message.includes('ResizeObserver loop completed with undelivered notifications.') ||
+    message.includes('ResizeObserver loop limit exceeded')
+  ) {
+    event.preventDefault();
+  }
+}, { capture: true });
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

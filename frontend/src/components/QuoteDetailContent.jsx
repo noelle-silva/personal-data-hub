@@ -1234,7 +1234,23 @@ const QuoteDetailContent = ({
       // 生成 x-tab-action 标记
       const actionMarkup = `<x-tab-action data-action="open-attachment" data-attachment-id="${attachmentId}" data-label="${escapedName}">${escapedName}</x-tab-action>`;
       
-      await navigator.clipboard.writeText(actionMarkup);
+      // 优先使用现代 clipboard API，但在非安全上下文时降级
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(actionMarkup);
+      } else {
+        // 降级方案：使用传统方法
+        const textArea = document.createElement('textarea');
+        textArea.value = actionMarkup;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
       // 可以添加一个提示，这里使用简单的控制台日志
       console.log('已复制到剪贴板:', actionMarkup);
     } catch (error) {

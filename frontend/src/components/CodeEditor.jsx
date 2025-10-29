@@ -82,7 +82,8 @@ const CodeEditor = ({
       wordWrap: 'on', // 软换行
       minimap: { enabled: false }, // 禁用 minimap
       scrollBeyondLastLine: false,
-      automaticLayout: true,
+      // 仅在非 autoSize 模式下启用 automaticLayout，避免与自定义高度自适应冲突
+      automaticLayout: mode !== 'autoSize',
       fontSize: 14,
       fontFamily: theme.typography.fontFamily,
       lineNumbers: 'on',
@@ -108,7 +109,11 @@ const CodeEditor = ({
             : maxHeight;
           
           const newHeight = Math.max(minHeight, Math.min(contentHeight, maxHeightPixels));
-          setEditorHeight(newHeight);
+          
+          // 只有高度变化超过阈值时才更新，减少不必要的重渲染
+          if (Math.abs(newHeight - editorHeight) > 1) {
+            setEditorHeight(newHeight);
+          }
         }, 100);
       };
 
@@ -143,6 +148,18 @@ const CodeEditor = ({
     }
   }, [theme.palette.mode, isEditorReady]);
 
+  // 在高度变化后触发布局更新，确保 Monaco 编辑器正确渲染
+  useEffect(() => {
+    if (isEditorReady && editorRef.current && mode === 'autoSize') {
+      // 使用 requestAnimationFrame 确保 DOM 更新后再触发布局
+      requestAnimationFrame(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      });
+    }
+  }, [editorHeight, isEditorReady, mode]);
+
   // 清理防抖定时器
   useEffect(() => {
     return () => {
@@ -161,6 +178,8 @@ const CodeEditor = ({
     borderColor: 'divider',
     borderRadius: 1,
     overflow: 'hidden',
+    // 在 autoSize 模式下使用 contain 隔离布局变化，减少 ResizeObserver 级联风险
+    contain: mode === 'autoSize' ? 'content' : 'none',
   };
 
   return (
@@ -178,7 +197,8 @@ const CodeEditor = ({
             wordWrap: 'on',
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
-            automaticLayout: true,
+            // 仅在非 autoSize 模式下启用 automaticLayout，避免与自定义高度自适应冲突
+            automaticLayout: mode !== 'autoSize',
             fontSize: 14,
             fontFamily: theme.typography.fontFamily,
             lineNumbers: 'on',
