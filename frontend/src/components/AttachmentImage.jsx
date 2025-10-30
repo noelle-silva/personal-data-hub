@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, CircularProgress, IconButton, Tooltip, Typography } from '@mui/material';
+import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { 
   Refresh as RefreshIcon,
@@ -31,20 +31,6 @@ const StyledImage = styled('img')(({ theme }) => ({
   transition: 'opacity 0.3s ease',
 }));
 
-// 样式化的加载状态
-const LoadingOverlay = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)',
-  zIndex: 1,
-}));
 
 // 样式化的错误状态
 const ErrorOverlay = styled(Box)(({ theme }) => ({
@@ -177,6 +163,12 @@ const AttachmentImage = ({
     if (signedUrl) {
       setLoading(true);
       setError(null);
+      
+      // 缓存就绪兜底：如果图片已经加载完成，立即清除loading状态
+      if (imageRef.current && imageRef.current.complete) {
+        setLoading(false);
+        setRetryCount(0);
+      }
     }
   }, [signedUrl]);
 
@@ -190,20 +182,10 @@ const AttachmentImage = ({
   const imageStyle = {
     width: '100%',
     height: '100%',
-    opacity: loading ? 0.7 : 1,
   };
 
   return (
     <ImageContainer style={containerStyle}>
-      {/* 加载状态 */}
-      {loading && (
-        <LoadingOverlay>
-          <CircularProgress size={24} />
-          <Typography variant="caption" sx={{ mt: 1 }}>
-            加载中...
-          </Typography>
-        </LoadingOverlay>
-      )}
 
       {/* 错误状态 */}
       {error && (
