@@ -89,10 +89,8 @@ const quotesSlice = createSlice({
           state.selectedQuoteStatus = 'loading';
         }
       }
-      // 只要传入了 payload，或者 selectedQuote 已存在，就打开弹窗
-      if (action.payload || state.selectedQuote) {
-        state.isModalOpen = true;
-      }
+      // 直接打开弹窗，无论是否有 payload
+      state.isModalOpen = true;
     },
     closeQuoteModal: (state) => {
       state.selectedQuote = null;

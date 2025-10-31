@@ -34,6 +34,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import ThemeToggle from '../components/ThemeToggle';
 import GlobalSearch from '../components/GlobalSearch';
 import DocumentWindowsContainer from '../components/DocumentWindowsContainer';
+import GlobalActionPortal from '../components/GlobalActionPortal';
+import ShortcutRuntime from '../shortcuts/ShortcutRuntime';
 import { closeDropdown } from '../store/searchSlice';
 import {
   openDocumentModal,
@@ -591,6 +593,12 @@ const MainLayout = () => {
       
       {/* 多窗口容器 */}
       <DocumentWindowsContainer />
+      
+      {/* 快捷键运行时组件 */}
+      <ShortcutRuntime />
+      
+      {/* 全局动作门户组件 */}
+      <GlobalActionPortal />
     </MainContainer>
   );
 };

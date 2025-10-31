@@ -57,10 +57,8 @@ const documentsSlice = createSlice({
           state.selectedDocumentStatus = 'loading';
         }
       }
-      // 只要传入了 payload，或者 selectedDocument 已存在，就打开弹窗
-      if (action.payload || state.selectedDocument) {
-        state.isModalOpen = true;
-      }
+      // 直接打开弹窗，无论是否有 payload
+      state.isModalOpen = true;
     },
     closeDocumentModal: (state) => {
       state.selectedDocument = null;

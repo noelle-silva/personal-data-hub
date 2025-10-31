@@ -85,6 +85,7 @@ import {
   Colorize as ColorizeIcon,
 } from '@mui/icons-material';
 import ThemePreviewBar from '../components/ThemePreviewBar';
+import ShortcutSettingsPanel from '../components/ShortcutSettingsPanel';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -779,6 +780,9 @@ const Settings = () => {
           <TransparencyConfigPanel />
         </CardContent>
       </SettingsCard>
+
+      {/* 快捷键设置 */}
+      <ShortcutSettingsPanel />
 
       {/* AI设置 */}
       <SettingsCard>
