@@ -52,6 +52,11 @@ import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import CodeEditor from './CodeEditor';
 import MarkdownPreview from './MarkdownPreview';
 import { useMediaQuery } from '@mui/material';
+import DocumentFormModal from './DocumentFormModal';
+import QuoteFormModal from './QuoteFormModal';
+import { createDocument as createDocumentService } from '../services/documents';
+import { createQuote } from '../store/quotesSlice'; // 添加 createQuote 导入
+// import { updateQuote } from '../store/quotesSlice'; // 改为使用 dispatch 方式
 import {
   DndContext,
   closestCenter,
@@ -826,6 +831,8 @@ const QuoteDetailContent = ({
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
   const isActionsMenuOpen = Boolean(actionsMenuAnchorEl);
   const [editorType, setEditorType] = useState('code'); // 'code' 或 'text'
+  const [documentFormModalOpen, setDocumentFormModalOpen] = useState(false);
+  const [quoteFormModalOpen, setQuoteFormModalOpen] = useState(false);
   
   // 引用列表相关状态
   const [referencedDocuments, setReferencedDocuments] = useState([]);
@@ -1272,6 +1279,72 @@ const QuoteDetailContent = ({
     }
   };
 
+  // 处理打开文档创建模态框
+  const handleOpenDocumentFormModal = () => {
+    setDocumentFormModalOpen(true);
+  };
+
+  // 处理关闭文档创建模态框
+  const handleCloseDocumentFormModal = () => {
+    setDocumentFormModalOpen(false);
+  };
+
+  // 处理打开引用体创建模态框
+  const handleOpenQuoteFormModal = () => {
+    setQuoteFormModalOpen(true);
+  };
+
+  // 处理关闭引用体创建模态框
+  const handleCloseQuoteFormModal = () => {
+    setQuoteFormModalOpen(false);
+  };
+
+  // 处理创建并引用笔记
+  const handleCreateAndReferenceDocument = async (documentData) => {
+    try {
+      // 创建新笔记
+      const newDocument = await createDocumentService(documentData);
+      
+      // 更新当前引用体的引用列表，添加新创建的笔记ID
+      const updatedReferencedIds = [...referencedDocuments.map(doc => doc._id || doc), newDocument.data._id];
+      
+      // 调用 updateQuote 持久化引用关系
+      await onSave(quote._id, {
+        referencedDocumentIds: updatedReferencedIds
+      });
+      
+      // 乐观更新本地状态
+      setReferencedDocuments(prev => [...prev, newDocument.data]);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('创建并引用笔记失败:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  // 处理创建并引用引用体
+  const handleCreateAndReferenceQuote = async (quoteData) => {
+    try {
+      // 创建新引用体
+      const newQuote = await dispatch(createQuote(quoteData)).unwrap();
+      
+      // 更新当前引用体的引用列表，添加新创建的引用体ID
+      const updatedReferencedIds = [...referencedQuotes.map(quote => quote._id || quote), newQuote._id];
+      
+      // 调用 updateQuote 持久化引用关系
+      await onSave(quote._id, {
+        referencedQuoteIds: updatedReferencedIds
+      });
+      
+      // 乐观更新本地状态
+      setReferencedQuotes(prev => [...prev, newQuote]);
+      return Promise.resolve();
+    } catch (error) {
+      console.error('创建并引用引用体失败:', error);
+      return Promise.reject(error);
+    }
+  };
+
   // 处理引用引用体拖拽结束
   const handleQuoteDragEnd = (event) => {
     const { active, over } = event;
@@ -1449,17 +1522,31 @@ const QuoteDetailContent = ({
                 </Tooltip>
               </>
             ) : (
-              <Tooltip title="编辑引用">
-                <IconButton
-                  size="small"
-                  onClick={() => setIsReferencesEditing(true)}
-                  sx={{
-                    borderRadius: 16,
-                  }}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <>
+                <Tooltip title="新建并引用笔记">
+                  <IconButton
+                    size="small"
+                    onClick={handleOpenDocumentFormModal}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                    aria-label="新建并引用笔记"
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="编辑引用">
+                  <IconButton
+                    size="small"
+                    onClick={() => setIsReferencesEditing(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
             )
           }
         >
@@ -1672,17 +1759,31 @@ const QuoteDetailContent = ({
                 </Tooltip>
               </>
             ) : (
-              <Tooltip title="编辑引用">
-                <IconButton
-                  size="small"
-                  onClick={() => setIsQuoteReferencesEditing(true)}
-                  sx={{
-                    borderRadius: 16,
-                  }}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <>
+                <Tooltip title="新建并引用引用体">
+                  <IconButton
+                    size="small"
+                    onClick={handleOpenQuoteFormModal}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                    aria-label="新建并引用引用体"
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="编辑引用">
+                  <IconButton
+                    size="small"
+                    onClick={() => setIsQuoteReferencesEditing(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
             )
           }
         >
@@ -2095,6 +2196,22 @@ const QuoteDetailContent = ({
         onConfirm={handleAddQuoteReferences}
         excludeIds={referencedQuotes.map(quote => quote._id)}
         hiddenIds={[quote._id]} // 传递当前引用体的ID，使其不在列表中显示
+      />
+
+      {/* 文档创建模态框 */}
+      <DocumentFormModal
+        open={documentFormModalOpen}
+        handleClose={handleCloseDocumentFormModal}
+        onSave={handleCreateAndReferenceDocument}
+      />
+
+      {/* 引用体创建模态框 */}
+      <QuoteFormModal
+        open={quoteFormModalOpen}
+        handleClose={handleCloseQuoteFormModal}
+        initialDocumentId={quote._id}
+        onSave={handleCreateAndReferenceQuote}
+        initialQuoteId={quote._id}
       />
     </RightContentBox>
   </ContentBox>

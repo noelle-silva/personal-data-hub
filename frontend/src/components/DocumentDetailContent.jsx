@@ -77,6 +77,9 @@ import { getAttachmentMetadata } from '../services/attachments';
 import QuoteFormModal from './QuoteFormModal';
 import { createQuote } from '../store/quotesSlice';
 import CodeEditor from './CodeEditor';
+import DocumentFormModal from './DocumentFormModal';
+import { createDocument } from '../store/documentsSlice';
+import { createDocument as createDocumentService } from '../services/documents';
 
 // 内容区域
 const ContentBox = styled(Box)(({ theme }) => ({
@@ -699,6 +702,7 @@ const DocumentDetailContent = ({
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
   const isActionsMenuOpen = Boolean(actionsMenuAnchorEl);
   const [quoteFormModalOpen, setQuoteFormModalOpen] = useState(false);
+  const [documentFormModalOpen, setDocumentFormModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
   // 引用列表相关状态
@@ -1305,6 +1309,16 @@ const DocumentDetailContent = ({
     setQuoteFormModalOpen(false);
   };
 
+  // 处理打开文档创建模态框
+  const handleOpenDocumentFormModal = () => {
+    setDocumentFormModalOpen(true);
+  };
+
+  // 处理关闭文档创建模态框
+  const handleCloseDocumentFormModal = () => {
+    setDocumentFormModalOpen(false);
+  };
+
   // 处理创建引用体
   const handleCreateQuote = async (quoteData) => {
     try {
@@ -1312,6 +1326,30 @@ const DocumentDetailContent = ({
       setSuccessMessage('引用体创建成功');
       return Promise.resolve();
     } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
+  // 处理创建并引用笔记
+  const handleCreateAndReferenceDocument = async (documentData) => {
+    try {
+      // 创建新笔记
+      const newDocument = await createDocumentService(documentData);
+      
+      // 更新当前笔记的引用列表，添加新创建的笔记ID
+      const updatedReferencedIds = [...referencedDocuments.map(doc => doc._id || doc), newDocument.data._id];
+      
+      // 调用 updateDocument 持久化引用关系
+      await onSave(document._id, {
+        referencedDocumentIds: updatedReferencedIds
+      });
+      
+      // 乐观更新本地状态
+      setReferencedDocuments(prev => [...prev, newDocument.data]);
+      setSuccessMessage('笔记创建并引用成功');
+      return Promise.resolve();
+    } catch (error) {
+      console.error('创建并引用笔记失败:', error);
       return Promise.reject(error);
     }
   };
@@ -1330,6 +1368,20 @@ const DocumentDetailContent = ({
             count={referencingQuotes.length}
             expanded={quotesExpanded}
             onExpandedChange={setQuotesExpanded}
+            actions={
+              <Tooltip title="新建并引用引用体">
+                <IconButton
+                  size="small"
+                  onClick={handleOpenQuoteFormModal}
+                  sx={{
+                    borderRadius: 16,
+                  }}
+                  aria-label="新建并引用引用体"
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            }
           >
             {referencingQuotes.length > 0 ? (
               <>
@@ -1468,17 +1520,31 @@ const DocumentDetailContent = ({
                   </Tooltip>
                 </>
               ) : (
-                <Tooltip title="编辑引用">
-                  <IconButton
-                    size="small"
-                    onClick={() => setIsReferencesEditing(true)}
-                    sx={{
-                      borderRadius: 16,
-                    }}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <>
+                  <Tooltip title="新建并引用笔记">
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenDocumentFormModal}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                      aria-label="新建并引用笔记"
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="编辑引用">
+                    <IconButton
+                      size="small"
+                      onClick={() => setIsReferencesEditing(true)}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
               )
             }
           >
@@ -2154,6 +2220,12 @@ const DocumentDetailContent = ({
         initialSelectedIds={referencedAttachments.map(att => typeof att === 'string' ? att : att._id)}
       />
 
+      {/* 文档创建模态框 */}
+      <DocumentFormModal
+        open={documentFormModalOpen}
+        handleClose={handleCloseDocumentFormModal}
+        onSave={handleCreateAndReferenceDocument}
+      />
 
       {/* 删除确认对话框 */}
       <Dialog

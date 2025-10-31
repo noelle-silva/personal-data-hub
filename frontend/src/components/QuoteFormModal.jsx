@@ -112,11 +112,12 @@ const ActionsBox = styled(Box)(({ theme }) => ({
   transition: 'background-color 0.3s ease',
 }));
 
-const QuoteFormModal = ({ 
-  open, 
-  handleClose, 
+const QuoteFormModal = ({
+  open,
+  handleClose,
   initialDocumentId = null,
-  onSave 
+  initialQuoteId = null,
+  onSave
 }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -147,7 +148,7 @@ const QuoteFormModal = ({
         tags: [],
         referencedDocumentIds: initialDocumentId ? [initialDocumentId] : [],
         referencedAttachmentIds: [],
-        referencedQuoteIds: [],
+        referencedQuoteIds: initialQuoteId ? [initialQuoteId] : [],
       });
       setTagInput('');
       setErrors({});
@@ -157,10 +158,21 @@ const QuoteFormModal = ({
         fetchDocumentInfo(initialDocumentId);
       } else {
         setReferencedDocuments([]);
+      }
+      
+      // 如果有初始引用体ID，获取引用体信息
+      if (initialQuoteId) {
+        fetchQuoteInfo(initialQuoteId);
+      } else {
+        setReferencedQuotes([]);
+      }
+      
+      // 如果没有初始附件引用，清空附件列表
+      if (!initialDocumentId && !initialQuoteId) {
         setReferencedAttachments([]);
       }
     }
-  }, [open, initialDocumentId]);
+  }, [open, initialDocumentId, initialQuoteId]);
 
   // 获取文档信息
   const fetchDocumentInfo = async (documentId) => {
@@ -169,6 +181,16 @@ const QuoteFormModal = ({
       setReferencedDocuments([response.data.data]);
     } catch (error) {
       console.error('获取文档信息失败:', error);
+    }
+  };
+
+  // 获取引用体信息
+  const fetchQuoteInfo = async (quoteId) => {
+    try {
+      const response = await apiClient.get(`/quotes/${quoteId}`);
+      setReferencedQuotes([response.data.data]);
+    } catch (error) {
+      console.error('获取引用体信息失败:', error);
     }
   };
 
