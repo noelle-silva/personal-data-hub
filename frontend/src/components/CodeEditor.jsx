@@ -40,6 +40,7 @@ const EditorLoadingFallback = () => (
  * @param {boolean} props.disabled - 是否禁用编辑器
  * @param {boolean} props.shieldExtensionShortcuts - 是否启用扩展快捷键防护（默认true）
  *                                            注意：只能阻止内容脚本型扩展，无法阻止浏览器层全局快捷键
+ *                                            策略：在冒泡阶段拦截含修饰键的组合键，放行普通编辑键（Backspace/Delete/Enter/Tab/Arrow等）
  */
 const CodeEditor = ({
   value = '',
@@ -106,20 +107,18 @@ const CodeEditor = ({
     const handleEditorFocus = () => {
       setIsEditorFocused(true);
       if (shieldExtensionShortcuts) {
-        // 添加捕获阶段的按键事件监听器，阻止扩展快捷键
+        // 添加冒泡阶段的按键事件监听器，阻止扩展快捷键
+        // 注意：改为冒泡阶段以确保 Monaco 先处理所有编辑键（如删除、覆盖等）
         keydownHandlerRef.current = (e) => {
           // 不调用 preventDefault()，确保 Monaco 仍能处理输入
-          // 但通过 stopPropagation() 阻止事件冒泡到扩展
-          e.stopPropagation();
-          
-          // 对于一些特殊组合键，允许默认行为但阻止冒泡
+          // 仅对包含修饰键的组合键阻止冒泡到扩展，放行普通编辑键
           if (e.ctrlKey || e.metaKey || e.altKey) {
             e.stopPropagation();
           }
         };
         
-        // 使用捕获阶段监听，确保在扩展之前拦截
-        document.addEventListener('keydown', keydownHandlerRef.current, true);
+        // 使用冒泡阶段监听，让 Monaco 先处理事件，再阻止扩展
+        document.addEventListener('keydown', keydownHandlerRef.current, false);
       }
     };
 
@@ -284,8 +283,6 @@ const CodeEditor = ({
       aria-multiline="true"
       aria-label={`代码编辑器 - ${language}`}
       tabIndex={disabled ? -1 : 0}
-      contentEditable={!disabled}
-      suppressContentEditableWarning={true}
       onFocus={() => {
         // 当容器获得焦点时，立即将焦点转交给 Monaco 编辑器
         if (editorRef.current && !disabled) {
