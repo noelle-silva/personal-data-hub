@@ -810,6 +810,7 @@ const DocumentDetailContent = ({
   const isActionsMenuOpen = Boolean(actionsMenuAnchorEl);
   const [quoteFormModalOpen, setQuoteFormModalOpen] = useState(false);
   const [documentFormModalOpen, setDocumentFormModalOpen] = useState(false);
+  const [quoteFormShouldReference, setQuoteFormShouldReference] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
   // 引用列表相关状态
@@ -1526,12 +1527,20 @@ const DocumentDetailContent = ({
   // 处理打开引用体创建模态框
   const handleOpenQuoteFormModal = () => {
     setActionsMenuAnchorEl(null);
+    setQuoteFormShouldReference(false);
+    setQuoteFormModalOpen(true);
+  };
+
+  // 处理打开引用体创建模态框并引用
+  const handleOpenQuoteFormModalAndReference = () => {
+    setQuoteFormShouldReference(true);
     setQuoteFormModalOpen(true);
   };
 
   // 处理关闭引用体创建模态框
   const handleCloseQuoteFormModal = () => {
     setQuoteFormModalOpen(false);
+    setQuoteFormShouldReference(false);
   };
 
   // 处理打开文档创建模态框
@@ -1552,6 +1561,39 @@ const DocumentDetailContent = ({
       return Promise.resolve();
     } catch (error) {
       return Promise.reject(error);
+    }
+  };
+
+  // 处理创建并引用引用体
+  const handleCreateAndReferenceQuote = async (quoteData) => {
+    try {
+      // 创建新引用体
+      const newQuote = await dispatch(createQuote(quoteData)).unwrap();
+      
+      // 更新当前笔记的引用列表，添加新创建的引用体ID
+      const updatedReferencedIds = [...referencedQuotes.map(quote => quote._id || quote), newQuote._id];
+      
+      // 调用 updateDocument 持久化引用关系
+      await onSave(document._id, {
+        referencedQuoteIds: updatedReferencedIds
+      });
+      
+      // 乐观更新本地状态
+      setReferencedQuotes(prev => [...prev, newQuote]);
+      setSuccessMessage('引用体创建并引用成功');
+      return Promise.resolve();
+    } catch (error) {
+      console.error('创建并引用引用体失败:', error);
+      return Promise.reject(error);
+    }
+  };
+
+  // 处理引用体表单保存
+  const handleQuoteFormSave = async (quoteData) => {
+    if (quoteFormShouldReference) {
+      return handleCreateAndReferenceQuote(quoteData);
+    } else {
+      return handleCreateQuote(quoteData);
     }
   };
 
@@ -1733,6 +1775,18 @@ const DocumentDetailContent = ({
                 </>
               ) : (
                 <>
+                  <Tooltip title="新建并引用引用体">
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenQuoteFormModalAndReference}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                      aria-label="新建并引用引用体"
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="编辑引用体">
                     <IconButton
                       size="small"
@@ -2590,7 +2644,7 @@ const DocumentDetailContent = ({
         open={quoteFormModalOpen}
         handleClose={handleCloseQuoteFormModal}
         initialDocumentId={document._id}
-        onSave={handleCreateQuote}
+        onSave={handleQuoteFormSave}
       />
 
       {/* 成功提示 */}
