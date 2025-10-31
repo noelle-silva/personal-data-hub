@@ -2209,9 +2209,7 @@ const QuoteDetailContent = ({
       <QuoteFormModal
         open={quoteFormModalOpen}
         handleClose={handleCloseQuoteFormModal}
-        initialDocumentId={quote._id}
         onSave={handleCreateAndReferenceQuote}
-        initialQuoteId={quote._id}
       />
     </RightContentBox>
   </ContentBox>
