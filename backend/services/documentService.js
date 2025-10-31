@@ -106,6 +106,12 @@ class DocumentService {
           path: 'referencedAttachmentIds',
           select: '_id originalName category mimeType size'
         });
+        
+        // 填充引用的引用体信息
+        query = query.populate({
+          path: 'referencedQuoteIds',
+          select: populateFields
+        });
       }
       
       // 执行查询获取文档
@@ -161,7 +167,8 @@ class DocumentService {
         htmlContent: documentData.htmlContent || '',
         tags: documentData.tags || [],
         source: documentData.source || '',
-        referencedAttachmentIds: documentData.referencedAttachmentIds || []
+        referencedAttachmentIds: documentData.referencedAttachmentIds || [],
+        referencedQuoteIds: documentData.referencedQuoteIds || []
       });
 
       // 保存到数据库
@@ -190,6 +197,11 @@ class DocumentService {
       // 如果更新包含引用附件，进行验证
       if (updateData.referencedAttachmentIds) {
         await this.validateReferencedAttachments(updateData.referencedAttachmentIds);
+      }
+      
+      // 如果更新包含引用引用体，进行验证
+      if (updateData.referencedQuoteIds) {
+        await this.validateReferencedQuotes(updateData.referencedQuoteIds);
       }
       
       // 查找并更新文档
@@ -293,6 +305,46 @@ class DocumentService {
       
       if (existingAttachments.length !== uniqueIds.length) {
         throw new Error('部分引用的附件不存在或已删除');
+      }
+      
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * 验证引用的引用体
+   * @param {Array} referencedIds - 引用的引用体ID数组
+   * @returns {Promise} 验证结果
+   */
+  async validateReferencedQuotes(referencedIds) {
+    try {
+      // 检查是否为数组
+      if (!Array.isArray(referencedIds)) {
+        throw new Error('引用的引用体ID必须是数组');
+      }
+      
+      // 去重
+      const uniqueIds = [...new Set(referencedIds)];
+      if (uniqueIds.length !== referencedIds.length) {
+        throw new Error('引用的引用体ID存在重复');
+      }
+      
+      // 验证ObjectId格式
+      for (const refId of uniqueIds) {
+        if (!mongoose.Types.ObjectId.isValid(refId)) {
+          throw new Error(`无效的引用体ID: ${refId}`);
+        }
+      }
+      
+      // 检查所有引用的引用体是否存在
+      const existingQuotes = await Quote.find({
+        _id: { $in: uniqueIds }
+      }).select('_id');
+      
+      if (existingQuotes.length !== uniqueIds.length) {
+        throw new Error('部分引用的引用体不存在');
       }
       
       return true;
@@ -406,6 +458,19 @@ class DocumentService {
         console.log(`已从 ${docResult.modifiedCount} 个文档中移除对文档 ${id} 的引用`);
       } catch (docError) {
         console.error('清理文档引用失败:', docError);
+        // 不抛出错误，避免影响文档删除
+      }
+
+      // 从其他文档的引用引用体列表中移除已删除的文档ID
+      try {
+        const quoteRefResult = await Document.updateMany(
+          { referencedQuoteIds: id },
+          { $pull: { referencedQuoteIds: id } }
+        );
+        
+        console.log(`已从 ${quoteRefResult.modifiedCount} 个文档的引用引用体列表中移除文档 ${id}`);
+      } catch (quoteRefError) {
+        console.error('清理文档引用引用体失败:', quoteRefError);
         // 不抛出错误，避免影响文档删除
       }
 

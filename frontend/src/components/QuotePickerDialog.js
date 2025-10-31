@@ -120,7 +120,7 @@ const formatRelativeTime = (dateString) => {
 
 const QuotePickerDialog = ({
   open,
-  handleClose,
+  handleClose = () => {}, // 默认空函数，防止未传入时出错
   onConfirm,
   excludeIds = [],
   hiddenIds = [],

@@ -263,6 +263,34 @@ export const saveAttachmentReferences = createAsyncThunk(
   }
 );
 
+// 异步thunk：保存文档引用体引用
+export const saveDocumentQuoteReferences = createAsyncThunk(
+  'windows/saveDocumentQuoteReferences',
+  async ({ documentId, referencedQuoteIds }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/documents/${documentId}`, {
+        referencedQuoteIds
+      }, {
+        params: {
+          populate: 'full',
+          include: 'referencingQuotes',
+          quotesLimit: 20
+        }
+      });
+      return {
+        documentId,
+        referencedQuoteIds,
+        document: response.data.data
+      };
+    } catch (error) {
+      return rejectWithValue({
+        documentId,
+        error: error.response?.data?.message || error.message || '保存引用体引用失败'
+      });
+    }
+  }
+);
+
 // 获取下一个 zIndex 值
 const getNextZIndex = (windows) => {
   if (windows.length === 0) return 1400; // 基础 zIndex

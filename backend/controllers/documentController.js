@@ -100,7 +100,8 @@ class DocumentController {
         htmlContent: req.body.htmlContent,
         tags: req.body.tags,
         source: req.body.source,
-        referencedAttachmentIds: req.body.referencedAttachmentIds
+        referencedAttachmentIds: req.body.referencedAttachmentIds,
+        referencedQuoteIds: req.body.referencedQuoteIds
       };
 
       const document = await documentService.createDocument(documentData);
@@ -135,6 +136,7 @@ class DocumentController {
       if (req.body.source !== undefined) updateData.source = req.body.source;
       if (req.body.referencedDocumentIds !== undefined) updateData.referencedDocumentIds = req.body.referencedDocumentIds;
       if (req.body.referencedAttachmentIds !== undefined) updateData.referencedAttachmentIds = req.body.referencedAttachmentIds;
+      if (req.body.referencedQuoteIds !== undefined) updateData.referencedQuoteIds = req.body.referencedQuoteIds;
 
       // 解析查询参数，用于返回更新后的文档数据
       const options = {

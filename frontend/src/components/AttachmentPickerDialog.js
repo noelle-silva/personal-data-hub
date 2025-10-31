@@ -51,7 +51,7 @@ const CATEGORY_MAP = {
  */
 const AttachmentPickerDialog = ({
   open,
-  onClose,
+  onClose = () => {}, // 默认空函数，防止未传入时出错
   onConfirm,
   excludeIds = [],
   initialSelectedIds = []

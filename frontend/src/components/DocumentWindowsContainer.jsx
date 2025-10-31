@@ -24,7 +24,8 @@ import {
   fetchWindowDocument,
   fetchWindowQuote,
   fetchWindowAttachment,
-  openWindowAndFetch
+  openWindowAndFetch,
+  saveDocumentQuoteReferences
 } from '../store/windowsSlice';
 import {
   fetchDocumentById,
@@ -358,6 +359,32 @@ const DocumentWindowsContainer = () => {
     }
   };
 
+  // 处理文档引用体引用保存
+  const handleSaveDocumentQuoteReferences = async (id, referencedQuoteIds) => {
+    try {
+      const result = await dispatch(saveDocumentQuoteReferences({
+        documentId: id,
+        referencedQuoteIds
+      })).unwrap();
+      
+      console.log('文档引用体引用关系更新成功:', result);
+      
+      // 更新所有引用了该文档的窗口
+      windows.forEach(window => {
+        if (window.resourceId === id && window.document && window.document._id === id) {
+          dispatch(fetchWindowDocument({ windowId: window.id, docId: id }));
+        }
+      });
+      
+      return result.document;
+    } catch (error) {
+      console.error('更新文档引用体引用关系失败:', error);
+      const errorMessage = error.error || error.message || '更新文档引用体引用关系失败，请重试';
+      alert(errorMessage);
+      throw error;
+    }
+  };
+
   // 处理附件窗口删除
   const handleDeleteAttachment = async (id) => {
     try {
@@ -483,6 +510,7 @@ const DocumentWindowsContainer = () => {
               onDelete={handleDeleteDocument}
               onSaveReferences={handleSaveDocumentReferences}
               onSaveAttachmentReferences={handleSaveDocumentAttachmentReferences}
+              onSaveQuoteReferences={handleSaveDocumentQuoteReferences}
               onViewDocument={handleViewDocument}
             />
           );

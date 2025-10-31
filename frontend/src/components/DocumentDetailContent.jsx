@@ -70,6 +70,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useDispatch } from 'react-redux';
 import DocumentPickerDialog from './DocumentPickerDialog';
 import AttachmentPickerDialog from './AttachmentPickerDialog';
+import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
 import { openAttachmentWindowAndFetch, openQuoteWindowAndFetch } from '../store/windowsSlice';
@@ -645,6 +646,111 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, isEditi
   );
 };
 
+// 可排序的引用体项组件
+const SortableReferencedQuoteItem = ({ quote, index, onRemove, isEditing, onViewQuote }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: quote._id || quote });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <QuoteItem
+      ref={setNodeRef}
+      style={style}
+      sx={{
+        cursor: isEditing ? 'grab' : 'pointer',
+        '&:active': { cursor: isEditing ? 'grabbing' : 'pointer' }
+      }}
+      onClick={() => !isEditing && onViewQuote && onViewQuote(quote)}
+    >
+      {isEditing && (
+        <Box
+          {...attributes}
+          {...listeners}
+          sx={{
+            mr: 1,
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'grab',
+            '&:active': { cursor: 'grabbing' }
+          }}
+          aria-label="拖拽排序"
+        >
+          <DragIndicatorIcon color="action" fontSize="small" />
+        </Box>
+      )}
+      <FormatQuoteIcon sx={{ mr: 1, color: 'primary.main' }} />
+      <Box sx={{ flexGrow: 1 }}>
+        <Typography variant="subtitle2" fontWeight="medium">
+          {quote.title}
+        </Typography>
+        {quote.tags && quote.tags.length > 0 && (
+          <Box sx={{ mt: 0.5 }}>
+            {quote.tags.slice(0, 2).map((tag, tagIndex) => (
+              <Chip
+                key={tagIndex}
+                label={tag}
+                size="small"
+                variant="outlined"
+                sx={{
+                  mr: 0.5,
+                  borderRadius: 8,
+                  fontSize: '0.7rem',
+                  height: 20,
+                }}
+              />
+            ))}
+            {quote.tags.length > 2 && (
+              <Chip
+                label={`+${quote.tags.length - 2}`}
+                size="small"
+                variant="outlined"
+                sx={{
+                  borderRadius: 8,
+                  fontSize: '0.7rem',
+                  height: 20,
+                }}
+              />
+            )}
+          </Box>
+        )}
+        <Typography variant="caption" color="text.secondary">
+          更新于 {quote.updatedAt && new Date(quote.updatedAt).toLocaleDateString('zh-CN')}
+        </Typography>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        {!isEditing && (
+          <QuoteCopyButton quote={quote} />
+        )}
+        {isEditing && (
+          <Tooltip title="删除引用">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(index);
+              }}
+              aria-label="删除引用"
+            >
+              <DeleteIcon fontSize="small" color="error" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
+    </QuoteItem>
+  );
+};
+
 // 自适应 textarea 高度的 hook - 已废弃，改用 CodeEditor
 // const useAutoResizeTextarea = () => {
 //   const textareaRef = useRef(null);
@@ -669,6 +775,7 @@ const DocumentDetailContent = ({
   onDelete,
   onSaveReferences,
   onSaveAttachmentReferences,
+  onSaveQuoteReferences,
   onViewDocument,
   selectedDocumentStatus,
   isSidebarCollapsed,
@@ -714,10 +821,18 @@ const DocumentDetailContent = ({
   const [quotesPagination, setQuotesPagination] = useState(null);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   
+  // 引用体相关状态
+  const [referencedQuotes, setReferencedQuotes] = useState([]);
+  const [originalQuoteIds, setOriginalQuoteIds] = useState([]);
+  const [isQuotesEditing, setIsQuotesEditing] = useState(false);
+  const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
+  const [isQuotePickerOpen, setIsQuotePickerOpen] = useState(false);
+  
   // 展开/收起状态管理
   const [quotesExpanded, setQuotesExpanded] = useState(true);
   const [referencesExpanded, setReferencesExpanded] = useState(true);
   const [attachmentsExpanded, setAttachmentsExpanded] = useState(true);
+  const [quotesReferencedExpanded, setQuotesReferencedExpanded] = useState(true);
   
   // 引用附件相关状态
   const [referencedAttachments, setReferencedAttachments] = useState([]);
@@ -804,6 +919,19 @@ const DocumentDetailContent = ({
       setReferencedAttachments(normalizedAttachmentRefs);
       setOriginalAttachmentIds(attachmentRefs.map(ref => typeof ref === 'string' ? ref : ref._id));
       setIsAttachmentReferencesDirty(false);
+      
+      // 初始化引用体列表
+      const quoteRefs = document.referencedQuoteIds || [];
+      const normalizedQuoteRefs = quoteRefs.map(ref => {
+        if (typeof ref === 'string') {
+          return { _id: ref, title: '加载中...', tags: [] };
+        }
+        return ref;
+      });
+      setReferencedQuotes(normalizedQuoteRefs);
+      setOriginalQuoteIds(quoteRefs.map(ref => typeof ref === 'string' ? ref : ref._id));
+      setIsQuoteReferencesDirty(false);
+      setIsQuotesEditing(false);
       
       // 初始化引用此文档的引用体列表
       setReferencingQuotes(document.referencingQuotes || []);
@@ -1154,6 +1282,103 @@ const DocumentDetailContent = ({
     setIsReferencesEditing(false);
   }, [document.referencedDocumentIds]);
 
+  // 处理引用体拖拽结束
+  const handleQuoteDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setReferencedQuotes((items) => {
+        const oldIndex = items.findIndex((item) =>
+          (item._id || item) === active.id
+        );
+        const newIndex = items.findIndex((item) =>
+          (item._id || item) === over.id
+        );
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+      setIsQuoteReferencesDirty(true);
+    }
+  };
+
+  // 处理移除引用体引用
+  const handleRemoveQuoteReference = (index) => {
+    setReferencedQuotes(prev => prev.filter((_, i) => i !== index));
+    setIsQuoteReferencesDirty(true);
+  };
+
+  // 处理添加引用体引用
+  const handleAddQuoteReferences = async (selectedIds) => {
+    console.log('[DocumentDetailContent.handleAddQuoteReferences] 开始添加引用体引用, selectedIds:', selectedIds);
+    try {
+      // 过滤掉已经存在的引用体
+      const newIds = selectedIds.filter(id =>
+        !referencedQuotes.some(quote => quote._id === id)
+      );
+      
+      if (newIds.length === 0) {
+        console.log('[DocumentDetailContent.handleAddQuoteReferences] 没有新的引用体需要添加');
+        return;
+      }
+
+      // 获取引用体详情
+      const newQuotes = [];
+      for (const id of newIds) {
+        try {
+          console.log(`[DocumentDetailContent.handleAddQuoteReferences] 正在获取引用体 ${id} 的元数据`);
+          const metadataResponse = await apiClient.get(`/quotes/${id}`);
+          console.log(`[DocumentDetailContent.handleAddQuoteReferences] 获取引用体 ${id} 元数据成功:`, metadataResponse.data);
+          newQuotes.push(metadataResponse.data.data);
+        } catch (error) {
+          console.error(`[DocumentDetailContent.handleAddQuoteReferences] 获取引用体 ${id} 详情失败:`, error);
+        }
+      }
+
+      console.log(`[DocumentDetailContent.handleAddQuoteReferences] 成功获取 ${newQuotes.length} 个引用体，准备添加到列表`);
+      // 添加到引用列表
+      setReferencedQuotes(prev => {
+        const updated = [...prev, ...newQuotes];
+        console.log(`[DocumentDetailContent.handleAddQuoteReferences] 更新后的引用体列表:`, updated);
+        return updated;
+      });
+      setIsQuoteReferencesDirty(true);
+      console.log(`[DocumentDetailContent.handleAddQuoteReferences] 设置引用体引用为脏状态`);
+    } catch (error) {
+      console.error('[DocumentDetailContent.handleAddQuoteReferences] 添加引用体引用失败:', error);
+    }
+  };
+
+  // 处理保存引用体引用
+  const handleSaveQuoteReferences = async () => {
+    if (!document || !onSaveQuoteReferences) return;
+    
+    try {
+      const referencedQuoteIds = referencedQuotes.map(quote => quote._id);
+      await onSaveQuoteReferences(document._id, referencedQuoteIds);
+
+      setOriginalQuoteIds(referencedQuoteIds);
+      setIsQuoteReferencesDirty(false);
+    } catch (error) {
+      console.error('保存引用体引用失败:', error);
+    }
+  };
+
+  // 处理重置引用体引用
+  const handleResetQuoteReferences = useCallback(() => {
+    // 恢复到原始状态
+    const refs = document.referencedQuoteIds || [];
+    const normalizedRefs = refs.map(ref => {
+      if (typeof ref === 'string') {
+        return { _id: ref, title: '加载中...', tags: [] };
+      }
+      return ref;
+    });
+    
+    setReferencedQuotes(normalizedRefs);
+    setIsQuoteReferencesDirty(false);
+    setIsQuotesEditing(false);
+  }, [document.referencedQuoteIds]);
+
   // 处理查看引用体详情
   const handleViewQuoteDetail = async (quote) => {
     try {
@@ -1368,20 +1593,7 @@ const DocumentDetailContent = ({
             count={referencingQuotes.length}
             expanded={quotesExpanded}
             onExpandedChange={setQuotesExpanded}
-            actions={
-              <Tooltip title="新建并引用引用体">
-                <IconButton
-                  size="small"
-                  onClick={handleOpenQuoteFormModal}
-                  sx={{
-                    borderRadius: 16,
-                  }}
-                  aria-label="新建并引用引用体"
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            }
+            // 移除新建入口，保持只读模式
           >
             {referencingQuotes.length > 0 ? (
               <>
@@ -1452,6 +1664,118 @@ const DocumentDetailContent = ({
               <EmptyStateContainer>
                 <Typography variant="body2">
                   暂无引用此笔记的引用体
+                </Typography>
+              </EmptyStateContainer>
+            )}
+          </CollapsibleRelationModule>
+
+          {/* 此笔记引用的引用体 */}
+          <CollapsibleRelationModule
+            title="此笔记引用的引用体"
+            count={referencedQuotes.length}
+            expanded={quotesReferencedExpanded}
+            onExpandedChange={setQuotesReferencedExpanded}
+            actions={
+              isQuotesEditing ? (
+                <>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setIsQuotePickerOpen(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    添加引用体
+                  </Button>
+                  {isQuoteReferencesDirty && (
+                    <>
+                      <Tooltip title="保存引用体">
+                        <IconButton
+                          size="small"
+                          onClick={handleSaveQuoteReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'success.main',
+                          }}
+                        >
+                          <SaveIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="撤销更改">
+                        <IconButton
+                          size="small"
+                          onClick={handleResetQuoteReferences}
+                          sx={{
+                            borderRadius: 16,
+                            color: 'action.active',
+                          }}
+                        >
+                          <UndoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                  <Tooltip title="取消编辑">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setIsQuotesEditing(false);
+                        handleResetQuoteReferences();
+                      }}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
+                <>
+                  <Tooltip title="编辑引用体">
+                    <IconButton
+                      size="small"
+                      onClick={() => setIsQuotesEditing(true)}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )
+            }
+          >
+            {referencedQuotes.length > 0 ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleQuoteDragEnd}
+              >
+                <SortableContext
+                  items={referencedQuotes.map(quote => quote._id || quote)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <QuotesListContainer>
+                    {referencedQuotes.map((quote, index) => (
+                      <SortableReferencedQuoteItem
+                        key={quote._id || quote}
+                        quote={quote}
+                        index={index}
+                        onRemove={handleRemoveQuoteReference}
+                        isEditing={isQuotesEditing}
+                        onViewQuote={handleViewQuoteDetail}
+                      />
+                    ))}
+                  </QuotesListContainer>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <EmptyStateContainer>
+                <Typography variant="body2">
+                  暂无引用的引用体
                 </Typography>
               </EmptyStateContainer>
             )}
@@ -2218,6 +2542,15 @@ const DocumentDetailContent = ({
         onConfirm={handleAddAttachmentReferences}
         excludeIds={referencedAttachments.map(att => typeof att === 'string' ? att : att._id)}
         initialSelectedIds={referencedAttachments.map(att => typeof att === 'string' ? att : att._id)}
+      />
+      
+      {/* 引用体选择对话框 */}
+      <QuotePickerDialog
+        open={isQuotePickerOpen}
+        handleClose={() => setIsQuotePickerOpen(false)}
+        onConfirm={handleAddQuoteReferences}
+        excludeIds={referencedQuotes.map(quote => typeof quote === 'string' ? quote : quote._id)}
+        initialSelectedIds={referencedQuotes.map(quote => typeof quote === 'string' ? quote : quote._id)}
       />
 
       {/* 文档创建模态框 */}

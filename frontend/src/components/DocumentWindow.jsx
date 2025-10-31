@@ -19,7 +19,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import DocumentDetailContent from './DocumentDetailContent';
 import AIChatSidebar from './AIChatSidebar';
-import { saveDocumentReferences, saveAttachmentReferences } from '../store/windowsSlice';
+import { saveDocumentReferences, saveAttachmentReferences, saveDocumentQuoteReferences } from '../store/windowsSlice';
 
 // 窗口容器
 const WindowContainer = styled(Paper, {
@@ -440,6 +440,15 @@ const DocumentWindow = ({
           return result.document;
         };
 
+        // 实现保存引用体引用的回调
+        const handleSaveQuoteReferences = async (documentId, referencedIds) => {
+          const result = await dispatch(saveDocumentQuoteReferences({
+            documentId,
+            referencedQuoteIds: referencedIds
+          })).unwrap();
+          return result.document;
+        };
+
         return (
           <>
             <MainContent>
@@ -449,7 +458,7 @@ const DocumentWindow = ({
                 onDelete={onDelete}
                 onSaveReferences={onSaveReferences || handleSaveReferences}
                 onSaveAttachmentReferences={onSaveAttachmentReferences || handleSaveAttachmentReferences}
-                onSaveQuoteReferences={onSaveQuoteReferences}
+                onSaveQuoteReferences={onSaveQuoteReferences || handleSaveQuoteReferences}
                 onViewDocument={onViewDocument}
                 selectedDocumentStatus="loaded"
                 isSidebarCollapsed={isSidebarCollapsed}

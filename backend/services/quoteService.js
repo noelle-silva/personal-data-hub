@@ -384,6 +384,19 @@ class QuoteService {
       // 清理其他引用体中对已删除引用体的引用
       await this.removeReferencedQuote(id);
 
+      // 从文档的引用引用体列表中移除已删除的引用体ID
+      try {
+        const docResult = await Document.updateMany(
+          { referencedQuoteIds: id },
+          { $pull: { referencedQuoteIds: id } }
+        );
+        
+        console.log(`已从 ${docResult.modifiedCount} 个文档的引用引用体列表中移除引用体 ${id}`);
+      } catch (docError) {
+        console.error('清理文档引用引用体失败:', docError);
+        // 不抛出错误，避免影响引用体删除
+      }
+
       return { message: '引用体删除成功', id };
     } catch (error) {
       throw new Error(`删除引用体失败: ${error.message}`);

@@ -61,6 +61,13 @@ const documentSchema = new mongoose.Schema(
       default: []
     }],
     
+    // 引用的引用体ID数组，可选字段（允许为空，支持引用体删除后笔记保留）
+    referencedQuoteIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quote',
+      default: []
+    }],
+    
     // 创建时间，自动设置为文档创建时的时间
     createdAt: {
       type: Date,
@@ -94,6 +101,7 @@ documentSchema.index({ createdAt: -1 }); // 按创建时间降序索引
 documentSchema.index({ updatedAt: -1 }); // 按更新时间降序索引（用于搜索排序）
 documentSchema.index({ referencedDocumentIds: 1 }); // 引用文档ID索引
 documentSchema.index({ referencedAttachmentIds: 1 }); // 引用附件ID索引
+documentSchema.index({ referencedQuoteIds: 1 }); // 引用引用体ID索引
 
 /**
  * 虚拟字段：文档摘要
