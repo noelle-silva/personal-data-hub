@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import DocumentFormModal from './DocumentFormModal';
 import QuoteFormModal from './QuoteFormModal';
 import { selectIsModalOpen, closeDocumentModal } from '../store/documentsSlice';
-import { selectIsQuoteModalOpen, closeQuoteModal } from '../store/quotesSlice';
+import { selectIsQuoteCreateModalOpen, closeQuoteCreateModal } from '../store/quotesSlice';
 
 /**
  * 全局动作门户组件
@@ -75,7 +75,7 @@ const GlobalActionPortal: React.FC = () => {
 const GlobalModals: React.FC = () => {
   // 直接从Redux状态获取模态框开关状态
   const documentModalOpen = useSelector(selectIsModalOpen);
-  const quoteModalOpen = useSelector(selectIsQuoteModalOpen);
+  const quoteModalOpen = useSelector(selectIsQuoteCreateModalOpen);
   
   // 需要导入dispatch来关闭模态框
   const dispatch = useDispatch();
@@ -132,7 +132,7 @@ const GlobalModals: React.FC = () => {
           detail: result.data 
         }));
         
-        dispatch(closeQuoteModal());
+        dispatch(closeQuoteCreateModal());
       } else {
         throw new Error('创建引用体失败');
       }
@@ -156,7 +156,7 @@ const GlobalModals: React.FC = () => {
       {/* 引用体创建模态框 */}
       <QuoteFormModal
         open={quoteModalOpen}
-        handleClose={() => dispatch(closeQuoteModal())}
+        handleClose={() => dispatch(closeQuoteCreateModal())}
         onSave={handleQuoteCreate}
         initialDocumentId={undefined}
       />

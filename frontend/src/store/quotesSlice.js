@@ -73,6 +73,7 @@ const initialState = {
   error: null,
   selectedQuote: null,
   isModalOpen: false,
+  isCreateModalOpen: false, // 新建引用体模态框开关
   selectedQuoteStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于单个引用体
 };
 
@@ -96,6 +97,12 @@ const quotesSlice = createSlice({
       state.selectedQuote = null;
       state.isModalOpen = false;
       state.selectedQuoteStatus = 'idle'; // 关闭时重置状态
+    },
+    openQuoteCreateModal: (state) => {
+      state.isCreateModalOpen = true;
+    },
+    closeQuoteCreateModal: (state) => {
+      state.isCreateModalOpen = false;
     },
   },
   extraReducers: (builder) => {
@@ -175,7 +182,12 @@ const quotesSlice = createSlice({
   },
 });
 
-export const { openQuoteModal, closeQuoteModal } = quotesSlice.actions;
+export const {
+  openQuoteModal,
+  closeQuoteModal,
+  openQuoteCreateModal,
+  closeQuoteCreateModal
+} = quotesSlice.actions;
 
 // Selectors
 export const selectAllQuotes = (state) => state.quotes.items;
@@ -183,6 +195,7 @@ export const selectQuotesStatus = (state) => state.quotes.status;
 export const selectQuotesError = (state) => state.quotes.error;
 export const selectSelectedQuote = (state) => state.quotes.selectedQuote;
 export const selectIsQuoteModalOpen = (state) => state.quotes.isModalOpen;
+export const selectIsQuoteCreateModalOpen = (state) => state.quotes.isCreateModalOpen;
 export const selectSelectedQuoteStatus = (state) => state.quotes.selectedQuoteStatus;
 
 export default quotesSlice.reducer;

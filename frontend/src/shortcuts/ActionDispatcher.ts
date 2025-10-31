@@ -1,7 +1,7 @@
 import { ShortcutActionId } from './types';
 import { store } from '../store';
 import { openDocumentModal } from '../store/documentsSlice';
-import { openQuoteModal } from '../store/quotesSlice';
+import { openQuoteCreateModal } from '../store/quotesSlice';
 import { 
   uploadAttachmentImage, 
   uploadAttachmentVideo, 
@@ -41,7 +41,7 @@ class ActionDispatcher {
    */
   public dispatchCreateQuote(): void {
     console.debug('派发动作: 创建新引用体');
-    store.dispatch(openQuoteModal(undefined));
+    store.dispatch(openQuoteCreateModal());
   }
 
   /**
