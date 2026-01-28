@@ -108,20 +108,6 @@ app.use('/api/themes/wallpapers/file', express.static(path.join(__dirname, 'asse
   }
 }));
 
-// 暴露 vendor/node_modules 作为静态资源（支持原生依赖引用）
-app.use('/node_modules', express.static(path.join(__dirname, 'vendor', 'node_modules'), {
-  maxAge: '1y', // 设置长期缓存，依赖版本通常稳定
-  etag: true,   // 启用 ETag
-  lastModified: true, // 启用 Last-Modified
-  index: false, // 禁止目录索引
-  setHeaders: (res, filePath) => {
-    // 对 JS/CSS 文件设置更积极的缓存策略
-    if (/\.(js|css|map)$/.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
-  }
-}));
-
 /**
  * 请求日志中间件
  */

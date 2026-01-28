@@ -61,29 +61,6 @@ const HtmlSandboxRenderer = ({
     return `html-sandbox-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }, []);
 
-  // 检测内容是否需要注入 base 标签
-  const needsBaseTag = useMemo(() => {
-    if (!content) return false;
-    // 检测是否有相对路径引用 node_modules
-    return /(?:src|href)=["']\.?\/?node_modules\//i.test(content);
-  }, [content]);
-
-  // 检测内容是否需要注入 import map
-  const needsImportMap = useMemo(() => {
-    if (!content) return false;
-    // 检测是否有裸模块导入或 three examples 引用
-    return /(?:import\s+['"](?!\.\/|\/|http)['"]|from\s+['"](?!\.\/|\/|http)['"]|\/node_modules\/three\/examples\/jsm\/)/i.test(content);
-  }, [content]);
-
-  // 生成 import map
-  const generateImportMap = useMemo(() => {
-    return {
-      imports: {
-        "three": "/node_modules/three/build/three.module.js"
-      }
-    };
-  }, []);
-
   // 预处理内容，替换 attach:// 引用
   const preprocessContent = useCallback(async (contentToProcess) => {
     if (!contentToProcess) return contentToProcess;
@@ -154,22 +131,11 @@ const HtmlSandboxRenderer = ({
         <title>HTML 内容</title>`;
     
     // 根据需要添加 base 标签
-    if (needsBaseTag && !hasExistingBase) {
-      headContent += `
-        <base href="/" target="_blank">`;
-    } else if (!hasExistingBase) {
+    if (!hasExistingBase) {
       headContent += `
         <base target="_blank">`;
     }
-    
-    // 根据需要添加 import map
-    if (needsImportMap) {
-      headContent += `
-        <script type="importmap">
-        ${JSON.stringify(generateImportMap, null, 2)}
-        </script>`;
-    }
-    
+
     // 添加资源加载调试脚本（仅在开发环境）
     if (process.env.NODE_ENV === 'development') {
       headContent += `

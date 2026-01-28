@@ -29,14 +29,4 @@ module.exports = function(app) {
       }
     })
   );
-  
-  // 代理 /node_modules 请求到后端服务器
-  app.use(
-    '/node_modules',
-    createProxyMiddleware({
-      target: 'http://localhost:8444',
-      changeOrigin: true,
-      logLevel: 'debug'
-    })
-  );
 };
