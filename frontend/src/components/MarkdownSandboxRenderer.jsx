@@ -236,6 +236,8 @@ const MarkdownSandboxRenderer = ({
       <StyledIframe
         ref={iframeRef}
         srcDoc={fullHtml}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        referrerPolicy="no-referrer"
         style={{
           height: loading ? 0 : height,
           display: loading ? 'none' : 'block',

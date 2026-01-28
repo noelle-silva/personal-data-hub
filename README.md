@@ -165,7 +165,6 @@ ATTACHMENTS_SCRIPT_DIR=backend/attachments/scripts
 
 # 安全配置（生产环境必须修改）
 ATTACHMENTS_SECRET=your-attachment-secret-key-change-this-in-production
-ATTACHMENTS_BEARER_TOKEN=your-attachment-bearer-token-change-this-in-production
 ```
 
 #### 3.4 登录认证配置
@@ -195,6 +194,15 @@ LOGIN_PASSWORD_HASH=生成的哈希值
 # JWT配置
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
+
+# Cookie 登录态（公网部署推荐）
+AUTH_COOKIE_NAME=pdh_auth
+CSRF_COOKIE_NAME=pdh_csrf
+COOKIE_SECURE=true
+COOKIE_SAMESITE=lax
+
+# 前后端不同源时必配（逗号分隔）
+# CORS_ORIGINS=https://app.example.com
 ```
 
 #### 3.5 AI服务配置
@@ -396,9 +404,10 @@ ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
 
 生产环境部署时，请务必修改以下安全配置：
 
-1. `file.env` 中的 `ATTACHMENTS_SECRET` 和 `ATTACHMENTS_BEARER_TOKEN`
-2. `login.env` 中的 `JWT_SECRET` 和 `LOGIN_PASSWORD_HASH`
-3. 使用强密码并定期更换
+1. `file.env` 中的 `ATTACHMENTS_SECRET`
+2. `login.env` 中的 `JWT_SECRET`、`LOGIN_PASSWORD_HASH`
+3. 公网部署建议启用 Cookie 登录态：`COOKIE_SECURE=true`，并配置 `CORS_ORIGINS`
+4. 使用强密码并定期更换
 
 ### 数据库优化
 

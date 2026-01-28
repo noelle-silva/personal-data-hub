@@ -6,7 +6,8 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectIsAuthenticated, selectAuthToken, restoreAuth } from '../store/authSlice';
+import { checkAuth, selectAuthInitialized, selectIsAuthenticated } from '../store/authSlice';
+import { Box, CircularProgress } from '@mui/material';
 
 /**
  * 受保护路由组件
@@ -20,18 +21,27 @@ const ProtectedRoute = ({ children, requireAuth = true }) => {
   
   // Redux 状态
   const isAuthenticated = useSelector(selectIsAuthenticated);
-  const authToken = useSelector(selectAuthToken);
+  const initialized = useSelector(selectAuthInitialized);
 
-  // 组件挂载时尝试恢复认证状态
+  // 组件挂载时尝试检查登录态（避免刷新后直接误判未登录）
   useEffect(() => {
-    if (authToken && !isAuthenticated) {
-      dispatch(restoreAuth());
+    if (!initialized) {
+      dispatch(checkAuth());
     }
-  }, [dispatch, authToken, isAuthenticated]);
+  }, [dispatch, initialized]);
 
   // 如果不需要认证，直接渲染子组件
   if (!requireAuth) {
     return children;
+  }
+
+  // 还没完成登录态检查：给个最小 loading，避免闪跳登录页
+  if (!initialized) {
+    return (
+      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress size={24} />
+      </Box>
+    );
   }
 
   // 如果未认证，重定向到登录页面，并保存当前路径

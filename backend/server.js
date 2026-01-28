@@ -6,6 +6,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 require('dotenv').config({ path: './db.env' });
 require('dotenv').config({ path: '../port.env' });
 require('dotenv').config({ path: '../file.env' });
@@ -23,6 +24,7 @@ const themeRoutes = require('./routes/themes');
 const transparencyRoutes = require('./routes/transparency');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
+const requireCsrf = require('./middlewares/requireCsrf');
 const helmet = require('helmet');
 
 // 输出关键配置信息用于调试
@@ -57,6 +59,7 @@ const app = express();
 
 // 安全中间件
 app.use(helmet());
+app.use(cookieParser());
 
 /**
  * 连接到MongoDB数据库
@@ -77,20 +80,54 @@ app.use(express.json({ limit: maxRequestBodySize }));
 app.use(express.urlencoded({ extended: true, limit: maxRequestBodySize }));
 
 // 配置CORS中间件，允许跨域请求
-app.use(cors({
-  origin: [
+const getCorsOptions = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  const rawOrigins = process.env.CORS_ORIGINS;
+  const allowedOrigins = rawOrigins
+    ? rawOrigins.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  if (isProd && allowedOrigins.length === 0) {
+    console.warn('[CORS] 生产环境未配置 CORS_ORIGINS，将拒绝所有跨域请求（同源/无 Origin 请求仍可用）');
+  }
+
+  const devAllowedOrigins = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:8333',
-    'http://127.0.0.1:8333',
-    // 允许Live Server的常用端口范围
-    /^http:\/\/localhost:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/,
-    /^http:\/\/127\.0\.0\.1:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/
-  ], // 允许的前端地址
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // 允许的HTTP方法
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Attachment-Token'], // 允许的请求头
-  credentials: true // 允许发送凭证
-}));
+    'http://127.0.0.1:8333'
+  ];
+
+  return {
+    origin: (origin, callback) => {
+      // 没有 Origin（同源、curl、server-to-server）放行
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // 仅开发环境允许一些常用本地端口（Live Server 等）
+      if (!isProd) {
+        if (devAllowedOrigins.includes(origin)) return callback(null, true);
+        if (/^http:\/\/localhost:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/.test(origin)) return callback(null, true);
+        if (/^http:\/\/127\.0\.0\.1:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/.test(origin)) return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-CSRF-Token',
+      'Range',
+      'If-None-Match',
+      'If-Modified-Since'
+    ],
+    credentials: true
+  };
+};
+
+app.use(cors(getCorsOptions()));
 
 // 静态文件服务（用于提供静态资源）
 app.use(express.static(path.join(__dirname, 'public')));
@@ -181,6 +218,8 @@ app.use('/api/test', testRoutes);
 
 // 对其他API路由应用JWT认证中间件
 app.use('/api', requireAuth);
+// 对需要登录态的API路由增加 CSRF 防护（非安全方法）
+app.use('/api', requireCsrf);
 
 // 文档相关路由
 app.use('/api/documents', documentRoutes);

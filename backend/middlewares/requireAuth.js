@@ -13,25 +13,25 @@ const jwt = require('jsonwebtoken');
  */
 const requireAuth = (req, res, next) => {
   try {
-    // 从请求头获取 Authorization
+    const cookieName = process.env.AUTH_COOKIE_NAME || 'pdh_auth';
+
+    // 兼容两种来源：
+    // 1) Authorization: Bearer <token>（旧客户端/脚本）
+    // 2) HttpOnly Cookie（推荐，防止 token 被前端 JS 读到）
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: '未提供有效的认证令牌',
-        hint: '请在请求头中提供 Authorization: Bearer <token>'
-      });
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (req.cookies && req.cookies[cookieName]) {
+      token = req.cookies[cookieName];
     }
 
-    // 提取 JWT Token
-    const token = authHeader.substring(7);
-    
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: '认证令牌为空',
-        hint: '请在请求头中提供有效的 JWT Token'
+        message: '未提供有效的认证令牌',
+        hint: '请先登录（推荐 Cookie 登录态），或在请求头中提供 Authorization: Bearer <token>'
       });
     }
 

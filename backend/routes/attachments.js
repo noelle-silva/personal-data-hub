@@ -7,7 +7,10 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const router = express.Router();
-const { attachmentController, requireBearerAuth, requireAttachmentAuth } = require('../controllers/attachmentController');
+const attachmentController = require('../controllers/attachmentController');
+const requireAuth = require('../middlewares/requireAuth');
+const requireCsrf = require('../middlewares/requireCsrf');
+const { requireAuthOrSignedUrl } = require('../middlewares/requireAttachmentAuth');
 
 /**
  * 配置multer用于文件上传
@@ -154,111 +157,111 @@ const dynamicMulterMiddleware = (req, res, next) => {
 /**
  * @route   POST /api/attachments/:category
  * @desc    上传附件文件（支持图片、视频、文档）
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   category - 附件类别 (image/video/document)
  * @body    file - 附件文件 (必填)
  */
-router.post('/:category', requireBearerAuth, dynamicMulterMiddleware, attachmentController.uploadAttachment);
+router.post('/:category', requireAuth, requireCsrf, dynamicMulterMiddleware, attachmentController.uploadAttachment);
 
 /**
  * @route   GET /api/attachments
  * @desc    获取附件列表
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @query   page - 页码 (默认: 1)
  * @query   limit - 每页数量 (默认: 20)
  * @query   sort - 排序字段 (默认: -createdAt)
  * @query   category - 附件类别 (可选)
  */
-router.get('/', requireBearerAuth, attachmentController.getAttachments);
+router.get('/', requireAuth, attachmentController.getAttachments);
 
 /**
  * @route   GET /api/attachments/search
  * @desc    搜索附件
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @query   q - 搜索关键词 (必填，至少2个字符)
  * @query   page - 页码 (可选，默认为1)
  * @query   limit - 每页数量 (可选，默认为20，最大为50)
  * @query   sort - 排序字段 (可选，默认为'-createdAt')
  * @query   category - 附件类别 (可选)
  */
-router.get('/search', requireBearerAuth, attachmentController.searchAttachments);
+router.get('/search', requireAuth, attachmentController.searchAttachments);
 
 /**
  * @route   GET /api/attachments/stats
  * @desc    获取附件统计信息
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  */
-router.get('/stats', requireBearerAuth, attachmentController.getAttachmentStats);
+router.get('/stats', requireAuth, attachmentController.getAttachmentStats);
 
 /**
  * @route   GET /api/attachments/config
  * @desc    获取附件配置信息
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  */
-router.get('/config', requireBearerAuth, attachmentController.getConfig);
+router.get('/config', requireAuth, attachmentController.getConfig);
 
 /**
  * @route   GET /api/attachments/:id
  * @desc    获取附件文件
- * @access  Public (支持Bearer Token或签名URL鉴权)
+ * @access  Public (登录态或签名URL鉴权)
  * @param   id - 附件ID
  * @query   token - 签名令牌 (签名URL鉴权时必填)
  * @query   exp - 过期时间戳 (签名URL鉴权时必填)
  */
-router.get('/:id', requireAttachmentAuth({ allowSignedUrl: true, allowBearer: true }), attachmentController.getFile);
+router.get('/:id', requireAuthOrSignedUrl, attachmentController.getFile);
 
 /**
  * @route   HEAD /api/attachments/:id
  * @desc    获取附件文件头信息
- * @access  Public (支持Bearer Token或签名URL鉴权)
+ * @access  Public (登录态或签名URL鉴权)
  * @param   id - 附件ID
  * @query   token - 签名令牌 (签名URL鉴权时必填)
  * @query   exp - 过期时间戳 (签名URL鉴权时必填)
  */
-router.head('/:id', requireAttachmentAuth({ allowSignedUrl: true, allowBearer: true }), attachmentController.headFile);
+router.head('/:id', requireAuthOrSignedUrl, attachmentController.headFile);
 
 /**
  * @route   GET /api/attachments/:id/meta
  * @desc    获取附件元数据
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  */
-router.get('/:id/meta', requireBearerAuth, attachmentController.getMetadata);
+router.get('/:id/meta', requireAuth, attachmentController.getMetadata);
 
 /**
  * @route   PATCH /api/attachments/:id/meta
  * @desc    更新附件元数据
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  * @body    originalName - 原始文件名（可选）
  * @body    description - 内容描述（可选）
  */
-router.patch('/:id/meta', requireBearerAuth, attachmentController.updateMetadata);
+router.patch('/:id/meta', requireAuth, requireCsrf, attachmentController.updateMetadata);
 
 /**
  * @route   POST /api/attachments/:id/signed
  * @desc    生成签名URL
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  * @query   ttl - 有效期（秒，可选，默认使用配置值）
  */
-router.post('/:id/signed', requireBearerAuth, attachmentController.generateSignedUrl);
+router.post('/:id/signed', requireAuth, requireCsrf, attachmentController.generateSignedUrl);
 
 /**
  * @route   POST /api/attachments/signed-batch
  * @desc    批量生成签名URL
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @body    ids - 附件ID数组
  * @body    ttl - 有效期（秒，可选）
  */
-router.post('/signed-batch', requireBearerAuth, attachmentController.generateSignedUrlBatch);
+router.post('/signed-batch', requireAuth, requireCsrf, attachmentController.generateSignedUrlBatch);
 
 /**
  * @route   DELETE /api/attachments/:id
  * @desc    删除附件
- * @access  Private (需要Bearer Token鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  */
-router.delete('/:id', requireBearerAuth, attachmentController.deleteAttachment);
+router.delete('/:id', requireAuth, requireCsrf, attachmentController.deleteAttachment);
 
 module.exports = router;

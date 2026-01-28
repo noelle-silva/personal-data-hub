@@ -81,20 +81,11 @@ const SSETest = () => {
       const endpoint = testType === 'split' 
         ? '/api/test/sse-split' 
         : '/api/test/sse';
-
-      // 获取认证token（如果存在）
-      const authToken = localStorage.getItem('authToken');
-      
-      // 准备请求头
-      const headers = {};
-      if (authToken) {
-        headers.Authorization = `Bearer ${authToken}`;
-      }
       
       // 发送请求
       const response = await fetch(endpoint, {
         method: 'GET',
-        headers,
+        credentials: 'include',
         signal: controller.signal
       });
 

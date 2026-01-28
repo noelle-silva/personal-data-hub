@@ -5,6 +5,17 @@
 
 import apiClient from './apiClient';
 
+const getCookieValue = (name) => {
+  if (typeof document === 'undefined') return null;
+  const parts = document.cookie.split(';').map(s => s.trim());
+  for (const part of parts) {
+    if (part.startsWith(`${encodeURIComponent(name)}=`)) {
+      return decodeURIComponent(part.substring(name.length + 1));
+    }
+  }
+  return null;
+};
+
 /**
  * AI 服务类
  */
@@ -68,15 +79,16 @@ class AIService {
     const controller = new AbortController();
     
     try {
-      // 获取认证token
-      const authToken = localStorage.getItem('authToken');
+      const csrfCookieName = process.env.REACT_APP_CSRF_COOKIE_NAME || 'pdh_csrf';
+      const csrfToken = getCookieValue(csrfCookieName);
       
       // 发送流式请求
       const response = await fetch('/api/ai/v1/chat/completions', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
         },
         body: JSON.stringify({
           ...requestParams,

@@ -49,43 +49,6 @@ export const logout = async () => {
   }
 };
 
-/**
- * 检查本地存储的认证令牌是否有效
- * @returns {boolean} 是否有效
- */
-export const isTokenValid = () => {
-  const token = localStorage.getItem('authToken');
-  if (!token) return false;
-  
-  try {
-    // 简单检查 JWT 格式（不验证签名）
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    
-    // 解码 payload 检查过期时间
-    const payload = JSON.parse(atob(parts[1]));
-    const now = Math.floor(Date.now() / 1000);
-    
-    return payload.exp > now;
-  } catch (error) {
-    console.error('Token 验证错误:', error);
-    return false;
-  }
-};
-
-/**
- * 获取本地存储的用户信息
- * @returns {Object|null} 用户信息
- */
-export const getStoredUser = () => {
-  try {
-    const userStr = localStorage.getItem('authUser');
-    return userStr ? JSON.parse(userStr) : null;
-  } catch (error) {
-    console.error('获取用户信息错误:', error);
-    return null;
-  }
-};
 
 /**
  * 处理API错误
@@ -122,19 +85,15 @@ const handleApiError = (error) => {
 };
 
 /**
- * 清除本地存储的认证信息
+ * 清除本地存储的认证信息（升级为 Cookie 登录态后保留为空实现，避免旧代码调用时报错）
  */
 export const clearAuthData = () => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('attachmentBearerToken');
-  localStorage.removeItem('authUser');
+  // no-op
 };
 
 export default {
   login,
   getCurrentUser,
   logout,
-  isTokenValid,
-  getStoredUser,
   clearAuthData
 };

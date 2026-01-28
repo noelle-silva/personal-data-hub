@@ -5,10 +5,22 @@
 
 import axios from 'axios';
 
+const getCookieValue = (name) => {
+  if (typeof document === 'undefined') return null;
+  const parts = document.cookie.split(';').map(s => s.trim());
+  for (const part of parts) {
+    if (part.startsWith(`${encodeURIComponent(name)}=`)) {
+      return decodeURIComponent(part.substring(name.length + 1));
+    }
+  }
+  return null;
+};
+
 // 创建 axios 实例
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 30000, // 30秒超时
+  withCredentials: true, // 使用 HttpOnly Cookie 作为登录态
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,17 +32,14 @@ let redirectingToLogin = false;
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
   (config) => {
-    // 从 localStorage 获取 JWT Token
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      config.headers.Authorization = `Bearer ${authToken}`;
-    }
-    
-    // 如果是附件相关的请求，额外添加 X-Attachment-Token
-    if (config.url && config.url.includes('/attachments')) {
-      const attachmentToken = localStorage.getItem('attachmentBearerToken');
-      if (attachmentToken) {
-        config.headers['X-Attachment-Token'] = attachmentToken;
+    // CSRF（Double Submit Cookie）：对所有非安全方法补上 X-CSRF-Token
+    const method = (config.method || 'get').toLowerCase();
+    const isSafeMethod = method === 'get' || method === 'head' || method === 'options';
+    if (!isSafeMethod) {
+      const csrfCookieName = process.env.REACT_APP_CSRF_COOKIE_NAME || 'pdh_csrf';
+      const csrfToken = getCookieValue(csrfCookieName);
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
       }
     }
     
@@ -49,11 +58,6 @@ apiClient.interceptors.response.use(
   (error) => {
     // 处理 401 未授权错误
     if (error.response?.status === 401) {
-      // 清除所有认证信息
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('attachmentBearerToken');
-      localStorage.removeItem('authUser');
-      
       // 触发自定义事件，通知应用需要重新登录
       window.dispatchEvent(new CustomEvent('auth-required', {
         detail: { message: '需要重新登录' }
@@ -82,61 +86,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
-/**
- * 设置 JWT Token
- * @param {string} token - JWT Token
- */
-export const setAuthToken = (token) => {
-  if (token) {
-    localStorage.setItem('authToken', token);
-  } else {
-    localStorage.removeItem('authToken');
-  }
-};
-
-/**
- * 获取当前 JWT Token
- * @returns {string|null} 当前存储的 JWT Token
- */
-export const getAuthToken = () => {
-  return localStorage.getItem('authToken');
-};
-
-/**
- * 检查是否已设置 JWT Token
- * @returns {boolean} 是否已设置 Token
- */
-export const hasAuthToken = () => {
-  return !!localStorage.getItem('authToken');
-};
-
-/**
- * 设置附件 Bearer Token
- * @param {string} token - 附件 Bearer Token
- */
-export const setBearerToken = (token) => {
-  if (token) {
-    localStorage.setItem('attachmentBearerToken', token);
-  } else {
-    localStorage.removeItem('attachmentBearerToken');
-  }
-};
-
-/**
- * 获取当前附件 Bearer Token
- * @returns {string|null} 当前存储的附件 Bearer Token
- */
-export const getBearerToken = () => {
-  return localStorage.getItem('attachmentBearerToken');
-};
-
-/**
- * 检查是否已设置附件 Bearer Token
- * @returns {boolean} 是否已设置 Token
- */
-export const hasBearerToken = () => {
-  return !!localStorage.getItem('attachmentBearerToken');
-};
 
 export default apiClient;

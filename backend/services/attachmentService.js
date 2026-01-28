@@ -480,17 +480,14 @@ class AttachmentService {
                                   .update(data)
                                   .digest('hex');
     
-    return token === expectedSignature;
-  }
-
-  /**
-   * 验证Bearer Token
-   * @param {String} token - Bearer Token
-   * @returns {Boolean} 是否有效
-   */
-  validateBearerToken(token) {
-    const expectedToken = process.env.ATTACHMENTS_BEARER_TOKEN;
-    return expectedToken && token === expectedToken;
+    try {
+      const provided = Buffer.from(String(token), 'hex');
+      const expected = Buffer.from(expectedSignature, 'hex');
+      if (provided.length !== expected.length) return false;
+      return crypto.timingSafeEqual(provided, expected);
+    } catch (_) {
+      return false;
+    }
   }
 
   /**

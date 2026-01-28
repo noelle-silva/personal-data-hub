@@ -487,7 +487,7 @@ const HtmlSandboxRenderer = ({
       </body>
       </html>
     `;
-  }, [processedContent, sandboxId, needsBaseTag, needsImportMap, generateImportMap]);
+  }, [processedContent, sandboxId]);
 
   // 处理来自 iframe 的消息
   const handleMessage = useCallback((event) => {
@@ -602,6 +602,8 @@ const HtmlSandboxRenderer = ({
       <StyledIframe
         ref={iframeRef}
         srcDoc={fullHtml}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        referrerPolicy="no-referrer"
         onLoad={handleIframeLoad}
         style={{
           height: loading ? 0 : height,

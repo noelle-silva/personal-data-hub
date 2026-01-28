@@ -4,7 +4,6 @@
  */
 
 const attachmentService = require('../services/attachmentService');
-const { requireBearerAuth, requireAttachmentAuth } = require('../middlewares/requireAttachmentAuth');
 
 /**
  * 附件控制器类
@@ -595,11 +594,5 @@ class AttachmentController {
   }
 }
 
-// 导出控制器实例和中间件
-const attachmentController = new AttachmentController();
-
-module.exports = {
-  attachmentController,
-  requireBearerAuth,
-  requireAttachmentAuth
-};
+// 导出控制器实例
+module.exports = new AttachmentController();

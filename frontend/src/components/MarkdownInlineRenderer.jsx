@@ -2,6 +2,7 @@ import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import parse from 'html-react-parser';
+import DOMPurify from 'dompurify';
 import { renderMarkdownToHtml, generateBaseStylesScoped, generateHighlightStylesScoped, generateKatexStylesScoped } from '../utils/markdownRenderer';
 import { generateTabActionFancyCssScoped, generateQuoteActionFancyCssScoped, generateAttachmentActionFancyCssScoped } from '../utils/tabActionStyles';
 import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyles';
@@ -401,6 +402,14 @@ const MarkdownInlineRenderer = ({
     try {
       // 收敛文档级标签
       const sanitizedHtml = sanitizeDocLevelHtml(renderedHtml);
+
+      // DOMPurify：系统内容可能来自用户输入/外部同步，必须做强净化
+      // 允许项目内自定义标签 x-tab-action（用于“打开文档/引用体/附件”的交互入口）
+      const purifiedHtml = DOMPurify.sanitize(sanitizedHtml, {
+        USE_PROFILES: { html: true },
+        ADD_TAGS: ['x-tab-action'],
+        ALLOW_DATA_ATTR: true
+      });
       
       // 组合替换函数：先执行安全过滤，再执行其他替换逻辑
       const combinedReplace = (node) => {
@@ -414,7 +423,7 @@ const MarkdownInlineRenderer = ({
         return replaceElements(node);
       };
       
-      return parse(sanitizedHtml, { replace: combinedReplace });
+      return parse(purifiedHtml, { replace: combinedReplace });
     } catch (err) {
       console.error('HTML 解析错误:', err);
       return null;

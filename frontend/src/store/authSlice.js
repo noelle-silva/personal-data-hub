@@ -5,7 +5,6 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../services/auth';
-import { fetchAttachmentConfig } from './attachmentsSlice';
 
 // 异步 thunk：用户登录
 export const login = createAsyncThunk(
@@ -14,28 +13,10 @@ export const login = createAsyncThunk(
     try {
       const response = await authService.login(username, password);
       
-      // 存储认证信息到 localStorage
-      if (response.success && response.data) {
-        const { token, attachmentToken, user } = response.data;
-        
-        // 存储 JWT Token
-        localStorage.setItem('authToken', token);
-        
-        // 如果有附件令牌，也存储
-        if (attachmentToken) {
-          localStorage.setItem('attachmentBearerToken', attachmentToken);
-        }
-        
-        // 存储用户信息
-        localStorage.setItem('authUser', JSON.stringify(user));
-        
+      if (response.success && response.data && response.data.user) {
         return {
-          token,
-          attachmentToken,
-          user,
-          isAuthenticated: true,
-          // 标记需要获取附件配置
-          shouldFetchAttachmentConfig: !!attachmentToken
+          user: response.data.user,
+          isAuthenticated: true
         };
       }
       
@@ -48,9 +29,9 @@ export const login = createAsyncThunk(
   }
 );
 
-// 异步 thunk：获取当前用户信息
-export const getCurrentUser = createAsyncThunk(
-  'auth/getCurrentUser',
+// 异步 thunk：检查当前登录态（Cookie 登录态）
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
   async (_, { rejectWithValue }) => {
     try {
       const response = await authService.getCurrentUser();
@@ -65,7 +46,7 @@ export const getCurrentUser = createAsyncThunk(
       throw new Error('获取用户信息响应格式错误');
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || '获取用户信息失败'
+        error.response?.data?.message || error.message || '未登录'
       );
     }
   }
@@ -76,21 +57,9 @@ export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      // 调用登出 API（虽然 JWT 是无状态的，但可以用于记录日志等）
       await authService.logout();
-      
-      // 清除本地存储
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('attachmentBearerToken');
-      localStorage.removeItem('authUser');
-      
       return { isAuthenticated: false };
     } catch (error) {
-      // 即使 API 调用失败，也要清除本地存储
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('attachmentBearerToken');
-      localStorage.removeItem('authUser');
-      
       return rejectWithValue(
         error.response?.data?.message || error.message || '登出失败'
       );
@@ -101,9 +70,8 @@ export const logout = createAsyncThunk(
 // 初始状态
 const initialState = {
   user: null,
-  token: localStorage.getItem('authToken'),
-  attachmentToken: localStorage.getItem('attachmentBearerToken'),
   isAuthenticated: false,
+  initialized: false,
   isLoading: false,
   error: null
 };
@@ -117,29 +85,6 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    
-    // 从本地存储恢复认证状态
-    restoreAuth: (state) => {
-      const token = localStorage.getItem('authToken');
-      const attachmentToken = localStorage.getItem('attachmentBearerToken');
-      const userStr = localStorage.getItem('authUser');
-      
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          state.token = token;
-          state.attachmentToken = attachmentToken;
-          state.user = user;
-          state.isAuthenticated = true;
-        } catch (error) {
-          console.error('恢复认证状态失败:', error);
-          // 清除无效的本地存储
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('attachmentBearerToken');
-          localStorage.removeItem('authUser');
-        }
-      }
-    }
   },
   extraReducers: (builder) => {
     // 登录
@@ -152,37 +97,35 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.attachmentToken = action.payload.attachmentToken;
+        state.initialized = true;
         state.error = null;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
-        state.token = null;
-        state.attachmentToken = null;
+        state.initialized = true;
         state.error = action.payload;
       });
     
-    // 获取当前用户信息
+    // 检查登录态
     builder
-      .addCase(getCurrentUser.pending, (state) => {
+      .addCase(checkAuth.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(getCurrentUser.fulfilled, (state, action) => {
+      .addCase(checkAuth.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
+        state.initialized = true;
         state.error = null;
       })
-      .addCase(getCurrentUser.rejected, (state, action) => {
+      .addCase(checkAuth.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
-        state.token = null;
-        state.attachmentToken = null;
+        state.initialized = true;
         state.error = action.payload;
       });
     
@@ -195,32 +138,29 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
-        state.token = null;
-        state.attachmentToken = null;
+        state.initialized = true;
         state.error = null;
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
-        state.token = null;
-        state.attachmentToken = null;
+        state.initialized = true;
         state.error = action.payload;
       });
   }
 });
 
 // 导出 actions
-export const { clearError, restoreAuth } = authSlice.actions;
+export const { clearError } = authSlice.actions;
 
 // 选择器
 export const selectAuth = (state) => state.auth;
 export const selectUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
+export const selectAuthInitialized = (state) => state.auth.initialized;
 export const selectAuthLoading = (state) => state.auth.isLoading;
 export const selectAuthError = (state) => state.auth.error;
-export const selectAuthToken = (state) => state.auth.token;
-export const selectAttachmentToken = (state) => state.auth.attachmentToken;
 
 // 导出 reducer
 export default authSlice.reducer;

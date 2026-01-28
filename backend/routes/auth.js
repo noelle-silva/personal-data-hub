@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { login, me, logout, createLoginRateLimit } = require('../controllers/authController');
 const requireAuth = require('../middlewares/requireAuth');
+const requireCsrf = require('../middlewares/requireCsrf');
 
 /**
  * @route   POST /api/auth/login
@@ -29,6 +30,6 @@ router.get('/me', requireAuth, me);
  * @desc    用户登出
  * @access  Private (需要JWT认证)
  */
-router.post('/logout', requireAuth, logout);
+router.post('/logout', requireAuth, requireCsrf, logout);
 
 module.exports = router;

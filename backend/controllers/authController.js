@@ -8,6 +8,38 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 
+const parseExpiresInToMs = (expiresIn) => {
+  if (!expiresIn || typeof expiresIn !== 'string') return null;
+  const match = expiresIn.trim().match(/^(\d+)\s*([smhd])$/i);
+  if (!match) return null;
+  const value = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+  if (!Number.isFinite(value) || value <= 0) return null;
+  switch (unit) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    default: return null;
+  }
+};
+
+const buildCookieOptions = () => {
+  const cookieSecure = process.env.COOKIE_SECURE
+    ? process.env.COOKIE_SECURE === 'true'
+    : process.env.NODE_ENV === 'production';
+
+  const sameSite = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase();
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+
+  return {
+    secure: cookieSecure,
+    sameSite: (sameSite === 'strict' || sameSite === 'none') ? sameSite : 'lax',
+    path: '/',
+    ...(cookieDomain ? { domain: cookieDomain } : {})
+  };
+};
+
 /**
  * 创建登录限流中间件
  * 限制登录尝试频率，防止暴力破解
@@ -48,7 +80,9 @@ const login = async (req, res, next) => {
     const envPasswordHash = process.env.LOGIN_PASSWORD_HASH;
     const jwtSecret = process.env.JWT_SECRET;
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
-    const attachmentBearerToken = process.env.ATTACHMENTS_BEARER_TOKEN;
+
+    const authCookieName = process.env.AUTH_COOKIE_NAME || 'pdh_auth';
+    const csrfCookieName = process.env.CSRF_COOKIE_NAME || 'pdh_csrf';
 
     // 检查必要的环境变量是否配置
     if (!envUsername || !envPasswordHash || !jwtSecret) {
@@ -130,18 +164,37 @@ const login = async (req, res, next) => {
 
     const token = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
 
+    // CSRF token（Double Submit Cookie）
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+
+    const baseCookieOptions = buildCookieOptions();
+    const maxAgeMs = parseExpiresInToMs(jwtExpiresIn);
+
+    // 设置 HttpOnly 登录态 Cookie（推荐）
+    res.cookie(authCookieName, token, {
+      ...baseCookieOptions,
+      httpOnly: true,
+      ...(maxAgeMs ? { maxAge: maxAgeMs } : {})
+    });
+
+    // 设置 CSRF Cookie（非 HttpOnly，供前端读取并回传 Header）
+    res.cookie(csrfCookieName, csrfToken, {
+      ...baseCookieOptions,
+      httpOnly: false,
+      ...(maxAgeMs ? { maxAge: maxAgeMs } : {})
+    });
+
     // 返回登录成功响应
     res.status(200).json({
       success: true,
       data: {
-        token,
         user: {
           id: payload.id,
           username: payload.username
         },
-        // 如果配置了附件令牌，也返回给前端
-        ...(attachmentBearerToken && { attachmentToken: attachmentBearerToken }),
-        expiresIn: jwtExpiresIn
+        expiresIn: jwtExpiresIn,
+        // 可选：为了兼容旧客户端，可通过环境变量开启返回 token
+        ...(process.env.AUTH_RETURN_TOKEN === 'true' ? { token } : {})
       },
       message: '登录成功'
     });
@@ -188,8 +241,14 @@ const me = (req, res) => {
  */
 const logout = (req, res) => {
   try {
-    // JWT 是无状态的，服务端不需要做特殊处理
-    // 客户端需要删除本地存储的令牌
+    const authCookieName = process.env.AUTH_COOKIE_NAME || 'pdh_auth';
+    const csrfCookieName = process.env.CSRF_COOKIE_NAME || 'pdh_csrf';
+    const baseCookieOptions = buildCookieOptions();
+
+    // 清理 Cookie（服务端侧显式清除更可靠）
+    res.clearCookie(authCookieName, { ...baseCookieOptions, httpOnly: true });
+    res.clearCookie(csrfCookieName, { ...baseCookieOptions, httpOnly: false });
+
     res.status(200).json({
       success: true,
       message: '登出成功'

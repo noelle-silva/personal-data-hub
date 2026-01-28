@@ -18,28 +18,28 @@ import AIChatTest from './pages/AIChatTest';
 import SSETest from './pages/SSETest';
 import ShortcutTest from './pages/ShortcutTest';
 import ProtectedRoute from './components/ProtectedRoute';
-import { restoreAuth, selectAttachmentToken } from './store/authSlice';
+import { checkAuth, selectIsAuthenticated } from './store/authSlice';
 import { fetchAttachmentConfig } from './store/attachmentsSlice';
 import { fetchAllPages } from './store/customPagesSlice';
 import { TransparencyProvider } from './contexts/TransparencyContext';
 
 function App() {
   const dispatch = useDispatch();
-  const attachmentToken = useSelector(selectAttachmentToken);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
 
-  // 应用启动时尝试恢复认证状态
+  // 应用启动时检查登录态（Cookie）
   useEffect(() => {
-    dispatch(restoreAuth());
+    dispatch(checkAuth());
   }, [dispatch]);
 
-  // 监听认证成功，如果有附件令牌则获取附件配置
+  // 登录后获取附件配置和自定义页面列表
   useEffect(() => {
-    if (attachmentToken) {
+    if (isAuthenticated) {
       dispatch(fetchAttachmentConfig());
       // 同时获取自定义页面列表
       dispatch(fetchAllPages());
     }
-  }, [dispatch, attachmentToken]);
+  }, [dispatch, isAuthenticated]);
 
   return (
     <TransparencyProvider>
