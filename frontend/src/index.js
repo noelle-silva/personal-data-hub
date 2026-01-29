@@ -51,9 +51,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const initDesktopGateway = async () => {
   if (!tauri) return;
 
-  // 等网关起来（少量重试，避免启动时竞态）
+  // 等网关起来（避免启动时竞态）
   let url = '';
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 100; i += 1) {
     try {
       url = await getGatewayUrl();
       if (url) break;
@@ -65,6 +65,26 @@ const initDesktopGateway = async () => {
 
   if (url) {
     window.__PDH_GATEWAY_URL__ = url;
+  }
+  // 若仍未拿到 URL，后台继续尝试，不阻塞 UI（避免首次登录点太快又直连后端）
+  if (!url) {
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      if (tries > 300) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const next = await getGatewayUrl();
+        if (next) {
+          window.__PDH_GATEWAY_URL__ = next;
+          clearInterval(timer);
+        }
+      } catch (_) {
+        // ignore
+      }
+    }, 100);
   }
 
   // 同步后端地址与 token 到网关（用于附件资源转发时补 Authorization）

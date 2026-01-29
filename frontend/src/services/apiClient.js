@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { getApiBaseUrl, isDesktopTauri } from './serverConfig';
+import { getApiBaseUrl, getGatewayBaseUrl, isDesktopTauri } from './serverConfig';
 import { getAuthToken } from './authToken';
 
 const getCookieValue = (name) => {
@@ -34,18 +34,25 @@ let redirectingToLogin = false;
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
   (config) => {
-    // 动态 baseURL：桌面端可配置服务器；未配置时保留 /api 以兼容开发代理
-    const base = getApiBaseUrl();
-    // 兜底：避免出现 ":8444/api" 这种相对 baseURL（会变成 tauri://localhost/:8444/...）
-    if (base && !/^https?:\/\//i.test(base) && !base.startsWith('/')) {
-      config.baseURL = '/api';
+    // 桌面端：优先走本机网关（统一解决 CORS/CSRF/Authorization 限制）
+    const gateway = isDesktopTauri() ? getGatewayBaseUrl() : '';
+    if (gateway) {
+      config.baseURL = `${gateway}/api`;
+      config.withCredentials = false;
     } else {
-      config.baseURL = base;
+      // 动态 baseURL：桌面端可配置服务器；未配置时保留 /api 以兼容开发代理
+      const base = getApiBaseUrl();
+      // 兜底：避免出现 ":8444/api" 这种相对 baseURL（会变成 tauri://localhost/:8444/...）
+      if (base && !/^https?:\/\//i.test(base) && !base.startsWith('/')) {
+        config.baseURL = '/api';
+      } else {
+        config.baseURL = base;
+      }
     }
 
     // Token 优先：存在 token 则走 Bearer（不需要 Cookie / CSRF）
     const token = getAuthToken();
-    if (token) {
+    if (token && !gateway) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
       if (isDesktopTauri()) {
@@ -55,9 +62,14 @@ apiClient.interceptors.request.use(
       return config;
     }
 
-    if (isDesktopTauri()) {
+    if (isDesktopTauri() && !gateway) {
       config.headers = config.headers || {};
       config.headers['X-PDH-CLIENT'] = 'tauri';
+    }
+
+    // 网关模式：认证由网关注入 token，前端不需要再处理 CSRF / Authorization
+    if (gateway) {
+      return config;
     }
 
     // CSRF（Double Submit Cookie）：对所有非安全方法补上 X-CSRF-Token

@@ -4,7 +4,7 @@
  */
 
 import apiClient from './apiClient';
-import { resolveApiUrl } from './serverConfig';
+import { getGatewayBaseUrl, resolveClientUrl } from './serverConfig';
 import { getAuthToken } from './authToken';
 
 const getCookieValue = (name) => {
@@ -84,14 +84,15 @@ class AIService {
       const csrfCookieName = process.env.REACT_APP_CSRF_COOKIE_NAME || 'pdh_csrf';
       const csrfToken = getCookieValue(csrfCookieName);
       const token = getAuthToken();
+      const gateway = getGatewayBaseUrl();
       
       // 发送流式请求
-      const response = await fetch(resolveApiUrl('/api/ai/v1/chat/completions'), {
+      const response = await fetch(resolveClientUrl('/api/ai/v1/chat/completions'), {
         method: 'POST',
-        credentials: token ? 'omit' : 'include',
+        credentials: 'omit',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(token && !gateway ? { 'Authorization': `Bearer ${token}` } : {}),
           ...(!token && csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
         },
         body: JSON.stringify({

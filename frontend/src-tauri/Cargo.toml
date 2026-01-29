@@ -28,3 +28,4 @@ bytes = "1"
 futures-util = "0.3"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+tower-http = { version = "0.6", features = ["cors"] }
