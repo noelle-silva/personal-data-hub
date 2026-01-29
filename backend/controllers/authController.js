@@ -45,6 +45,11 @@ const buildCookieOptions = () => {
  * 限制登录尝试频率，防止暴力破解
  */
 const createLoginRateLimit = () => {
+  // 桌面端/内网场景可能不需要限流；默认开启以避免公网暴力破解
+  if (process.env.LOGIN_RATE_LIMIT_ENABLED === 'false') {
+    return (req, res, next) => next();
+  }
+
   return rateLimit({
     windowMs: 15 * 60 * 1000, // 15分钟
     max: 5, // 最多5次尝试

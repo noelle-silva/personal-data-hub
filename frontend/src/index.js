@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, HashRouter } from 'react-router-dom';
 import CssBaseline from '@mui/material/CssBaseline';
 import './index.css';
 // Import styles for react-pdf
@@ -40,15 +40,17 @@ window.addEventListener('unhandledrejection', (event) => {
 }, { capture: true });
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__);
+const Router = isTauri ? HashRouter : BrowserRouter;
 root.render(
   <React.StrictMode>
     <Provider store={store}>
-      <BrowserRouter>
+      <Router>
         <ThemeProvider>
           <CssBaseline />
           <App />
         </ThemeProvider>
-      </BrowserRouter>
+      </Router>
     </Provider>
   </React.StrictMode>
 );

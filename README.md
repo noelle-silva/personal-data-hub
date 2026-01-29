@@ -140,9 +140,6 @@ cp port.env.example port.env
 # 后端服务端口
 BACKEND_PORT=5000
 
-# 前端服务端口
-FRONTEND_PORT=3000
-
 # 运行环境
 NODE_ENV=development
 ```
@@ -229,7 +226,11 @@ AI_TEMPERATURE=0.7
 
 ### 4. 启动应用
 
-#### 开发环境
+#### 桌面端（Tauri，推荐）
+
+> 说明：桌面端建议使用 Bearer Token 模式（不依赖跨域 Cookie / CSRF）。请在后端 `login.env` 里设置 `AUTH_RETURN_TOKEN=true`。
+
+一键启动（开发环境）：
 
 **Windows系统**:
 ```bash
@@ -244,7 +245,26 @@ chmod +x start-dev.sh
 ./start-dev.sh
 ```
 
-#### 生产环境
+手动启动（开发环境）：
+
+1) 启动后端
+```bash
+cd backend
+npm run dev
+```
+
+2) 启动桌面端
+```bash
+cd frontend
+npm install
+npm run desktop:dev
+```
+
+首次启动在登录页填写服务器地址，例如：`http://127.0.0.1:8444`。
+
+构建桌面端安装包：在 `frontend` 目录运行 `npm run desktop:build`。
+
+#### 后端生产环境（PM2）
 
 使用PM2部署：
 
@@ -267,18 +287,7 @@ pm2 restart tab-backend
 
 **注意**: 请使用 `node start-pm2.js` 而不是 `pm2 start ecosystem.config.js`，因为前者会先读取端口配置并动态生成适合的配置文件。
 
-#### 手动启动（生产环境）
-
-```bash
-# 启动后端
-cd backend
-npm start
-
-# 启动前端（新终端）
-cd frontend
-npm run build
-npm start
-```
+桌面端请使用 `npm run desktop:build` 构建安装包并分发。
 
 ### 6. 初始化数据（可选）
 

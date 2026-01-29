@@ -103,6 +103,9 @@ const getCorsOptions = () => {
       // 没有 Origin（同源、curl、server-to-server）放行
       if (!origin) return callback(null, true);
 
+      // Tauri 桌面端 Origin（生产/打包后常见）
+      if (origin === 'tauri://localhost') return callback(null, true);
+
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
       // 仅开发环境允许一些常用本地端口（Live Server 等）

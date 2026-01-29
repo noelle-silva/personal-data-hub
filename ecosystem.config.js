@@ -16,11 +16,11 @@ module.exports = {
       "max_memory_restart": "2560M",
       "env": {
         "NODE_ENV": "development",
-        "PORT": "8444"
+        "BACKEND_PORT": "8444"
       },
       "env_production": {
         "NODE_ENV": "production",
-        "PORT": "8444"
+        "BACKEND_PORT": "8444"
       },
       "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
       "error_file": "./logs/err.log",
@@ -34,22 +34,6 @@ module.exports = {
       "kill_timeout": 5000,
       "wait_ready": true,
       "listen_timeout": 10000
-    },
-    {
-      "name": "tab-frontend",
-      "script": "./node_modules/react-scripts/bin/react-scripts.js",
-      "args": "start",
-      "cwd": "./frontend",
-      "instances": 1,
-      "watch": false,
-      "autorestart": false,
-      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
-      "error_file": "./logs/err.log",
-      "out_file": "./logs/out.log",
-      "log_file": "./logs/combined.log",
-      "env": {
-        "PORT": "8333"
-      }
     }
   ]
 };

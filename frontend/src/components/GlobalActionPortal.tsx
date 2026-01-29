@@ -5,6 +5,7 @@ import DocumentFormModal from './DocumentFormModal';
 import QuoteFormModal from './QuoteFormModal';
 import { selectIsModalOpen, closeDocumentModal } from '../store/documentsSlice';
 import { selectIsQuoteCreateModalOpen, closeQuoteCreateModal } from '../store/quotesSlice';
+import apiClient from '../services/apiClient';
 
 /**
  * 全局动作门户组件
@@ -83,28 +84,17 @@ const GlobalModals: React.FC = () => {
   // 处理文档创建
   const handleDocumentCreate = async (documentData: any) => {
     try {
-      // 调用 API 创建文档
-      const response = await fetch('/api/documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(documentData),
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('文档创建成功:', result);
-        
-        // 触发文档创建事件，通知其他组件刷新
-        window.dispatchEvent(new CustomEvent('documentCreated', { 
-          detail: result.data 
-        }));
-        
-        dispatch(closeDocumentModal());
-      } else {
-        throw new Error('创建文档失败');
-      }
+      const response = await apiClient.post('/documents', documentData);
+      const result = response.data;
+
+      console.log('文档创建成功:', result);
+
+      // 触发文档创建事件，通知其他组件刷新
+      window.dispatchEvent(new CustomEvent('documentCreated', {
+        detail: result.data
+      }));
+
+      dispatch(closeDocumentModal());
     } catch (error) {
       console.error('创建文档失败:', error);
       alert('创建文档失败，请重试');
@@ -114,28 +104,17 @@ const GlobalModals: React.FC = () => {
   // 处理引用体创建
   const handleQuoteCreate = async (quoteData: any) => {
     try {
-      // 调用 API 创建引用体
-      const response = await fetch('/api/quotes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(quoteData),
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('引用体创建成功:', result);
-        
-        // 触发引用体创建事件，通知其他组件刷新
-        window.dispatchEvent(new CustomEvent('quoteCreated', { 
-          detail: result.data 
-        }));
-        
-        dispatch(closeQuoteCreateModal());
-      } else {
-        throw new Error('创建引用体失败');
-      }
+      const response = await apiClient.post('/quotes', quoteData);
+      const result = response.data;
+
+      console.log('引用体创建成功:', result);
+
+      // 触发引用体创建事件，通知其他组件刷新
+      window.dispatchEvent(new CustomEvent('quoteCreated', {
+        detail: result.data
+      }));
+
+      dispatch(closeQuoteCreateModal());
     } catch (error) {
       console.error('创建引用体失败:', error);
       alert('创建引用体失败，请重试');

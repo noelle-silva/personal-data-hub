@@ -86,6 +86,7 @@ import {
 } from '@mui/icons-material';
 import ThemePreviewBar from '../components/ThemePreviewBar';
 import ShortcutSettingsPanel from '../components/ShortcutSettingsPanel';
+import { getServerUrl, normalizeServerUrl, setServerUrl } from '../services/serverConfig';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -136,6 +137,11 @@ const Settings = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [pageToDelete, setPageToDelete] = useState(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+
+  // 桌面端：后端服务器配置
+  const [backendServerUrl, setBackendServerUrl] = useState(() => getServerUrl());
+  const [backendServerStatus, setBackendServerStatus] = useState(null);
+  const [backendServerBusy, setBackendServerBusy] = useState(false);
   
   // AI角色相关状态
   const [roles, setRoles] = useState([]);
@@ -581,6 +587,39 @@ const Settings = () => {
     closeLogoutConfirm();
   };
 
+  const handleSaveBackendServer = () => {
+    const normalized = setServerUrl(backendServerUrl);
+    setBackendServerUrl(normalized);
+
+    if (!normalized) {
+      setBackendServerStatus({ ok: false, message: '服务器地址无效' });
+      return;
+    }
+
+    setBackendServerStatus({ ok: true, message: `已保存：${normalized}` });
+  };
+
+  const handleTestBackendServer = async () => {
+    const normalized = normalizeServerUrl(backendServerUrl);
+    if (!normalized) {
+      setBackendServerStatus({ ok: false, message: '服务器地址无效' });
+      return;
+    }
+
+    setBackendServerBusy(true);
+    setBackendServerStatus(null);
+    try {
+      const res = await fetch(`${normalized}/health`, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json().catch(() => ({}));
+      setBackendServerStatus({ ok: true, message: data.message || '连接成功' });
+    } catch (e) {
+      setBackendServerStatus({ ok: false, message: `连接失败：${e.message || e}` });
+    } finally {
+      setBackendServerBusy(false);
+    }
+  };
+
   // 组件挂载时加载AI配置
   useEffect(() => {
     loadAIConfig();
@@ -591,6 +630,38 @@ const Settings = () => {
       <PageTitle variant="h3" component="h1">
         系统设置
       </PageTitle>
+
+      {/* 服务器设置 */}
+      <SettingsCard>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            服务器设置
+          </Typography>
+
+          {backendServerStatus && (
+            <Alert severity={backendServerStatus.ok ? 'success' : 'warning'} sx={{ mb: 2 }}>
+              {backendServerStatus.message}
+            </Alert>
+          )}
+
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              label="后端服务器地址"
+              value={backendServerUrl}
+              onChange={(e) => setBackendServerUrl(e.target.value)}
+              placeholder="127.0.0.1:8444"
+              helperText="支持填写 host:port 或 https://..."
+              fullWidth
+            />
+            <Button variant="outlined" onClick={handleTestBackendServer} disabled={backendServerBusy}>
+              {backendServerBusy ? '测试中...' : '测试连接'}
+            </Button>
+            <Button variant="contained" onClick={handleSaveBackendServer}>
+              保存
+            </Button>
+          </Box>
+        </CardContent>
+      </SettingsCard>
       
       {/* 功能开关 */}
       <SettingsCard>

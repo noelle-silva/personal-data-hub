@@ -29,7 +29,6 @@ function parseEnvFile(filePath) {
     // 如果文件不存在，返回默认值
     return {
       BACKEND_PORT: '5000',
-      FRONTEND_PORT: '3000',
       NODE_ENV: 'development'
     };
   }
@@ -38,10 +37,9 @@ function parseEnvFile(filePath) {
 // 1. 读取端口配置
 const portEnv = parseEnvFile('./port.env');
 const backendPort = portEnv.BACKEND_PORT || '5000';
-const frontendPort = portEnv.FRONTEND_PORT || '3000';
 const nodeEnv = portEnv.NODE_ENV || 'development';
 
-console.log(`读取端口配置: 后端=${backendPort}, 前端=${frontendPort}, 环境=${nodeEnv}`);
+console.log(`读取端口配置: 后端=${backendPort}, 环境=${nodeEnv}`);
 
 // 2. 动态生成 ecosystem.config.js 的内容
 const ecosystemConfig = {
@@ -62,11 +60,11 @@ const ecosystemConfig = {
       max_memory_restart: '2560M',
       env: {
         NODE_ENV: nodeEnv,
-        PORT: backendPort
+        BACKEND_PORT: backendPort
       },
       env_production: {
         NODE_ENV: 'production',
-        PORT: backendPort
+        BACKEND_PORT: backendPort
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       error_file: './logs/err.log',
@@ -80,22 +78,6 @@ const ecosystemConfig = {
       kill_timeout: 5000,
       wait_ready: true,
       listen_timeout: 10000
-    },
-    {
-      name: 'tab-frontend',
-      script: './node_modules/react-scripts/bin/react-scripts.js',
-      args: 'start',
-      cwd: './frontend',
-      instances: 1,
-      watch: false,
-      autorestart: false,
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      error_file: './logs/err.log',
-      out_file: './logs/out.log',
-      log_file: './logs/combined.log',
-      env: {
-        PORT: frontendPort
-      }
     }
   ]
 };
@@ -106,27 +88,15 @@ fs.writeFileSync(configPath, `module.exports = ${JSON.stringify(ecosystemConfig,
 
 console.log('已根据 port.env 生成 ecosystem.config.js 文件。');
 
-// 4. 运行 setup-ports.js 来更新前端代理配置
-console.log('正在运行 setup-ports.js...');
-exec('node setup-ports.js', (error, stdout, stderr) => {
+// 4. 启动 PM2（仅后端）
+console.log('正在使用 PM2 启动后端...');
+exec('pm2 start ecosystem.config.js', (error, stdout, stderr) => {
   if (error) {
-    console.error(`执行 setup-ports.js 出错: ${error}`);
+    console.error(`启动 PM2 服务出错: ${error}`);
     return;
   }
   console.log(stdout);
   console.error(stderr);
-
-  // 5. 启动 PM2
-  console.log('正在使用 PM2 启动服务...');
-  exec('pm2 start ecosystem.config.js', (error, stdout, stderr) => {
-    if (error) {
-      console.error(`启动 PM2 服务出错: ${error}`);
-      return;
-    }
-    console.log(stdout);
-    console.error(stderr);
-    console.log(`\n服务已启动！`);
-    console.log(`后端API: http://localhost:${backendPort}`);
-    console.log(`前端应用: http://localhost:${frontendPort}`);
-  });
+  console.log(`\n后端已启动！`);
+  console.log(`后端API: http://localhost:${backendPort}`);
 });

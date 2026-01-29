@@ -4,6 +4,8 @@
  */
 
 import axios from 'axios';
+import { getApiBaseUrl } from './serverConfig';
+import { getAuthToken } from './authToken';
 
 const getCookieValue = (name) => {
   if (typeof document === 'undefined') return null;
@@ -20,7 +22,7 @@ const getCookieValue = (name) => {
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 30000, // 30秒超时
-  withCredentials: true, // 使用 HttpOnly Cookie 作为登录态
+  withCredentials: true, // Cookie 模式需要；Token 模式会在拦截器里关闭
   headers: {
     'Content-Type': 'application/json',
   },
@@ -32,6 +34,18 @@ let redirectingToLogin = false;
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
   (config) => {
+    // 动态 baseURL：桌面端可配置服务器；未配置时保留 /api 以兼容开发代理
+    config.baseURL = getApiBaseUrl();
+
+    // Token 优先：存在 token 则走 Bearer（不需要 Cookie / CSRF）
+    const token = getAuthToken();
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+      config.withCredentials = false;
+      return config;
+    }
+
     // CSRF（Double Submit Cookie）：对所有非安全方法补上 X-CSRF-Token
     const method = (config.method || 'get').toLowerCase();
     const isSafeMethod = method === 'get' || method === 'head' || method === 'options';

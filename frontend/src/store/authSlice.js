@@ -5,6 +5,7 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../services/auth';
+import { clearAuthToken, setAuthToken } from '../services/authToken';
 
 // 异步 thunk：用户登录
 export const login = createAsyncThunk(
@@ -14,6 +15,10 @@ export const login = createAsyncThunk(
       const response = await authService.login(username, password);
       
       if (response.success && response.data && response.data.user) {
+        const token = response.data.token;
+        if (token) setAuthToken(token);
+        else clearAuthToken();
+
         return {
           user: response.data.user,
           isAuthenticated: true
@@ -57,7 +62,11 @@ export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      await authService.logout();
+      try {
+        await authService.logout();
+      } finally {
+        clearAuthToken();
+      }
       return { isAuthenticated: false };
     } catch (error) {
       return rejectWithValue(

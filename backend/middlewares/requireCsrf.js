@@ -15,6 +15,12 @@ const requireCsrf = (req, res, next) => {
     return next();
   }
 
+  // Bearer Token 模式不需要 CSRF（CSRF 只针对 Cookie 自动携带场景）
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
   // 登录阶段没有 CSRF Cookie，放行
   // 注意：该中间件最好只挂在需要登录态的路由上
   if (req.path === '/auth/login') {
@@ -39,4 +45,3 @@ const requireCsrf = (req, res, next) => {
 };
 
 module.exports = requireCsrf;
-

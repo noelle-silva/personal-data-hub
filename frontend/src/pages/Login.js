@@ -14,13 +14,13 @@ import {
   Alert,
   CircularProgress,
   Container,
-  useTheme,
   alpha
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { login, clearError, selectAuthLoading, selectAuthError, selectIsAuthenticated } from '../store/authSlice';
+import { getServerUrl, setServerUrl } from '../services/serverConfig';
 
 // 样式化容器
 const StyledContainer = styled(Container)(({ theme }) => ({
@@ -66,7 +66,6 @@ const LoginButton = styled(Button)(({ theme }) => ({
  * 登录页面组件
  */
 const LoginPage = () => {
-  const theme = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -81,6 +80,8 @@ const LoginPage = () => {
     username: '',
     password: ''
   });
+  const [serverUrl, setServerUrlState] = useState(() => getServerUrl());
+  const [serverError, setServerError] = useState('');
 
   // 如果已经登录，重定向到目标页面或首页
   useEffect(() => {
@@ -114,12 +115,19 @@ const LoginPage = () => {
   // 处理表单提交
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const normalized = setServerUrl(serverUrl);
+    if (!normalized) {
+      setServerError('请先填写有效的服务器地址，例如：127.0.0.1:8444 或 https://pdh.example.com');
+      return;
+    }
     
     if (!formData.username.trim() || !formData.password.trim()) {
       return;
     }
     
     try {
+      setServerError('');
       await dispatch(login({
         username: formData.username.trim(),
         password: formData.password.trim()
@@ -150,8 +158,24 @@ const LoginPage = () => {
               {error}
             </Alert>
           )}
+
+          {serverError && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {serverError}
+            </Alert>
+          )}
           
           <LoginForm onSubmit={handleSubmit}>
+            <TextField
+              label="服务器地址"
+              value={serverUrl}
+              onChange={(e) => setServerUrlState(e.target.value)}
+              variant="outlined"
+              fullWidth
+              disabled={isLoading}
+              placeholder="127.0.0.1:8444"
+              helperText="桌面端会连到该后端；支持填写 host:port 或 https://..."
+            />
             <TextField
               label="用户名"
               name="username"
@@ -181,7 +205,7 @@ const LoginPage = () => {
               variant="contained"
               color="primary"
               fullWidth
-              disabled={isLoading || !formData.username.trim() || !formData.password.trim()}
+              disabled={isLoading || !serverUrl.trim() || !formData.username.trim() || !formData.password.trim()}
               startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
             >
               {isLoading ? '登录中...' : '登录'}

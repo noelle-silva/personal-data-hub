@@ -11,9 +11,9 @@ import {
   Paper,
   CircularProgress,
   Chip,
-  Divider
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { resolveApiUrl } from '../services/serverConfig';
 
 // 样式化的容器
 const TestContainer = styled(Container)(({ theme }) => ({
@@ -79,8 +79,8 @@ const SSETest = () => {
 
       // 确定测试端点
       const endpoint = testType === 'split' 
-        ? '/api/test/sse-split' 
-        : '/api/test/sse';
+        ? resolveApiUrl('/api/test/sse-split')
+        : resolveApiUrl('/api/test/sse');
       
       // 发送请求
       const response = await fetch(endpoint, {
