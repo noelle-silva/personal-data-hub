@@ -11,12 +11,11 @@ import {
   uploadDocument,
   uploadScript,
   deleteAttachment,
-  generateSignedUrl,
   getAttachmentMetadata,
   getAttachmentConfig,
   updateAttachmentMetadata
 } from '../services/attachments';
-import { getAttachmentProxyUrl } from '../services/serverConfig';
+import { ensureDesktopGatewayReady } from '../services/desktopGateway';
 
 // 异步 thunk：获取附件列表
 export const fetchAttachments = createAsyncThunk(
@@ -72,34 +71,20 @@ export const deleteAttachmentById = createAsyncThunk(
   }
 );
 
-// 异步 thunk：获取签名URL（带缓存）
-export const getSignedUrl = createAsyncThunk(
-  'attachments/getSignedUrl',
-  async ({ id, ttl = 3600 }, { getState, rejectWithValue }) => {
-    // 桌面端网关模式：直接用本地代理URL，不走签名接口
-    const proxyUrl = getAttachmentProxyUrl(id);
-    if (proxyUrl && proxyUrl.startsWith('http://127.0.0.1:')) {
-      const expAt = Date.now() + (ttl * 1000);
-      return { id, url: proxyUrl, expAt, fromCache: false };
-    }
-
-    const state = getState().attachments;
-    const cached = state.signedUrlCache[id];
-    
-    // 检查缓存是否有效（提前10秒过期）
-    if (cached && cached.expAt > Date.now() + 10000) {
-      return { id, url: cached.url, fromCache: true };
-    }
-    
-    // 移除"请求已在进行中"的早期拒绝，让组件层控制并发
-    // 这样可以避免不必要的错误日志和界面卡在加载状态
-    
+// 异步 thunk：确保附件URL（桌面端本机网关转发）
+export const ensureAttachmentUrl = createAsyncThunk(
+  'attachments/ensureAttachmentUrl',
+  async ({ id }, { getState, rejectWithValue }) => {
     try {
-      const response = await generateSignedUrl(id, ttl);
-      // 使用后端返回的TTL计算过期时间，避免前后端TTL不一致导致的问题
-      const serverTtl = response.data?.ttl || ttl || 3600;
-      const expAt = Date.now() + (serverTtl * 1000);
-      return { id, url: response.data.signedUrl, expAt, fromCache: false };
+      const state = getState().attachments;
+      const cached = state.attachmentUrlCache[id];
+      if (cached && cached.url) {
+        return { id, url: cached.url, fromCache: true };
+      }
+
+      const gateway = await ensureDesktopGatewayReady();
+      const url = `${gateway}/attachments/${id}`;
+      return { id, url, fromCache: false };
     } catch (error) {
       return rejectWithValue({ id, message: error.message, fromCache: false });
     }
@@ -157,11 +142,11 @@ const initialState = {
   status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
   error: null,
   
-  // 签名URL缓存
-  signedUrlCache: {}, // { id: { url, expAt } }
+  // 附件URL缓存（桌面端本机网关转发）
+  attachmentUrlCache: {}, // { id: { url } }
   
-  // 正在进行的签名URL请求
-  inflightSignedRequests: {}, // { id: true }
+  // 正在进行的附件URL请求
+  inflightUrlRequests: {}, // { id: true }
   
   // 选中的附件
   selectedAttachmentId: null,
@@ -190,7 +175,7 @@ const initialState = {
   stats: {
     cacheHits: 0,
     cacheMisses: 0,
-    signedUrlRequests: 0,
+    urlRequests: 0,
     concurrentRequests: 0
   },
   
@@ -282,15 +267,15 @@ const attachmentsSlice = createSlice({
       state.updateError = null;
     },
     
-    // 清除签名URL缓存
-    clearSignedUrlCache: (state) => {
-      state.signedUrlCache = {};
+    // 清除附件URL缓存
+    clearAttachmentUrlCache: (state) => {
+      state.attachmentUrlCache = {};
     },
     
-    // 设置签名URL缓存（手动设置）
-    setSignedUrlCache: (state, action) => {
-      const { id, url, expAt } = action.payload;
-      state.signedUrlCache[id] = { url, expAt };
+    // 设置附件URL缓存（手动设置）
+    setAttachmentUrlCache: (state, action) => {
+      const { id, url } = action.payload;
+      state.attachmentUrlCache[id] = { url };
     },
     
     // 重置状态
@@ -446,9 +431,9 @@ const attachmentsSlice = createSlice({
           delete state.itemsById[id];
         }
         
-        // 清除签名URL缓存
-        if (state.signedUrlCache[id]) {
-          delete state.signedUrlCache[id];
+        // 清除附件URL缓存
+        if (state.attachmentUrlCache[id]) {
+          delete state.attachmentUrlCache[id];
         }
         
         // 更新分页信息
@@ -466,21 +451,21 @@ const attachmentsSlice = createSlice({
         state.deleteError = action.error.message;
       });
     
-    // 获取签名URL
+    // 获取附件URL
     builder
-      .addCase(getSignedUrl.pending, (state, action) => {
+      .addCase(ensureAttachmentUrl.pending, (state, action) => {
         const { id } = action.meta.arg;
-        state.inflightSignedRequests[id] = true;
+        state.inflightUrlRequests[id] = true;
         
         // 更新性能统计
         state.stats.concurrentRequests += 1;
-        state.stats.signedUrlRequests += 1;
+        state.stats.urlRequests += 1;
       })
-      .addCase(getSignedUrl.fulfilled, (state, action) => {
-        const { id, url, expAt, fromCache } = action.payload;
+      .addCase(ensureAttachmentUrl.fulfilled, (state, action) => {
+        const { id, url, fromCache } = action.payload;
         
         // 清除进行中的请求标记
-        delete state.inflightSignedRequests[id];
+        delete state.inflightUrlRequests[id];
         
         // 更新并发请求数
         if (state.stats.concurrentRequests > 0) {
@@ -493,24 +478,21 @@ const attachmentsSlice = createSlice({
         } else {
           state.stats.cacheMisses += 1;
           // 更新缓存
-          state.signedUrlCache[id] = { url, expAt };
+          state.attachmentUrlCache[id] = { url };
         }
       })
-      .addCase(getSignedUrl.rejected, (state, action) => {
+      .addCase(ensureAttachmentUrl.rejected, (state, action) => {
         const { id } = action.meta.arg;
         
         // 清除进行中的请求标记
-        delete state.inflightSignedRequests[id];
+        delete state.inflightUrlRequests[id];
         
         // 更新并发请求数
         if (state.stats.concurrentRequests > 0) {
           state.stats.concurrentRequests -= 1;
         }
         
-        // 如果是重复请求，不记录为错误
-        if (action.payload?.message !== '请求已在进行中') {
-          console.error(`获取签名URL失败: ${id}`, action.error.message);
-        }
+        console.error(`获取附件URL失败: ${id}`, action.error.message);
       });
     
     // 获取附件元数据
@@ -552,10 +534,7 @@ const attachmentsSlice = createSlice({
           state.itemsById[id] = { ...state.itemsById[id], ...metadata };
         }
         
-        // 清除签名URL缓存，强制重新获取以反映新的文件名
-        if (state.signedUrlCache[id]) {
-          delete state.signedUrlCache[id];
-        }
+        // URL 不依赖文件名，无需清缓存
       })
       .addCase(updateAttachmentMetadataById.rejected, (state, action) => {
         state.updateStatus = 'failed';
@@ -574,8 +553,8 @@ export const {
   resetDeleteStatus,
   resetUpdateStatus,
   clearError,
-  clearSignedUrlCache,
-  setSignedUrlCache,
+  clearAttachmentUrlCache,
+  setAttachmentUrlCache,
   resetAttachmentsState
 } = attachmentsSlice.actions;
 
@@ -597,8 +576,8 @@ export const selectDeleteStatus = (state) => state.attachments.deleteStatus;
 export const selectDeleteError = (state) => state.attachments.deleteError;
 export const selectUpdateStatus = (state) => state.attachments.updateStatus;
 export const selectUpdateError = (state) => state.attachments.updateError;
-export const selectSignedUrlCache = (state) => state.attachments.signedUrlCache;
-export const selectInflightSignedRequests = (state) => state.attachments.inflightSignedRequests;
+export const selectAttachmentUrlCache = (state) => state.attachments.attachmentUrlCache;
+export const selectInflightUrlRequests = (state) => state.attachments.inflightUrlRequests;
 export const selectAttachmentsStats = (state) => state.attachments.stats;
 export const selectAttachmentConfig = (state) => state.attachments.config;
 export const selectAttachmentConfigStatus = (state) => state.attachments.configStatus;

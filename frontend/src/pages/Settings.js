@@ -87,6 +87,8 @@ import {
 import ThemePreviewBar from '../components/ThemePreviewBar';
 import ShortcutSettingsPanel from '../components/ShortcutSettingsPanel';
 import { getServerUrl, normalizeServerUrl, setServerUrl } from '../services/serverConfig';
+import { isTauri, setGatewayBackendUrl } from '../services/tauriBridge';
+import { ensureDesktopGatewayReady } from '../services/desktopGateway';
 
 // 样式化的页面标题
 const PageTitle = styled(Typography)(({ theme }) => ({
@@ -609,6 +611,25 @@ const Settings = () => {
     setBackendServerBusy(true);
     setBackendServerStatus(null);
     try {
+      // 桌面端：通过本机网关转发，避免 WebView 的跨域限制
+      if (isTauri()) {
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
+        if (!gateway) throw new Error('本地网关未就绪');
+
+        const prev = getServerUrl();
+        await setGatewayBackendUrl(normalized);
+        try {
+          const res = await fetch(`${gateway}/health`, { method: 'GET' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json().catch(() => ({}));
+          setBackendServerStatus({ ok: true, message: data.message || '连接成功' });
+        } finally {
+          // 回滚到当前保存的 server，避免“测试连接”影响正在使用的后端
+          await setGatewayBackendUrl(prev || '');
+        }
+        return;
+      }
+
       const res = await fetch(`${normalized}/health`, { method: 'GET' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json().catch(() => ({}));

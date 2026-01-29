@@ -15,7 +15,7 @@
 - 标签多视角：标签为轻量的多属性标注，支持并存的视角与语义，驱动检索与筛选。
 - 内容多形态：同时支持 Markdown 与 HTML。Markdown关注易写易读；HTML承担更强表现力与交互，适配 AI 时代由模型生成丰富交互内容的趋势。
 - 窗口化引用：在笔记内容中渲染“打开窗口”的动作，直达目标笔记或引用体，现场联动，增强关联说明上限。
-- 附件即一等公民：图片、视频、文档、脚本等外部资料通过安全签名与引用被纳入知识网络，增强语义上下文。
+- 附件即一等公民：图片、视频、文档、脚本等外部资料通过本机网关转发与引用被纳入知识网络，增强语义上下文。
 
 2. 概念到数据模型的映射
 
@@ -39,7 +39,7 @@
 
 2.4 Attachment：一等公民的外部素材
 - 类别与状态：category 包含 image、video、document、script；status 区分 active 与 deleted，见 [backend/models/Attachment.js](backend/models/Attachment.js)。
-- 访问与签名：暴露直达 URL 与 [attachmentSchema.virtual()](backend/models/Attachment.js:144) 的 signedUrl 概念；服务接口与中间件配合下载与权限，参见 [backend/routes/attachments.js](backend/routes/attachments.js) 与 [backend/middlewares/requireAttachmentAuth.js](backend/middlewares/requireAttachmentAuth.js)。
+- 访问机制：桌面端通过本机网关提供可直接加载的资源 URL（附件/壁纸等），避免 WebView 的跨域/安全头限制；相关实现见 [backend/routes/attachments.js](backend/routes/attachments.js) 与 [frontend/src-tauri/src/gateway.rs](frontend/src-tauri/src/gateway.rs)。
 
 3. 两条组织路径：原生连接与引用体连接
 
@@ -61,7 +61,7 @@
 
 5.2 HTML：高表现与交互
 - 渲染器： [HtmlSandboxRenderer()](frontend/src/components/HtmlSandboxRenderer.jsx:45) 提供更强大的 HTML 承载能力，支持 import map、静态资源错误监听与样式注入，仍在 iframe 沙箱内安全运行。
-- 附件直连：在渲染前对内容进行预处理，将自定义协议 attach://ID 替换为带时效签名的实际可访问地址，依赖缓存模块 [frontend/src/services/attachmentUrlCache.js](frontend/src/services/attachmentUrlCache.js)。
+- 附件直连：在渲染前对内容进行预处理，将自定义协议 attach://ID 替换为本机网关实际可访问地址，依赖模块 [frontend/src/services/attachmentUrlCache.js](frontend/src/services/attachmentUrlCache.js)。
 - 窗口动作：支持内嵌自定义元素 x-tab-action（如 data-action=open-document 或 open-quote），渲染为按钮并通过 postMessage 通知父页面打开目标窗口，动作样式由 [frontend/src/utils/tabActionStyles.js](frontend/src/utils/tabActionStyles.js) 提供。
 - 为什么偏爱 HTML：HTML 的表达与交互上限高，适合与 AI 生成内容结合，快速构造交互式演示、可视化或教学材料；同时通过沙箱与消息通道保证宿主页面安全与可控。
 
@@ -87,14 +87,14 @@ graph LR
 
 - 弱化手工归档：不再为“放在哪个文件夹”纠结，任何笔记都可通过标签、引用与搜索被找到。
 - 连接即组织：原生引用与引用体两条路径互补，既保留知识的“本体连接”，又提供“视角叙事”的集合组织。
-- 统一素材池：附件作为一等公民被引用与签名访问，跨笔记复用易于治理。
+- 统一素材池：附件作为一等公民被引用与网关访问，跨笔记复用易于治理。
 - 索引与统计：模型级索引保证检索速度；服务层统计能力可用于评估标签热度与知识增长，参见 [backend/services/documentService.js](backend/services/documentService.js)。
 
 8. 一致性与安全
 
 - 引用有效性：新增或更新引用时强制通过 [DocumentService.validateReferencedDocuments()](backend/services/documentService.js:223) 与 [DocumentService.validateReferencedAttachments()](backend/services/documentService.js:268)；附件仅允许 active 状态被引用。
 - 反向清理：删除文档后，服务层会在引用体与其他文档中进行清理，见 [DocumentService.deleteDocument()](backend/services/documentService.js:378)。
-- 附件安全：下载与直链访问需要相应令牌与中间件校验，参见 [backend/middlewares/requireAttachmentAuth.js](backend/middlewares/requireAttachmentAuth.js)。
+- 附件安全：所有附件接口需要登录态；本机网关会在请求转发时注入 Bearer Token。
 
 9. 面向 AI 时代的内容生产
 
@@ -105,7 +105,7 @@ graph LR
 
 - 链接知识：优先使用“笔记→笔记”的 referencedDocumentIds 形成知识骨架；当需要从某个角度叙事或聚合时，引入 Quote 并允许多级引用。
 - 善用标签：为笔记与引用体标注多维标签，用 [TagMultiSelect()](frontend/src/components/TagMultiSelect.js:34) 快速筛选。
-- 富媒体：上传素材为 Attachment 并在 HTML 内容中经 attach://ID 引用；若需通用外链，仍建议走签名替换流程以保留权限与追踪。
+- 富媒体：上传素材为 Attachment 并在 HTML 内容中经 attach://ID 引用；加载由本机网关完成，无需签名URL流程。
 - 即开即看：在 HTML 中插入 x-tab-action 元素生成“在窗口中打开”按钮，便于在说明文本中现场调取相关笔记或引用体进行串讲。
 
 11. 术语速览

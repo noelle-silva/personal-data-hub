@@ -156,6 +156,59 @@ async fn proxy_attachment(
   Ok(response)
 }
 
+async fn proxy_health(
+  State(state): State<AppState>,
+  method: Method,
+  headers: HeaderMap,
+) -> Result<Response, StatusCode> {
+  let backend_base_url = {
+    let cfg = state
+      .config
+      .read()
+      .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    cfg.backend_base_url.clone()
+  };
+
+  let backend_base_url = backend_base_url.ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+  let url = format!("{}/health", backend_base_url);
+
+  let mut req = state.client.request(method.clone(), url);
+  let mut out_headers = reqwest::header::HeaderMap::new();
+  copy_request_headers(&headers, &mut out_headers);
+
+  // /health 不需要认证；显式移除以避免误伤
+  out_headers.remove(reqwest::header::AUTHORIZATION);
+  req = req.headers(out_headers);
+
+  let resp = req.send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+  let status = resp.status();
+  let upstream_headers = resp.headers().clone();
+
+  let mut response = if method == Method::HEAD {
+    Response::builder()
+      .status(status)
+      .body(Body::empty())
+      .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+  } else {
+    let stream = resp.bytes_stream().map(|chunk| {
+      chunk.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+    });
+    let body = Body::from_stream(stream);
+
+    Response::builder()
+      .status(status)
+      .body(body)
+      .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+  };
+
+  copy_response_headers(&upstream_headers, response.headers_mut());
+  response.headers_mut().insert(
+    HeaderName::from_static("cross-origin-resource-policy"),
+    HeaderValue::from_static("cross-origin"),
+  );
+  Ok(response)
+}
+
 async fn proxy_api(
   State(state): State<AppState>,
   Path(path): Path<String>,
@@ -272,6 +325,7 @@ pub async fn start_gateway(
 
   let app = Router::new()
     .route("/attachments/:id", get(proxy_attachment).head(proxy_attachment))
+    .route("/health", get(proxy_health).head(proxy_health))
     .route("/api/*path", any(proxy_api))
     .layer(cors)
     .with_state(state);

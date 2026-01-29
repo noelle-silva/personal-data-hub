@@ -159,9 +159,6 @@ ATTACHMENTS_IMAGE_DIR=backend/attachments/images
 ATTACHMENTS_VIDEO_DIR=backend/attachments/videos
 ATTACHMENTS_FILE_DIR=backend/attachments/document-file
 ATTACHMENTS_SCRIPT_DIR=backend/attachments/scripts
-
-# 安全配置（生产环境必须修改）
-ATTACHMENTS_SECRET=your-attachment-secret-key-change-this-in-production
 ```
 
 #### 3.4 登录认证配置
@@ -192,14 +189,8 @@ LOGIN_PASSWORD_HASH=生成的哈希值
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 
-# Cookie 登录态（公网部署推荐）
-AUTH_COOKIE_NAME=pdh_auth
-CSRF_COOKIE_NAME=pdh_csrf
-COOKIE_SECURE=true
-COOKIE_SAMESITE=lax
-
-# 前后端不同源时必配（逗号分隔）
-# CORS_ORIGINS=https://app.example.com
+# 可选：登录限流（默认关闭；公网暴露后端建议开启）
+# LOGIN_RATE_LIMIT_ENABLED=true
 ```
 
 #### 3.5 AI服务配置
@@ -228,7 +219,7 @@ AI_TEMPERATURE=0.7
 
 #### 桌面端（Tauri，推荐）
 
-> 说明：桌面端建议使用 Bearer Token 模式（不依赖跨域 Cookie / CSRF）。请在后端 `login.env` 里设置 `AUTH_RETURN_TOKEN=true`。
+> 说明：桌面端使用 Bearer Token + 本机网关转发：不依赖 Cookie / CSRF / CORS。登录接口会返回 `token`，网关会自动注入到后续请求中。
 
 一键启动（开发环境）：
 
@@ -413,10 +404,9 @@ ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
 
 生产环境部署时，请务必修改以下安全配置：
 
-1. `file.env` 中的 `ATTACHMENTS_SECRET`
-2. `login.env` 中的 `JWT_SECRET`、`LOGIN_PASSWORD_HASH`
-3. 公网部署建议启用 Cookie 登录态：`COOKIE_SECURE=true`，并配置 `CORS_ORIGINS`
-4. 使用强密码并定期更换
+1. `login.env` 中的 `JWT_SECRET`、`LOGIN_PASSWORD_HASH`
+2. 如公网暴露后端：建议开启 `LOGIN_RATE_LIMIT_ENABLED=true`
+3. 使用强密码并定期更换
 
 ### 数据库优化
 

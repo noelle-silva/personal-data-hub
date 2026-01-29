@@ -4,7 +4,6 @@
  */
 
 import apiClient from './apiClient';
-import { resolveApiUrl } from './serverConfig';
 
 /**
  * 获取附件列表
@@ -193,53 +192,6 @@ export const getAttachment = async (id) => {
   try {
     const response = await apiClient.get(`/attachments/${id}`);
     return response.data;
-  } catch (error) {
-    throw handleApiError(error);
-  }
-};
-
-/**
- * 生成签名URL
- * @param {string} id - 附件ID
- * @param {number} ttl - 有效期（秒，可选）
- * @returns {Promise<Object>} 签名URL信息
- */
-export const generateSignedUrl = async (id, ttl) => {
-  try {
-    const url = ttl ? `/attachments/${id}/signed?ttl=${ttl}` : `/attachments/${id}/signed`;
-    const response = await apiClient.post(url);
-    const payload = response.data;
-    if (payload?.data?.signedUrl) {
-      payload.data.signedUrl = resolveApiUrl(payload.data.signedUrl);
-    }
-    return payload;
-  } catch (error) {
-    throw handleApiError(error);
-  }
-};
-
-/**
- * 批量生成签名URL
- * @param {string[]} ids - 附件ID数组
- * @param {number} ttl - 有效期（秒，可选）
- * @returns {Promise<Object>} 批量签名URL信息
- */
-export const generateSignedUrlBatch = async (ids, ttl) => {
-  try {
-    const response = await apiClient.post('/attachments/signed-batch', {
-      ids,
-      ttl
-    });
-    const payload = response.data;
-    const signedUrls = payload?.data?.signedUrls;
-    if (signedUrls && typeof signedUrls === 'object') {
-      for (const urlInfo of Object.values(signedUrls)) {
-        if (urlInfo && typeof urlInfo === 'object' && urlInfo.signedUrl) {
-          urlInfo.signedUrl = resolveApiUrl(urlInfo.signedUrl);
-        }
-      }
-    }
-    return payload;
   } catch (error) {
     throw handleApiError(error);
   }

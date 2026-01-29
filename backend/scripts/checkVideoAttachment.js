@@ -127,7 +127,6 @@ async function checkAttachment(attachmentId) {
     console.log('  - ATTACHMENTS_ENABLE_RANGE:', process.env.ATTACHMENTS_ENABLE_RANGE);
     console.log('  - ATTACHMENTS_VIDEO_DIR:', process.env.ATTACHMENTS_VIDEO_DIR);
     console.log('  - ATTACHMENTS_CACHE_TTL:', process.env.ATTACHMENTS_CACHE_TTL);
-    console.log('  - ATTACHMENTS_SECRET:', process.env.ATTACHMENTS_SECRET ? '已配置' : '未配置');
     
   } catch (error) {
     console.error('检查附件时出错:', error);

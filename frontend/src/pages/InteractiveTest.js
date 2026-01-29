@@ -502,7 +502,7 @@ const InteractiveTest = () => {
             附件引用测试 (attach://)
           </Typography>
           <Typography variant="body2" color="text.secondary" paragraph>
-            测试 Markdown 和 HTML 内容中的 attach:// 引用功能，验证签名URL生成、缓存和图片显示。
+            测试 Markdown 和 HTML 内容中的 attach:// 引用功能，验证本机网关替换与媒体加载。
           </Typography>
           
           <Alert severity="info" sx={{ mb: 2 }}>
@@ -536,8 +536,8 @@ const InteractiveTest = () => {
 
 ## 引用特性
 
-- 所有图片都会通过签名URL加载，确保安全性
-- 支持缓存机制，避免重复请求
+- 所有图片/视频都会通过本机网关加载
+- 不需要签名URL生成（降低耦合）
 - 支持错误处理，失败时显示占位图
 - 支持自定义样式属性
 - 视频支持自动播放、静音、循环等属性
@@ -616,9 +616,8 @@ console.log("视频URL:", videoUrl);
                       
                       <h2>测试特性</h2>
                       <ul>
-                        <li>所有图片都会通过签名URL加载</li>
-                        <li>所有视频都会通过签名URL加载</li>
-                        <li>支持批量获取签名URL，提高性能</li>
+                        <li>所有图片/视频都会通过本机网关加载</li>
+                        <li>不需要签名URL生成（降低耦合）</li>
                         <li>支持缓存机制，避免重复请求</li>
                         <li>支持错误处理，失败时显示占位图</li>
                         <li>支持自定义样式属性</li>
@@ -711,7 +710,7 @@ console.log("视频URL:", videoUrl);
   <div>
     <h4>说明文本</h4>
     <p>这是在 Markdown 中嵌入的 HTML 容器，其中包含 attach:// 引用的图片和视频。</p>
-    <p>两种引用方式都应该正常工作，并使用相同的签名URL机制。</p>
+    <p>两种引用方式都应该正常工作，并使用相同的本机网关加载机制。</p>
     <h4>x-tab-action 附件按钮测试</h4>
     <x-tab-action data-action="open-attachment" data-attachment-id="68e4ae62577d02adc74896d4" data-label="HTML中的测试附件1">HTML中的测试附件1</x-tab-action>
     <x-tab-action data-action="open-attachment" data-attachment-id="68e4af5eb57d7ecd1aec5078" data-label="HTML中的测试附件2" data-variant="secondary">HTML中的测试附件2</x-tab-action>
@@ -734,7 +733,7 @@ console.log("视频URL:", videoUrl);
 - ✅ HTML 中的 attach:// 引用
 - ✅ 混合内容中的样式应用
 - ✅ x-tab-action 附件按钮渲染
-- ✅ 签名URL的缓存机制
+- ✅ 本机网关加载机制
 - ✅ 错误处理和占位图显示`}
                   cacheKey="mixed-attachment-test"
                 />
@@ -818,7 +817,7 @@ console.log("视频URL:", videoUrl);
           <li>Markdown 内容的正确渲染和交互</li>
           <li>HTML 内容的原生渲染和交互</li>
           <li>附件引用功能 (attach://) 的安全性</li>
-          <li>签名URL的生成和缓存机制</li>
+          <li>本机网关对 attach:// 的替换与加载</li>
           <li>图片加载的错误处理</li>
           <li>沙盒环境的安全隔离</li>
           <li>高度自适应机制</li>

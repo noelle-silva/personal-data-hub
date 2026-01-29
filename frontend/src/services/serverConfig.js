@@ -69,23 +69,6 @@ export const setServerUrl = (raw) => {
   return normalized;
 };
 
-export const resolveApiUrl = (path) => {
-  if (!path) return path;
-  if (/^https?:\/\//i.test(path)) return path;
-
-  const serverUrl = getServerUrl();
-  if (!serverUrl) return path;
-
-  if (path.startsWith('/')) return `${serverUrl}${path}`;
-  return `${serverUrl}/${path}`;
-};
-
-export const getApiBaseUrl = () => {
-  const serverUrl = normalizeServerUrl(getServerUrl());
-  if (serverUrl) return `${serverUrl}/api`;
-  return '/api';
-};
-
 export const getGatewayBaseUrl = () => {
   if (typeof window === 'undefined') return '';
   return window.__PDH_GATEWAY_URL__ || '';
@@ -101,8 +84,8 @@ export const resolveClientUrl = (path) => {
     return `${gateway}/${path}`;
   }
 
-  // 非 Tauri / 网关未就绪：回退到直连服务器或相对路径
-  return resolveApiUrl(path);
+  // 桌面端以网关为唯一网络出口：网关未就绪时不做“直连后端”兜底
+  return path;
 };
 
 export const getAttachmentProxyUrl = (id) => {
@@ -111,10 +94,7 @@ export const getAttachmentProxyUrl = (id) => {
   const gateway = getGatewayBaseUrl();
   if (gateway) return `${gateway}/attachments/${id}`;
 
-  // 兜底：直连后端（仅在非桌面端/调试下有效）
-  const serverUrl = getServerUrl();
-  if (serverUrl) return `${serverUrl}/api/attachments/${id}`;
-  return `/api/attachments/${id}`;
+  return '';
 };
 
 export const isDesktopTauri = () => isTauri();

@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useLayoutEffect, useState, useMemo, useCallba
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { generateTabActionFancyCssUnscoped, generateQuoteActionFancyCssUnscoped, generateAttachmentActionFancyCssUnscoped } from '../utils/tabActionStyles';
-import { replaceWithSignedUrls, extractAttachmentIds } from '../services/attachmentUrlCache';
+import { replaceWithAttachmentUrls, extractAttachmentIds } from '../services/attachmentUrlCache';
 
 // 样式化的容器
 const RendererContainer = styled(Box)(({ theme }) => ({
@@ -71,7 +71,7 @@ const HtmlSandboxRenderer = ({
     
     try {
       setProcessingContent(true);
-      const processed = await replaceWithSignedUrls(contentToProcess, ttl);
+      const processed = await replaceWithAttachmentUrls(contentToProcess);
       return processed;
     } catch (err) {
       console.error('[HtmlSandboxRenderer] 预理内容失败', err);

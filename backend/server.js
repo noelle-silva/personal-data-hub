@@ -4,9 +4,7 @@
  */
 
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
-const cookieParser = require('cookie-parser');
 require('dotenv').config({ path: './db.env' });
 require('dotenv').config({ path: '../port.env' });
 require('dotenv').config({ path: '../file.env' });
@@ -24,7 +22,6 @@ const themeRoutes = require('./routes/themes');
 const transparencyRoutes = require('./routes/transparency');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
-const requireCsrf = require('./middlewares/requireCsrf');
 const helmet = require('helmet');
 
 // 输出关键配置信息用于调试
@@ -32,7 +29,6 @@ console.log('=== 附件系统配置检查 ===');
 console.log('ATTACHMENTS_ENABLE_RANGE:', process.env.ATTACHMENTS_ENABLE_RANGE);
 console.log('ATTACHMENTS_VIDEO_DIR:', process.env.ATTACHMENTS_VIDEO_DIR);
 console.log('ATTACHMENTS_CACHE_TTL:', process.env.ATTACHMENTS_CACHE_TTL);
-console.log('ATTACHMENTS_SECRET:', process.env.ATTACHMENTS_SECRET ? '已配置' : '未配置');
 console.log('========================');
 
 // 输出自定义页面配置信息
@@ -59,7 +55,6 @@ const app = express();
 
 // 安全中间件
 app.use(helmet());
-app.use(cookieParser());
 
 /**
  * 连接到MongoDB数据库
@@ -79,58 +74,7 @@ app.use(express.json({ limit: maxRequestBodySize }));
 // 解析URL编码的请求体
 app.use(express.urlencoded({ extended: true, limit: maxRequestBodySize }));
 
-// 配置CORS中间件，允许跨域请求
-const getCorsOptions = () => {
-  const isProd = process.env.NODE_ENV === 'production';
-  const rawOrigins = process.env.CORS_ORIGINS;
-  const allowedOrigins = rawOrigins
-    ? rawOrigins.split(',').map(s => s.trim()).filter(Boolean)
-    : [];
-
-  if (isProd && allowedOrigins.length === 0) {
-    console.warn('[CORS] 生产环境未配置 CORS_ORIGINS，将拒绝所有跨域请求（同源/无 Origin 请求仍可用）');
-  }
-
-  const devAllowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:8333',
-    'http://127.0.0.1:8333'
-  ];
-
-  return {
-    origin: (origin, callback) => {
-      // 没有 Origin（同源、curl、server-to-server）放行
-      if (!origin) return callback(null, true);
-
-      // Tauri 桌面端 Origin（生产/打包后常见）
-      if (origin === 'tauri://localhost') return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      // 仅开发环境允许一些常用本地端口（Live Server 等）
-      if (!isProd) {
-        if (devAllowedOrigins.includes(origin)) return callback(null, true);
-        if (/^http:\/\/localhost:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/.test(origin)) return callback(null, true);
-        if (/^http:\/\/127\.0\.0\.1:(55[0-9]{2}|[5-9][0-9]{3}|[1-9][0-9]{4})$/.test(origin)) return callback(null, true);
-      }
-
-      return callback(new Error('Not allowed by CORS'));
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-CSRF-Token',
-      'Range',
-      'If-None-Match',
-      'If-Modified-Since'
-    ],
-    credentials: true
-  };
-};
-
-app.use(cors(getCorsOptions()));
+// 桌面端专用：所有请求经本机网关转发，不需要 CORS/CSRF/Cookie
 
 // 静态文件服务（用于提供静态资源）
 app.use(express.static(path.join(__dirname, 'public')));
@@ -192,10 +136,9 @@ app.get('/api', (req, res) => {
       quotesTags: '/api/quotes/tags',
       quotesStats: '/api/quotes/stats',
       attachments: '/api/attachments',
-      attachmentUpload: '/api/attachments/images',
+      attachmentUpload: '/api/attachments/:category',
       attachmentDownload: '/api/attachments/:id',
       attachmentMeta: '/api/attachments/:id/meta',
-      attachmentSigned: '/api/attachments/:id/signed',
       customPages: '/api/custom-pages',
       customPagesSearch: '/api/custom-pages/search',
       customPagesByName: '/api/custom-pages/by-name/:name',
@@ -213,16 +156,14 @@ app.get('/api', (req, res) => {
 // 认证路由（不需要JWT认证）
 app.use('/api/auth', authRoutes);
 
-// 附件相关路由（需要附件认证，不需要JWT认证）
-app.use('/api/attachments', attachmentRoutes);
+// 除 /api/auth 外，其他 /api 全部需要 JWT Bearer
+app.use('/api', requireAuth);
 
-// 测试相关路由（不需要认证，仅用于开发测试）
+// 测试相关路由（需要认证，仅用于开发测试）
 app.use('/api/test', testRoutes);
 
-// 对其他API路由应用JWT认证中间件
-app.use('/api', requireAuth);
-// 对需要登录态的API路由增加 CSRF 防护（非安全方法）
-app.use('/api', requireCsrf);
+// 附件相关路由（需要认证）
+app.use('/api/attachments', attachmentRoutes);
 
 // 文档相关路由
 app.use('/api/documents', documentRoutes);

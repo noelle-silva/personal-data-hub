@@ -26,7 +26,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   setSelectedAttachment,
   setModalOpen,
-  getSignedUrl,
+  ensureAttachmentUrl,
   deleteAttachmentById
 } from '../store/attachmentsSlice';
 import { getPlaceholderImage } from '../services/attachments';
@@ -132,8 +132,8 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [imageUrl, setImageUrl] = useState(null);
   
-  const signedUrlCache = useSelector(state => state.attachments.signedUrlCache);
-  const inflightSignedRequests = useSelector(state => state.attachments.inflightSignedRequests);
+  const attachmentUrlCache = useSelector(state => state.attachments.attachmentUrlCache);
+  const inflightUrlRequests = useSelector(state => state.attachments.inflightUrlRequests);
   
   const cardRef = useRef(null);
   const imageRef = useRef(null);
@@ -224,26 +224,25 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     }
   };
 
-  // 获取签名URL
-  const fetchSignedUrl = useCallback(async () => {
+  // 获取附件URL（本机网关转发）
+  const fetchAttachmentUrl = useCallback(async () => {
     // 防止重复请求
     if (requestedRef.current) {
       console.log(`[AttachmentCard] 已请求过，跳过: ${attachment._id}`);
       return;
     }
     
-    console.log(`[AttachmentCard] 开始获取签名URL: ${attachment._id}`);
+    console.log(`[AttachmentCard] 开始获取附件URL: ${attachment._id}`);
     
     // 检查缓存
-    const cached = signedUrlCache[attachment._id];
-    if (cached && cached.expAt > Date.now() + 10000) {
-      console.log(`[AttachmentCard] 使用缓存URL: ${attachment._id}`);
+    const cached = attachmentUrlCache[attachment._id];
+    if (cached && cached.url) {
       setImageUrl(cached.url);
       return;
     }
 
     // 检查是否已有正在进行的请求
-    if (inflightSignedRequests[attachment._id]) {
+    if (inflightUrlRequests[attachment._id]) {
       console.log(`[AttachmentCard] 请求已在进行中: ${attachment._id}`);
       return;
     }
@@ -252,17 +251,15 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     requestedRef.current = true;
 
     try {
-      console.log(`[AttachmentCard] 发起签名URL请求: ${attachment._id}`);
-      const result = await dispatch(getSignedUrl({ id: attachment._id })).unwrap();
-      console.log(`[AttachmentCard] 签名URL请求成功: ${attachment._id}`, result);
+      const result = await dispatch(ensureAttachmentUrl({ id: attachment._id })).unwrap();
       setImageUrl(result.url);
     } catch (error) {
-      console.error(`[AttachmentCard] 获取签名URL失败: ${attachment._id}`, error);
+      console.error(`[AttachmentCard] 获取附件URL失败: ${attachment._id}`, error);
       setImageError(true);
       // 请求失败时重置标记，允许重试
       requestedRef.current = false;
     }
-  }, [attachment._id, signedUrlCache, inflightSignedRequests, dispatch]);
+  }, [attachment._id, attachmentUrlCache, inflightUrlRequests, dispatch]);
 
   // 处理图片加载完成
   const handleImageLoad = () => {
@@ -303,7 +300,7 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !imageUrl && !imageError) {
-            fetchSignedUrl();
+            fetchAttachmentUrl();
           }
         });
       },
@@ -320,22 +317,20 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
         observerRef.current.disconnect();
       }
     };
-  }, [attachment._id, imageUrl, imageError, fetchSignedUrl]);
+  }, [attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
 
-  // 监听 signedUrlCache 更新，确保当缓存中有有效的签名URL时能够显示
+  // 监听 attachmentUrlCache 更新，确保当缓存中有有效URL时能够显示
   useEffect(() => {
     // 如果本地已有 imageUrl 或已发生错误，则不需要处理
     if (imageUrl || imageError) return;
     
-    // 检查缓存中是否有当前附件的有效签名URL
-    const cached = signedUrlCache[attachment._id];
-    if (cached && cached.expAt > Date.now() + 10000) {
-      console.log(`[AttachmentCard] 从缓存设置imageUrl: ${attachment._id}`);
+    const cached = attachmentUrlCache[attachment._id];
+    if (cached && cached.url) {
       setImageUrl(cached.url);
       // 标记为已请求，防止重复请求
       requestedRef.current = true;
     }
-  }, [signedUrlCache, attachment._id, imageUrl, imageError, fetchSignedUrl]);
+  }, [attachmentUrlCache, attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
 
   // 兜底方案：为不支持 IntersectionObserver 的环境添加一次性获取
   // 以及处理首屏元素已在视口的情况
@@ -345,9 +340,7 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     
     // 检查是否支持 IntersectionObserver
     if (!window.IntersectionObserver) {
-      console.log(`[AttachmentCard] 不支持IntersectionObserver，直接获取签名URL: ${attachment._id}`);
-      // 不支持 IntersectionObserver，直接获取签名URL
-      fetchSignedUrl();
+      fetchAttachmentUrl();
       return;
     }
     
@@ -366,13 +359,12 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
         isInViewport
       });
       
-      // 如果元素已在视口内，直接获取签名URL
+      // 如果元素已在视口内，直接获取附件URL
       if (isInViewport) {
-        console.log(`[AttachmentCard] 首屏元素在视口内，主动获取签名URL: ${attachment._id}`);
-        fetchSignedUrl();
+        fetchAttachmentUrl();
       }
     }
-  }, [attachment._id, imageUrl, imageError, fetchSignedUrl]);
+  }, [attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
 
   // 清理
   useEffect(() => {

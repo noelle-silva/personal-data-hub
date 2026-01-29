@@ -5,6 +5,22 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/apiClient';
+import { ensureDesktopGatewayReady } from '../services/desktopGateway';
+
+const resolveGatewayUrl = (gateway, value) => {
+  if (!value || typeof value !== 'string') return value;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (!gateway) return value;
+  return value.startsWith('/') ? `${gateway}${value}` : `${gateway}/${value}`;
+};
+
+const normalizeWallpaper = (gateway, wallpaper) => {
+  if (!wallpaper || typeof wallpaper !== 'object') return wallpaper;
+  return {
+    ...wallpaper,
+    url: resolveGatewayUrl(gateway, wallpaper.url)
+  };
+};
 
 /**
  * 异步thunk：获取用户的壁纸列表
@@ -19,8 +35,9 @@ export const fetchWallpapers = createAsyncThunk(
       });
       
       if (response.data.success) {
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
         return {
-          wallpapers: response.data.data,
+          wallpapers: (response.data.data || []).map(w => normalizeWallpaper(gateway, w)),
           pagination: response.data.pagination
         };
       } else {
@@ -42,7 +59,8 @@ export const fetchCurrentWallpaper = createAsyncThunk(
       const response = await apiClient.get('/themes/wallpapers/current');
       
       if (response.data.success) {
-        return response.data.data;
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
+        return normalizeWallpaper(gateway, response.data.data);
       } else {
         throw new Error(response.data.message || '获取当前壁纸失败');
       }
@@ -72,7 +90,8 @@ export const uploadWallpaper = createAsyncThunk(
       });
       
       if (response.data.success) {
-        return response.data.data;
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
+        return normalizeWallpaper(gateway, response.data.data);
       } else {
         throw new Error(response.data.message || '上传壁纸失败');
       }
@@ -92,7 +111,8 @@ export const setCurrentWallpaper = createAsyncThunk(
       const response = await apiClient.put(`/themes/wallpapers/current/${wallpaperId}`);
       
       if (response.data.success) {
-        return response.data.data;
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
+        return normalizeWallpaper(gateway, response.data.data);
       } else {
         throw new Error(response.data.message || '设置当前壁纸失败');
       }
@@ -134,7 +154,8 @@ export const updateWallpaperDescription = createAsyncThunk(
       });
       
       if (response.data.success) {
-        return response.data.data;
+        const gateway = await ensureDesktopGatewayReady().catch(() => '');
+        return normalizeWallpaper(gateway, response.data.data);
       } else {
         throw new Error(response.data.message || '更新壁纸描述失败');
       }

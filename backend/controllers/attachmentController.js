@@ -109,12 +109,7 @@ class AttachmentController {
         'ETag': attachment.hash,
         'Last-Modified': fileInfo.mtime.toUTCString(),
         'Cache-Control': `private, max-age=${process.env.ATTACHMENTS_CACHE_TTL || 3600}`,
-        'Content-Disposition': contentDisposition,
-        // 添加CORS头部，确保视频可以跨域加载
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Range',
-        'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, Content-Type'
+        'Content-Disposition': contentDisposition
       };
 
       // 处理Range请求
@@ -225,12 +220,7 @@ class AttachmentController {
         'ETag': attachment.hash,
         'Last-Modified': fileInfo.mtime.toUTCString(),
         'Cache-Control': `private, max-age=${process.env.ATTACHMENTS_CACHE_TTL || 3600}`,
-        'Content-Disposition': contentDisposition,
-        // 添加CORS头部，确保视频可以跨域加载
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Range',
-        'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, Content-Type'
+        'Content-Disposition': contentDisposition
       };
 
       // 如果启用了Range支持，添加Accept-Ranges头
@@ -288,117 +278,6 @@ class AttachmentController {
         message: '附件删除成功'
       });
     } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 生成签名URL
-   * @param {Object} req - Express请求对象
-   * @param {Object} res - Express响应对象
-   * @param {Function} next - Express下一个中间件函数
-   */
-  async generateSignedUrl(req, res, next) {
-    try {
-      const { id } = req.params;
-      const { ttl } = req.query;
-      
-      // 验证附件存在
-      await attachmentService.getAttachmentById(id);
-      
-      // 生成签名URL
-      const signedUrl = attachmentService.generateSignedUrl(id, ttl ? parseInt(ttl) : null);
-
-      // 返回成功响应
-      res.status(200).json({
-        success: true,
-        data: {
-          id,
-          signedUrl,
-          ttl: ttl || process.env.ATTACHMENTS_SIGNED_URL_TTL || 3600
-        },
-        message: '签名URL生成成功'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 批量生成签名URL
-   * @param {Object} req - Express请求对象
-   * @param {Object} res - Express响应对象
-   * @param {Function} next - Express下一个中间件函数
-   */
-  async generateSignedUrlBatch(req, res, next) {
-    try {
-      const { ids, ttl } = req.body;
-      
-      // 参数验证
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: '请提供有效的附件ID数组'
-        });
-      }
-      
-      if (ids.length > 50) {
-        return res.status(400).json({
-          success: false,
-          message: '单次批量请求最多支持50个附件ID'
-        });
-      }
-      
-      // 验证所有附件ID格式
-      const validIdFormat = /^[a-fA-F0-9]{24}$/;
-      for (const id of ids) {
-        if (!validIdFormat.test(id)) {
-          return res.status(400).json({
-            success: false,
-            message: `无效的附件ID格式: ${id}`
-          });
-        }
-      }
-      
-      const effectiveTtl = ttl ? parseInt(ttl) : (process.env.ATTACHMENTS_SIGNED_URL_TTL || 3600);
-      const results = {};
-      const errors = {};
-      
-      // 并行处理所有附件ID
-      const promises = ids.map(async (id) => {
-        try {
-          // 验证附件存在
-          await attachmentService.getAttachmentById(id);
-          
-          // 生成签名URL
-          const signedUrl = attachmentService.generateSignedUrl(id, effectiveTtl);
-          results[id] = {
-            signedUrl,
-            ttl: effectiveTtl
-          };
-        } catch (error) {
-          console.error(`[generateSignedUrlBatch] 处理附件 ${id} 失败:`, error);
-          errors[id] = error.message || '附件不存在或处理失败';
-        }
-      });
-      
-      // 等待所有请求完成
-      await Promise.all(promises);
-      
-      // 返回成功响应
-      res.status(200).json({
-        success: true,
-        data: {
-          signedUrls: results,
-          errors: Object.keys(errors).length > 0 ? errors : undefined,
-          total: ids.length,
-          success: Object.keys(results).length,
-          failed: Object.keys(errors).length
-        },
-        message: `批量生成签名URL完成，成功: ${Object.keys(results).length}，失败: ${Object.keys(errors).length}`
-      });
-    } catch (error) {
-      console.error('[generateSignedUrlBatch] 批量生成签名URL失败:', error);
       next(error);
     }
   }

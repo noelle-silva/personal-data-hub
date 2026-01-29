@@ -11,7 +11,8 @@ import {
   Chip
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { getAttachments, generateSignedUrl } from '../services/attachments';
+import { getAttachments } from '../services/attachments';
+import { getAttachmentUrlCached } from '../services/attachmentUrlCache';
 
 const Container = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -66,21 +67,20 @@ const VideoTestPage = () => {
     }
   };
 
-  // 获取视频签名URL
+  // 获取视频URL（本机网关转发）
   const getVideoUrl = async (video) => {
     try {
       setLoading(true);
-      const response = await generateSignedUrl(video._id);
-      const url = response.data.signedUrl;
+      const url = await getAttachmentUrlCached(video._id);
       setVideoUrl(url);
       setSelectedVideo(video);
       setError('');
       
       // 添加网络日志
-      addNetworkLog('获取签名URL', 'success', `URL: ${url}`);
+      addNetworkLog('获取视频URL', 'success', `URL: ${url}`);
     } catch (err) {
       setError(`获取视频URL失败: ${err.message}`);
-      addNetworkLog('获取签名URL', 'error', err.message);
+      addNetworkLog('获取视频URL', 'error', err.message);
     } finally {
       setLoading(false);
     }

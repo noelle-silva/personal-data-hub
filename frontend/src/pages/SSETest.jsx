@@ -13,7 +13,7 @@ import {
   Chip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { resolveClientUrl } from '../services/serverConfig';
+import { ensureDesktopGatewayReady } from '../services/desktopGateway';
 
 // 样式化的容器
 const TestContainer = styled(Container)(({ theme }) => ({
@@ -79,11 +79,13 @@ const SSETest = () => {
 
       // 确定测试端点
       const endpoint = testType === 'split' 
-        ? resolveClientUrl('/api/test/sse-split')
-        : resolveClientUrl('/api/test/sse');
+        ? '/api/test/sse-split'
+        : '/api/test/sse';
+
+      const gateway = await ensureDesktopGatewayReady();
       
       // 发送请求
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${gateway}${endpoint}`, {
         method: 'GET',
         credentials: 'omit',
         signal: controller.signal

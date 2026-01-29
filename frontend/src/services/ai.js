@@ -4,19 +4,7 @@
  */
 
 import apiClient from './apiClient';
-import { getGatewayBaseUrl, resolveClientUrl } from './serverConfig';
-import { getAuthToken } from './authToken';
-
-const getCookieValue = (name) => {
-  if (typeof document === 'undefined') return null;
-  const parts = document.cookie.split(';').map(s => s.trim());
-  for (const part of parts) {
-    if (part.startsWith(`${encodeURIComponent(name)}=`)) {
-      return decodeURIComponent(part.substring(name.length + 1));
-    }
-  }
-  return null;
-};
+import { ensureDesktopGatewayReady } from './desktopGateway';
 
 /**
  * AI 服务类
@@ -81,19 +69,14 @@ class AIService {
     const controller = new AbortController();
     
     try {
-      const csrfCookieName = process.env.REACT_APP_CSRF_COOKIE_NAME || 'pdh_csrf';
-      const csrfToken = getCookieValue(csrfCookieName);
-      const token = getAuthToken();
-      const gateway = getGatewayBaseUrl();
-      
-      // 发送流式请求
-      const response = await fetch(resolveClientUrl('/api/ai/v1/chat/completions'), {
+      const gateway = await ensureDesktopGatewayReady();
+
+      // 发送流式请求（桌面端统一走本机网关）
+      const response = await fetch(`${gateway}/api/ai/v1/chat/completions`, {
         method: 'POST',
         credentials: 'omit',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && !gateway ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(!token && csrfToken ? { 'X-CSRF-Token': csrfToken } : {})
         },
         body: JSON.stringify({
           ...requestParams,

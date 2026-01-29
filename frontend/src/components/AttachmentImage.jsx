@@ -6,7 +6,7 @@ import {
   BrokenImage as BrokenImageIcon,
   Image as ImageIcon
 } from '@mui/icons-material';
-import { getSignedUrlCached } from '../services/attachmentUrlCache';
+import { getAttachmentUrlCached } from '../services/attachmentUrlCache';
 import { getPlaceholderImage } from '../services/attachments';
 
 // 样式化的容器
@@ -80,24 +80,24 @@ const AttachmentImage = ({
   showRetryButton = true,
   ...props
 }) => {
-  const [signedUrl, setSignedUrl] = useState(null);
+  const [attachmentUrl, setAttachmentUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const imageRef = useRef(null);
 
-  // 加载签名URL
-  const loadSignedUrl = async () => {
+  // 加载附件URL（本机网关转发）
+  const loadAttachmentUrl = async () => {
     if (!id) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const url = await getSignedUrlCached(id, ttl);
-      setSignedUrl(url);
+      const url = await getAttachmentUrlCached(id);
+      setAttachmentUrl(url);
     } catch (err) {
-      console.error(`[AttachmentImage] 获取签名URL失败: ${id}`, err);
+      console.error(`[AttachmentImage] 获取附件URL失败: ${id}`, err);
       setError(err);
       setLoading(false);
       
@@ -128,7 +128,7 @@ const AttachmentImage = ({
     if (retryCount < maxRetries) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
-        loadSignedUrl();
+        loadAttachmentUrl();
       }, 1000 * Math.pow(2, retryCount)); // 指数退避
     } else {
       // 重试次数用完，显示错误状态
@@ -150,17 +150,17 @@ const AttachmentImage = ({
   // 手动重试
   const handleRetry = () => {
     setRetryCount(0);
-    loadSignedUrl();
+    loadAttachmentUrl();
   };
 
-  // 组件挂载时加载签名URL
+  // 组件挂载时加载附件URL
   useEffect(() => {
-    loadSignedUrl();
+    loadAttachmentUrl();
   }, [id, ttl]);
 
   // 当URL变化时重置状态
   useEffect(() => {
-    if (signedUrl) {
+    if (attachmentUrl) {
       setLoading(true);
       setError(null);
       
@@ -170,7 +170,7 @@ const AttachmentImage = ({
         setRetryCount(0);
       }
     }
-  }, [signedUrl]);
+  }, [attachmentUrl]);
 
   // 构建样式对象
   const containerStyle = {
@@ -206,10 +206,10 @@ const AttachmentImage = ({
       )}
 
       {/* 实际图片 */}
-      {signedUrl && (
+      {attachmentUrl && (
         <StyledImage
           ref={imageRef}
-          src={signedUrl}
+          src={attachmentUrl}
           alt={alt}
           title={title}
           style={imageStyle}
@@ -220,7 +220,7 @@ const AttachmentImage = ({
       )}
 
       {/* 无URL时的占位图标 */}
-      {!signedUrl && !loading && !error && (
+      {!attachmentUrl && !loading && !error && (
         <ErrorOverlay>
           <ImageIcon sx={{ fontSize: 32, mb: 1 }} />
           <Typography variant="body2">

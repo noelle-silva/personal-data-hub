@@ -138,14 +138,6 @@ attachmentSchema.virtual('url').get(function() {
 });
 
 /**
- * 虚拟字段：签名URL
- * 返回附件的签名访问URL（需要额外生成签名）
- */
-attachmentSchema.virtual('signedUrl').get(function() {
-  return `/api/attachments/${this._id}?token=GENERATED_TOKEN&exp=EXPIRATION`;
-});
-
-/**
  * 实例方法：更新附件状态
  * @param {String} status - 新状态
  * @returns {Promise} 更新后的附件

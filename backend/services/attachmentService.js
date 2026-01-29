@@ -431,66 +431,6 @@ class AttachmentService {
   }
 
   /**
-   * 生成签名URL
-   * @param {String} attachmentId - 附件ID
-   * @param {Number} ttl - 有效期（秒）
-   * @returns {String} 签名URL
-   */
-  generateSignedUrl(attachmentId, ttl = null) {
-    const effectiveTtl = ttl || parseInt(process.env.ATTACHMENTS_SIGNED_URL_TTL) || 3600;
-    const expiration = Math.floor(Date.now() / 1000) + effectiveTtl;
-    const secret = process.env.ATTACHMENTS_SECRET;
-    
-    if (!secret) {
-      throw new Error('ATTACHMENTS_SECRET未配置');
-    }
-    
-    // 生成签名: HMAC-SHA256(secret, attachmentId:expiration)
-    const data = `${attachmentId}:${expiration}`;
-    const signature = crypto.createHmac('sha256', secret)
-                           .update(data)
-                           .digest('hex');
-    
-    return `/api/attachments/${attachmentId}?token=${signature}&exp=${expiration}`;
-  }
-
-  /**
-   * 验证签名URL
-   * @param {String} attachmentId - 附件ID
-   * @param {String} token - 签名令牌
-   * @param {Number} expiration - 过期时间戳
-   * @returns {Boolean} 是否有效
-   */
-  validateSignedUrl(attachmentId, token, expiration) {
-    const secret = process.env.ATTACHMENTS_SECRET;
-    
-    if (!secret) {
-      return false;
-    }
-    
-    // 检查是否过期
-    const now = Math.floor(Date.now() / 1000);
-    if (now >= expiration) {
-      return false;
-    }
-    
-    // 验证签名
-    const data = `${attachmentId}:${expiration}`;
-    const expectedSignature = crypto.createHmac('sha256', secret)
-                                  .update(data)
-                                  .digest('hex');
-    
-    try {
-      const provided = Buffer.from(String(token), 'hex');
-      const expected = Buffer.from(expectedSignature, 'hex');
-      if (provided.length !== expected.length) return false;
-      return crypto.timingSafeEqual(provided, expected);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /**
    * 根据ID获取附件
    * @param {String} attachmentId - 附件ID
    * @returns {Promise<Object>} 附件对象

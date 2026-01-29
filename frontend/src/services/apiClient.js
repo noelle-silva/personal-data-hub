@@ -1,28 +1,15 @@
 /**
- * API 客户端
- * 统一处理 HTTP 请求、错误处理和认证
+ * API 客户端（桌面端专用）
+ * 所有请求统一走本机网关：避免 CORS/CSRF/WebView 安全头等浏览器机制干扰
  */
 
 import axios from 'axios';
-import { getApiBaseUrl, getGatewayBaseUrl, isDesktopTauri } from './serverConfig';
-import { getAuthToken } from './authToken';
-
-const getCookieValue = (name) => {
-  if (typeof document === 'undefined') return null;
-  const parts = document.cookie.split(';').map(s => s.trim());
-  for (const part of parts) {
-    if (part.startsWith(`${encodeURIComponent(name)}=`)) {
-      return decodeURIComponent(part.substring(name.length + 1));
-    }
-  }
-  return null;
-};
+import { ensureDesktopGatewayReady } from './desktopGateway';
 
 // 创建 axios 实例
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 30000, // 30秒超时
-  withCredentials: true, // Cookie 模式需要；Token 模式会在拦截器里关闭
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,54 +20,13 @@ let redirectingToLogin = false;
 
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
-  (config) => {
-    // 桌面端：优先走本机网关（统一解决 CORS/CSRF/Authorization 限制）
-    const gateway = isDesktopTauri() ? getGatewayBaseUrl() : '';
-    if (gateway) {
-      config.baseURL = `${gateway}/api`;
-      config.withCredentials = false;
-    } else {
-      // 动态 baseURL：桌面端可配置服务器；未配置时保留 /api 以兼容开发代理
-      const base = getApiBaseUrl();
-      // 兜底：避免出现 ":8444/api" 这种相对 baseURL（会变成 tauri://localhost/:8444/...）
-      if (base && !/^https?:\/\//i.test(base) && !base.startsWith('/')) {
-        config.baseURL = '/api';
-      } else {
-        config.baseURL = base;
-      }
-    }
+  async (config) => {
+    const gateway = await ensureDesktopGatewayReady();
+    config.baseURL = `${gateway}/api`;
 
-    // Token 优先：存在 token 则走 Bearer（不需要 Cookie / CSRF）
-    const token = getAuthToken();
-    if (token && !gateway) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-      if (isDesktopTauri()) {
-        config.headers['X-PDH-CLIENT'] = 'tauri';
-      }
-      config.withCredentials = false;
-      return config;
-    }
-
-    if (isDesktopTauri() && !gateway) {
-      config.headers = config.headers || {};
-      config.headers['X-PDH-CLIENT'] = 'tauri';
-    }
-
-    // 网关模式：认证由网关注入 token，前端不需要再处理 CSRF / Authorization
-    if (gateway) {
-      return config;
-    }
-
-    // CSRF（Double Submit Cookie）：对所有非安全方法补上 X-CSRF-Token
-    const method = (config.method || 'get').toLowerCase();
-    const isSafeMethod = method === 'get' || method === 'head' || method === 'options';
-    if (!isSafeMethod) {
-      const csrfCookieName = process.env.REACT_APP_CSRF_COOKIE_NAME || 'pdh_csrf';
-      const csrfToken = getCookieValue(csrfCookieName);
-      if (csrfToken) {
-        config.headers['X-CSRF-Token'] = csrfToken;
-      }
+    // 桌面端：认证由网关注入 token，前端不应传 Authorization/Cookie/CSRF
+    if (config.headers && 'Authorization' in config.headers) {
+      delete config.headers.Authorization;
     }
     
     return config;
@@ -103,17 +49,18 @@ apiClient.interceptors.response.use(
         detail: { message: '需要重新登录' }
       }));
       
-      const currentPath = window.location.pathname;
+      const currentHash = window.location.hash || '';
+      const isOnLogin = currentHash.startsWith('#/登录') || currentHash.startsWith('#/%E7%99%BB%E5%BD%95');
       const isAuthRequest = error.config.url?.includes('/auth/');
       
       // 如果不是登录请求且当前不在登录页，且没有正在重定向中，则重定向到登录页面
-      if (!isAuthRequest && currentPath !== '/登录' && !redirectingToLogin) {
+      if (!isAuthRequest && !isOnLogin && !redirectingToLogin) {
         // 设置重定向标志，防止重复跳转
         redirectingToLogin = true;
         
         // 延迟重定向，让组件有时间处理错误
         setTimeout(() => {
-          window.location.href = '/登录';
+          window.location.hash = '#/登录';
           
           // 1.5秒后重置重定向标志，允许后续的401可以再次触发重定向
           setTimeout(() => {

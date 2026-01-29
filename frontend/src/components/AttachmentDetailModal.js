@@ -38,10 +38,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   selectSelectedAttachment,
   selectModalOpen,
-  selectSignedUrlCache,
-  selectInflightSignedRequests,
+  selectAttachmentUrlCache,
+  selectInflightUrlRequests,
   setModalOpen,
-  getSignedUrl,
+  ensureAttachmentUrl,
   deleteAttachmentById,
   fetchAttachmentMetadata
 } from '../store/attachmentsSlice';
@@ -254,8 +254,8 @@ const AttachmentDetailModal = () => {
   const dispatch = useDispatch();
   const selectedAttachment = useSelector(selectSelectedAttachment);
   const modalOpen = useSelector(selectModalOpen);
-  const signedUrlCache = useSelector(selectSignedUrlCache);
-  const inflightSignedRequests = useSelector(selectInflightSignedRequests);
+  const attachmentUrlCache = useSelector(selectAttachmentUrlCache);
+  const inflightUrlRequests = useSelector(selectInflightUrlRequests);
   
   const [imageError, setImageError] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
@@ -278,8 +278,8 @@ const AttachmentDetailModal = () => {
   // 提取附件ID，避免依赖整个对象
   const selectedAttachmentId = selectedAttachment?._id;
   
-  // 获取当前附件的签名URL
-  const imageUrl = selectedAttachmentId ? signedUrlCache[selectedAttachmentId]?.url : null;
+  // 获取当前附件的URL（本机网关转发）
+  const imageUrl = selectedAttachmentId ? attachmentUrlCache[selectedAttachmentId]?.url : null;
 
   // PDF 翻页处理
   const handlePreviousPage = () => {
@@ -316,35 +316,23 @@ const AttachmentDetailModal = () => {
     }
   }, [handleClose]);
 
-  // 获取签名URL
-  const fetchSignedUrl = useCallback(async () => {
+  // 获取附件URL
+  const fetchAttachmentUrl = useCallback(async () => {
     if (!selectedAttachmentId) return;
     
-    // 检查缓存是否有效（提前10秒过期）
-    const cached = signedUrlCache[selectedAttachmentId];
-    if (cached && cached.expAt > Date.now() + 10000) {
-      // 缓存有效，无需重新获取
-      return;
-    }
+    const cached = attachmentUrlCache[selectedAttachmentId];
+    if (cached && cached.url) return;
     
     // 检查是否已有正在进行的请求
-    if (inflightSignedRequests[selectedAttachmentId]) {
-      // 已有请求在进行中，无需重复请求
-      return;
-    }
+    if (inflightUrlRequests[selectedAttachmentId]) return;
     
     try {
-      await dispatch(getSignedUrl({
-        id: selectedAttachmentId
-      })).unwrap();
+      await dispatch(ensureAttachmentUrl({ id: selectedAttachmentId })).unwrap();
     } catch (error) {
-      console.error('获取签名URL失败:', error);
-      // 如果是"请求已在进行中"的错误，不设置为错误状态
-      if (error.message !== '请求已在进行中') {
-        setImageError(true);
-      }
+      console.error('获取附件URL失败:', error);
+      setImageError(true);
     }
-  }, [selectedAttachmentId, signedUrlCache, inflightSignedRequests, dispatch]);
+  }, [selectedAttachmentId, attachmentUrlCache, inflightUrlRequests, dispatch]);
 
   // 获取元数据
   const fetchMetadata = useCallback(async () => {
@@ -456,15 +444,15 @@ const AttachmentDetailModal = () => {
     }
   }, [modalOpen, handleKeyDown]);
 
-  // 当选中的附件ID或模态框打开状态变化时，获取签名URL和元数据
+  // 当选中的附件ID或模态框打开状态变化时，获取附件URL和元数据
   // 使用 selectedAttachmentId 而不是整个 selectedAttachment 对象，
   // 避免因元数据更新导致不必要的重复请求
   useEffect(() => {
     if (selectedAttachmentId && modalOpen) {
-      fetchSignedUrl();
+      fetchAttachmentUrl();
       fetchMetadata();
     }
-  }, [selectedAttachmentId, modalOpen, fetchSignedUrl, fetchMetadata]);
+  }, [selectedAttachmentId, modalOpen, fetchAttachmentUrl, fetchMetadata]);
 
   // 当模态框关闭时，清理状态
   useEffect(() => {

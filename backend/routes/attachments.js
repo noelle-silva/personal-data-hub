@@ -9,8 +9,9 @@ const path = require('path');
 const router = express.Router();
 const attachmentController = require('../controllers/attachmentController');
 const requireAuth = require('../middlewares/requireAuth');
-const requireCsrf = require('../middlewares/requireCsrf');
-const { requireAuthOrSignedUrl } = require('../middlewares/requireAttachmentAuth');
+
+// 桌面端专用：所有附件接口都要求登录态（JWT Bearer）
+router.use(requireAuth);
 
 /**
  * 配置multer用于文件上传
@@ -163,7 +164,7 @@ const dynamicMulterMiddleware = (req, res, next) => {
  * @query   sort - 排序字段 (默认: -createdAt)
  * @query   category - 附件类别 (可选)
  */
-router.get('/', requireAuth, attachmentController.getAttachments);
+router.get('/', attachmentController.getAttachments);
 
 /**
  * @route   GET /api/attachments/search
@@ -175,41 +176,37 @@ router.get('/', requireAuth, attachmentController.getAttachments);
  * @query   sort - 排序字段 (可选，默认为'-createdAt')
  * @query   category - 附件类别 (可选)
  */
-router.get('/search', requireAuth, attachmentController.searchAttachments);
+router.get('/search', attachmentController.searchAttachments);
 
 /**
  * @route   GET /api/attachments/stats
  * @desc    获取附件统计信息
  * @access  Private (需要登录态鉴权)
  */
-router.get('/stats', requireAuth, attachmentController.getAttachmentStats);
+router.get('/stats', attachmentController.getAttachmentStats);
 
 /**
  * @route   GET /api/attachments/config
  * @desc    获取附件配置信息
  * @access  Private (需要登录态鉴权)
  */
-router.get('/config', requireAuth, attachmentController.getConfig);
+router.get('/config', attachmentController.getConfig);
 
 /**
  * @route   GET /api/attachments/:id
  * @desc    获取附件文件
- * @access  Public (登录态或签名URL鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
- * @query   token - 签名令牌 (签名URL鉴权时必填)
- * @query   exp - 过期时间戳 (签名URL鉴权时必填)
  */
-router.get('/:id', requireAuthOrSignedUrl, attachmentController.getFile);
+router.get('/:id', attachmentController.getFile);
 
 /**
  * @route   HEAD /api/attachments/:id
  * @desc    获取附件文件头信息
- * @access  Public (登录态或签名URL鉴权)
+ * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
- * @query   token - 签名令牌 (签名URL鉴权时必填)
- * @query   exp - 过期时间戳 (签名URL鉴权时必填)
  */
-router.head('/:id', requireAuthOrSignedUrl, attachmentController.headFile);
+router.head('/:id', attachmentController.headFile);
 
 /**
  * @route   GET /api/attachments/:id/meta
@@ -217,7 +214,7 @@ router.head('/:id', requireAuthOrSignedUrl, attachmentController.headFile);
  * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  */
-router.get('/:id/meta', requireAuth, attachmentController.getMetadata);
+router.get('/:id/meta', attachmentController.getMetadata);
 
 /**
  * @route   PATCH /api/attachments/:id/meta
@@ -227,25 +224,7 @@ router.get('/:id/meta', requireAuth, attachmentController.getMetadata);
  * @body    originalName - 原始文件名（可选）
  * @body    description - 内容描述（可选）
  */
-router.patch('/:id/meta', requireAuth, requireCsrf, attachmentController.updateMetadata);
-
-/**
- * @route   POST /api/attachments/:id/signed
- * @desc    生成签名URL
- * @access  Private (需要登录态鉴权)
- * @param   id - 附件ID
- * @query   ttl - 有效期（秒，可选，默认使用配置值）
- */
-router.post('/:id/signed', requireAuth, requireCsrf, attachmentController.generateSignedUrl);
-
-/**
- * @route   POST /api/attachments/signed-batch
- * @desc    批量生成签名URL
- * @access  Private (需要登录态鉴权)
- * @body    ids - 附件ID数组
- * @body    ttl - 有效期（秒，可选）
- */
-router.post('/signed-batch', requireAuth, requireCsrf, attachmentController.generateSignedUrlBatch);
+router.patch('/:id/meta', attachmentController.updateMetadata);
 
 /**
  * @route   POST /api/attachments/:category
@@ -254,7 +233,7 @@ router.post('/signed-batch', requireAuth, requireCsrf, attachmentController.gene
  * @param   category - 附件类别 (image/video/document/script)
  * @body    file - 附件文件 (必填)
  */
-router.post('/:category', requireAuth, requireCsrf, dynamicMulterMiddleware, attachmentController.uploadAttachment);
+router.post('/:category', dynamicMulterMiddleware, attachmentController.uploadAttachment);
 
 /**
  * @route   DELETE /api/attachments/:id
@@ -262,6 +241,6 @@ router.post('/:category', requireAuth, requireCsrf, dynamicMulterMiddleware, att
  * @access  Private (需要登录态鉴权)
  * @param   id - 附件ID
  */
-router.delete('/:id', requireAuth, requireCsrf, attachmentController.deleteAttachment);
+router.delete('/:id', attachmentController.deleteAttachment);
 
 module.exports = router;
