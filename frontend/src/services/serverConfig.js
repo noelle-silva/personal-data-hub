@@ -1,4 +1,5 @@
 import { clearAuthToken } from './authToken';
+import { isTauri } from './tauriBridge';
 
 const STORAGE_KEY = 'pdh_server_url';
 
@@ -6,10 +7,20 @@ export const normalizeServerUrl = (raw) => {
   const value = (raw || '').trim();
   if (!value) return '';
 
+  // 兼容用户只填端口的情况：":8444" 或 "8444" -> 默认本机
+  if (/^:\d{2,5}$/.test(value)) {
+    return `http://127.0.0.1${value}`;
+  }
+  if (/^\d{2,5}$/.test(value)) {
+    return `http://127.0.0.1:${value}`;
+  }
+
   const withScheme = /^https?:\/\//i.test(value) ? value : `http://${value}`;
 
   try {
     const url = new URL(withScheme);
+    // URL(origin) 必须包含有效 hostname
+    if (!url.hostname) return '';
     const origin = url.origin;
     return origin.endsWith('/') ? origin.slice(0, -1) : origin;
   } catch {
@@ -20,7 +31,14 @@ export const normalizeServerUrl = (raw) => {
 export const getServerUrl = () => {
   if (typeof window === 'undefined') return '';
   try {
-    return window.localStorage.getItem(STORAGE_KEY) || '';
+    const raw = window.localStorage.getItem(STORAGE_KEY) || '';
+    const normalized = normalizeServerUrl(raw);
+    // 自动修复旧值（不清 token）
+    if (normalized && normalized !== raw) {
+      window.localStorage.setItem(STORAGE_KEY, normalized);
+      return normalized;
+    }
+    return raw;
   } catch {
     return '';
   }
@@ -63,8 +81,40 @@ export const resolveApiUrl = (path) => {
 };
 
 export const getApiBaseUrl = () => {
-  const serverUrl = getServerUrl();
+  const serverUrl = normalizeServerUrl(getServerUrl());
   if (serverUrl) return `${serverUrl}/api`;
   return '/api';
 };
 
+export const getGatewayBaseUrl = () => {
+  if (typeof window === 'undefined') return '';
+  return window.__PDH_GATEWAY_URL__ || '';
+};
+
+export const resolveClientUrl = (path) => {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const gateway = getGatewayBaseUrl();
+  if (gateway) {
+    if (path.startsWith('/')) return `${gateway}${path}`;
+    return `${gateway}/${path}`;
+  }
+
+  // 非 Tauri / 网关未就绪：回退到直连服务器或相对路径
+  return resolveApiUrl(path);
+};
+
+export const getAttachmentProxyUrl = (id) => {
+  if (!id) return '';
+  // 网关模式：走本地 /attachments/:id
+  const gateway = getGatewayBaseUrl();
+  if (gateway) return `${gateway}/attachments/${id}`;
+
+  // 兜底：直连后端（仅在非桌面端/调试下有效）
+  const serverUrl = getServerUrl();
+  if (serverUrl) return `${serverUrl}/api/attachments/${id}`;
+  return `/api/attachments/${id}`;
+};
+
+export const isDesktopTauri = () => isTauri();

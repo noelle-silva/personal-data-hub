@@ -4,6 +4,7 @@
  */
 
 import { generateSignedUrl, generateSignedUrlBatch } from './attachments';
+import { getAttachmentProxyUrl, resolveApiUrl } from './serverConfig';
 
 /**
  * LRU缓存实现
@@ -29,7 +30,7 @@ class LRUCache {
         // 移到最后（最近使用）
         this.cache.delete(key);
         this.cache.set(key, value);
-        return value.signedUrl;
+        return resolveApiUrl(value.signedUrl);
       } else {
         // 过期，删除
         this.cache.delete(key);
@@ -127,6 +128,13 @@ class LRUCache {
 // 创建全局缓存实例
 const attachmentUrlCache = new LRUCache(50);
 
+// 服务器切换时清理缓存，避免复用旧 server 的 URL
+if (typeof window !== 'undefined') {
+  window.addEventListener('pdh-server-changed', () => {
+    attachmentUrlCache.clear();
+  });
+}
+
 // 定期清理过期项（每5分钟）
 setInterval(() => {
   const cleaned = attachmentUrlCache.cleanup();
@@ -142,6 +150,12 @@ setInterval(() => {
  * @returns {Promise<string>} 签名URL
  */
 export const getSignedUrlCached = async (attachmentId, ttl) => {
+  // 桌面端网关模式：不走签名URL，直接走本地网关转发
+  const proxy = getAttachmentProxyUrl(attachmentId);
+  if (proxy && proxy.startsWith('http://127.0.0.1:')) {
+    return proxy;
+  }
+
   // 检查缓存
   const cachedUrl = attachmentUrlCache.get(attachmentId);
   if (cachedUrl) {
@@ -171,6 +185,16 @@ export const getSignedUrlCached = async (attachmentId, ttl) => {
  * @returns {Promise<Object>} ID到URL的映射
  */
 export const getSignedUrlsBatchCached = async (attachmentIds, ttl) => {
+  // 桌面端网关模式：直接映射
+  const first = attachmentIds && attachmentIds[0] ? getAttachmentProxyUrl(attachmentIds[0]) : '';
+  if (first && first.startsWith('http://127.0.0.1:')) {
+    const results = {};
+    for (const id of attachmentIds) {
+      results[id] = getAttachmentProxyUrl(id);
+    }
+    return results;
+  }
+
   const results = {};
   const uncachedIds = [];
 
@@ -294,6 +318,14 @@ export const replaceWithSignedUrls = async (content, ttl) => {
   const ids = extractAttachmentIds(content);
   if (ids.length === 0) {
     return content;
+  }
+
+  // 桌面端网关模式：同步替换，不需要请求后端
+  const first = getAttachmentProxyUrl(ids[0]);
+  if (first && first.startsWith('http://127.0.0.1:')) {
+    return content.replace(/attach:\/\/([a-fA-F0-9]{24})/g, (_match, id) => {
+      return getAttachmentProxyUrl(id) || _match;
+    });
   }
 
   try {

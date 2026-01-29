@@ -11,6 +11,9 @@ import App from './App';
 import store from './store';
 import { ThemeProvider } from './contexts/ThemeContext';
 import reportWebVitals from './reportWebVitals';
+import { isTauri, getGatewayUrl, setGatewayBackendUrl, setGatewayToken } from './services/tauriBridge';
+import { getServerUrl } from './services/serverConfig';
+import { getAuthToken } from './services/authToken';
 
 // 全局抑制 ResizeObserver 循环错误
 // 这是一个已知的浏览器问题，通常在组件卸载时发生，不影响功能
@@ -40,20 +43,74 @@ window.addEventListener('unhandledrejection', (event) => {
 }, { capture: true });
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__);
-const Router = isTauri ? HashRouter : BrowserRouter;
-root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <Router>
-        <ThemeProvider>
-          <CssBaseline />
-          <App />
-        </ThemeProvider>
-      </Router>
-    </Provider>
-  </React.StrictMode>
-);
+const tauri = isTauri();
+const Router = tauri ? HashRouter : BrowserRouter;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const initDesktopGateway = async () => {
+  if (!tauri) return;
+
+  // 等网关起来（少量重试，避免启动时竞态）
+  let url = '';
+  for (let i = 0; i < 30; i += 1) {
+    try {
+      url = await getGatewayUrl();
+      if (url) break;
+    } catch (_) {
+      // ignore
+    }
+    await sleep(100);
+  }
+
+  if (url) {
+    window.__PDH_GATEWAY_URL__ = url;
+  }
+
+  // 同步后端地址与 token 到网关（用于附件资源转发时补 Authorization）
+  try {
+    const backend = getServerUrl();
+    if (backend) await setGatewayBackendUrl(backend);
+  } catch (_) {
+    // ignore
+  }
+
+  try {
+    const token = getAuthToken();
+    await setGatewayToken(token || null);
+  } catch (_) {
+    // ignore
+  }
+
+  // 后续变更：监听事件同步到网关
+  window.addEventListener('pdh-server-changed', (e) => {
+    const next = e?.detail?.serverUrl || '';
+    setGatewayBackendUrl(next).catch(() => {});
+  });
+  window.addEventListener('pdh-auth-token-changed', () => {
+    const token = getAuthToken();
+    setGatewayToken(token || null).catch(() => {});
+  });
+};
+
+const mount = async () => {
+  await initDesktopGateway();
+
+  root.render(
+    <React.StrictMode>
+      <Provider store={store}>
+        <Router>
+          <ThemeProvider>
+            <CssBaseline />
+            <App />
+          </ThemeProvider>
+        </Router>
+      </Provider>
+    </React.StrictMode>
+  );
+};
+
+mount();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

@@ -155,15 +155,6 @@ const dynamicMulterMiddleware = (req, res, next) => {
 };
 
 /**
- * @route   POST /api/attachments/:category
- * @desc    上传附件文件（支持图片、视频、文档）
- * @access  Private (需要登录态鉴权)
- * @param   category - 附件类别 (image/video/document)
- * @body    file - 附件文件 (必填)
- */
-router.post('/:category', requireAuth, requireCsrf, dynamicMulterMiddleware, attachmentController.uploadAttachment);
-
-/**
  * @route   GET /api/attachments
  * @desc    获取附件列表
  * @access  Private (需要登录态鉴权)
@@ -255,6 +246,15 @@ router.post('/:id/signed', requireAuth, requireCsrf, attachmentController.genera
  * @body    ttl - 有效期（秒，可选）
  */
 router.post('/signed-batch', requireAuth, requireCsrf, attachmentController.generateSignedUrlBatch);
+
+/**
+ * @route   POST /api/attachments/:category
+ * @desc    上传附件文件（支持图片、视频、文档）
+ * @access  Private (需要登录态鉴权)
+ * @param   category - 附件类别 (image/video/document/script)
+ * @body    file - 附件文件 (必填)
+ */
+router.post('/:category', requireAuth, requireCsrf, dynamicMulterMiddleware, attachmentController.uploadAttachment);
 
 /**
  * @route   DELETE /api/attachments/:id

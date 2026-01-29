@@ -16,6 +16,7 @@ import {
   getAttachmentConfig,
   updateAttachmentMetadata
 } from '../services/attachments';
+import { getAttachmentProxyUrl } from '../services/serverConfig';
 
 // 异步 thunk：获取附件列表
 export const fetchAttachments = createAsyncThunk(
@@ -75,6 +76,13 @@ export const deleteAttachmentById = createAsyncThunk(
 export const getSignedUrl = createAsyncThunk(
   'attachments/getSignedUrl',
   async ({ id, ttl = 3600 }, { getState, rejectWithValue }) => {
+    // 桌面端网关模式：直接用本地代理URL，不走签名接口
+    const proxyUrl = getAttachmentProxyUrl(id);
+    if (proxyUrl && proxyUrl.startsWith('http://127.0.0.1:')) {
+      const expAt = Date.now() + (ttl * 1000);
+      return { id, url: proxyUrl, expAt, fromCache: false };
+    }
+
     const state = getState().attachments;
     const cached = state.signedUrlCache[id];
     

@@ -4,6 +4,7 @@
  */
 
 import apiClient from './apiClient';
+import { resolveApiUrl } from './serverConfig';
 
 /**
  * 获取附件列表
@@ -207,7 +208,11 @@ export const generateSignedUrl = async (id, ttl) => {
   try {
     const url = ttl ? `/attachments/${id}/signed?ttl=${ttl}` : `/attachments/${id}/signed`;
     const response = await apiClient.post(url);
-    return response.data;
+    const payload = response.data;
+    if (payload?.data?.signedUrl) {
+      payload.data.signedUrl = resolveApiUrl(payload.data.signedUrl);
+    }
+    return payload;
   } catch (error) {
     throw handleApiError(error);
   }
@@ -225,7 +230,16 @@ export const generateSignedUrlBatch = async (ids, ttl) => {
       ids,
       ttl
     });
-    return response.data;
+    const payload = response.data;
+    const signedUrls = payload?.data?.signedUrls;
+    if (signedUrls && typeof signedUrls === 'object') {
+      for (const urlInfo of Object.values(signedUrls)) {
+        if (urlInfo && typeof urlInfo === 'object' && urlInfo.signedUrl) {
+          urlInfo.signedUrl = resolveApiUrl(urlInfo.signedUrl);
+        }
+      }
+    }
+    return payload;
   } catch (error) {
     throw handleApiError(error);
   }

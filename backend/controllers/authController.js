@@ -45,8 +45,13 @@ const buildCookieOptions = () => {
  * 限制登录尝试频率，防止暴力破解
  */
 const createLoginRateLimit = () => {
-  // 桌面端/内网场景可能不需要限流；默认开启以避免公网暴力破解
-  if (process.env.LOGIN_RATE_LIMIT_ENABLED === 'false') {
+  // 开关策略（更符合开发体验）：
+  // - 生产环境默认开启（防爆破）
+  // - 开发环境默认关闭（避免输错几次就被锁 15 分钟）
+  // - 可用 LOGIN_RATE_LIMIT_ENABLED=true/false 强制覆盖
+  const override = (process.env.LOGIN_RATE_LIMIT_ENABLED || '').toLowerCase();
+  if (override === 'false') return (req, res, next) => next();
+  if (override !== 'true' && process.env.NODE_ENV !== 'production') {
     return (req, res, next) => next();
   }
 
@@ -190,6 +195,11 @@ const login = async (req, res, next) => {
     });
 
     // 返回登录成功响应
+    const clientHint = (req.get('X-PDH-CLIENT') || '').toLowerCase();
+    const isDev = process.env.NODE_ENV !== 'production';
+    // 桌面端/开发环境直接返回 token（避免 Cookie/CSRF/CORS 牵扯）；生产环境需显式开启或桌面端标记
+    const shouldReturnToken = process.env.AUTH_RETURN_TOKEN === 'true' || clientHint === 'tauri' || isDev;
+
     res.status(200).json({
       success: true,
       data: {
@@ -199,7 +209,7 @@ const login = async (req, res, next) => {
         },
         expiresIn: jwtExpiresIn,
         // 可选：为了兼容旧客户端，可通过环境变量开启返回 token
-        ...(process.env.AUTH_RETURN_TOKEN === 'true' ? { token } : {})
+        ...(shouldReturnToken ? { token } : {})
       },
       message: '登录成功'
     });

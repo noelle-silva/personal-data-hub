@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { getApiBaseUrl } from './serverConfig';
+import { getApiBaseUrl, isDesktopTauri } from './serverConfig';
 import { getAuthToken } from './authToken';
 
 const getCookieValue = (name) => {
@@ -35,15 +35,29 @@ let redirectingToLogin = false;
 apiClient.interceptors.request.use(
   (config) => {
     // 动态 baseURL：桌面端可配置服务器；未配置时保留 /api 以兼容开发代理
-    config.baseURL = getApiBaseUrl();
+    const base = getApiBaseUrl();
+    // 兜底：避免出现 ":8444/api" 这种相对 baseURL（会变成 tauri://localhost/:8444/...）
+    if (base && !/^https?:\/\//i.test(base) && !base.startsWith('/')) {
+      config.baseURL = '/api';
+    } else {
+      config.baseURL = base;
+    }
 
     // Token 优先：存在 token 则走 Bearer（不需要 Cookie / CSRF）
     const token = getAuthToken();
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
+      if (isDesktopTauri()) {
+        config.headers['X-PDH-CLIENT'] = 'tauri';
+      }
       config.withCredentials = false;
       return config;
+    }
+
+    if (isDesktopTauri()) {
+      config.headers = config.headers || {};
+      config.headers['X-PDH-CLIENT'] = 'tauri';
     }
 
     // CSRF（Double Submit Cookie）：对所有非安全方法补上 X-CSRF-Token
