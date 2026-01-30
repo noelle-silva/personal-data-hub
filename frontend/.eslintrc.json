@@ -1,0 +1,35 @@
+{
+  "extends": ["react-app", "react-app/jest"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "axios",
+            "message": "禁止直接使用 axios；请统一通过 src/services/apiClient.js"
+          },
+          {
+            "name": "@tauri-apps/api/core",
+            "message": "禁止直接使用 Tauri API；请统一通过 src/services/tauriBridge.js"
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/services/apiClient.js"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/services/tauriBridge.js"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}
+

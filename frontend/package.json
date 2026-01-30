@@ -44,6 +44,9 @@
     "start:tauri": "cross-env BROWSER=none react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "react-scripts test --watchAll=false",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "lint:fix": "npm run lint -- --fix",
     "eject": "react-scripts eject",
     "tauri": "npx --yes @tauri-apps/cli",
     "desktop:dev": "npx --yes @tauri-apps/cli dev",
@@ -51,7 +54,8 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.6",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.0"
   },
   "eslintConfig": {
     "extends": [

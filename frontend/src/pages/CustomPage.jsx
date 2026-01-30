@@ -3,15 +3,12 @@
  * 显示和编辑自定义页面的内容
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Container,
   Typography,
   Box,
   Button,
-  Grid,
-  Card,
-  CardContent,
   IconButton,
   Dialog,
   DialogTitle,
@@ -20,39 +17,32 @@ import {
   TextField,
   Alert,
   CircularProgress,
-  Chip,
-  Tooltip,
   Menu,
   MenuItem
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
   Edit as EditIcon,
-  Add as AddIcon,
   Close as CloseIcon,
   Save as SaveIcon,
   Note as NoteIcon,
   FormatQuote as QuoteIcon,
   AttachFile as AttachmentIcon,
-  ArrowDropDown as ArrowDropDownIcon,
-  DragIndicator as DragIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import {
-  fetchPageByName,
   updatePage,
-  selectCurrentPage,
-  selectLoading,
-  selectError,
-  clearError
 } from '../store/customPagesSlice';
+import { useCustomPageByName } from '../features/customPages/hooks/useCustomPageByName';
 import AttachmentPickerDialog from '../components/AttachmentPickerDialog';
 import DocumentPickerDialog from '../components/DocumentPickerDialog';
 import QuotePickerDialog from '../components/QuotePickerDialog';
 import DocumentCard from '../components/DocumentCard';
 import QuoteCard from '../components/QuoteCard';
 import AttachmentCard from '../components/AttachmentCard';
+import SortableCardItem from '../features/customPages/components/SortableCardItem';
+import { buildMixedItems } from '../features/customPages/utils/buildMixedItems';
 import {
   openWindowAndFetch,
   openQuoteWindowAndFetch,
@@ -70,9 +60,7 @@ import {
   arrayMove,
   SortableContext,
   rectSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 // 样式化的容器
 const StyledContainer = styled(Container)(({ theme }) => ({
@@ -101,44 +89,6 @@ const SortableGridContainer = styled(Box)(({ theme }) => ({
   overflow: 'visible',
 }));
 
-// 样式化的卡片包装器
-const CardWrapper = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  height: '100%',
-  overflow: 'visible',
-  minWidth: 0,
-  '&:hover .card-actions': {
-    opacity: 1,
-  },
-}));
-
-// 样式化的卡片操作按钮容器
-const CardActions = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  top: 8,
-  left: 8,
-  right: 8,
-  display: 'flex',
-  justifyContent: 'space-between',
-  opacity: 0,
-  transition: 'opacity 0.2s ease',
-  zIndex: 10,
-  pointerEvents: 'none',
-  '&.edit-mode': {
-    opacity: 1,
-  },
-  '&:hover .edit-mode': {
-    opacity: 1,
-  },
-  '& .MuiIconButton-root': {
-    pointerEvents: 'auto',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 1)',
-    },
-  },
-}));
-
 // 样式化的空状态容器
 const EmptyState = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -150,81 +100,12 @@ const EmptyState = styled(Box)(({ theme }) => ({
   minHeight: 200,
 }));
 
-// 附件类别映射
-const CATEGORY_MAP = {
-  image: '图片',
-  video: '视频',
-  document: '文档',
-  script: '程序与脚本'
-};
-
-
-
-// 格式化文件大小
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-
-// 可排序的卡片项组件
-const SortableCardItem = ({ id, children, onRemove, isEditLayout }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <CardWrapper>
-        <CardActions className={`card-actions ${isEditLayout ? 'edit-mode' : ''}`}>
-          <Tooltip title="拖拽排序">
-            <IconButton
-              size="small"
-              {...listeners}
-              sx={{ cursor: 'grab' }}
-            >
-              <DragIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="移除">
-            <IconButton
-              size="small"
-              onClick={() => onRemove(id)}
-              color="error"
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </CardActions>
-        {children}
-      </CardWrapper>
-    </div>
-  );
-};
-
 const CustomPage = () => {
   const { name } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Redux状态
-  const currentPage = useSelector(selectCurrentPage);
-  const loading = useSelector(selectLoading);
-  const error = useSelector(selectError);
+  const { currentPage, loading, error } = useCustomPageByName(name);
   
   // 本地状态
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -242,10 +123,8 @@ const CustomPage = () => {
   // 添加内容下拉菜单状态
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState(null);
   const addMenuOpen = Boolean(addMenuAnchorEl);
-  
-  
-  // 防抖更新定时器
-  const updateTimeoutRef = useRef(null);
+
+  const mixedItems = useMemo(() => buildMixedItems(currentPage), [currentPage]);
   
   // 拖拽排序传感器
   const sensors = useSensors(
@@ -267,82 +146,7 @@ const CustomPage = () => {
     setAddMenuAnchorEl(null);
   };
   
-  // 生成混合内容项数据
-  const generateMixedItems = () => {
-    if (!currentPage) return [];
-    
-    // 优先使用 contentItems
-    if (currentPage.contentItems && currentPage.contentItems.length > 0) {
-      return currentPage.contentItems.map(item => {
-        let data = null;
-        
-        // 根据类型查找对应的数据
-        switch (item.kind) {
-          case 'Document':
-            data = currentPage.referencedDocumentIds?.find(doc => doc._id === item.refId);
-            break;
-          case 'Quote':
-            data = currentPage.referencedQuoteIds?.find(quote => quote._id === item.refId);
-            break;
-          case 'Attachment':
-            data = currentPage.referencedAttachmentIds?.find(att => att._id === item.refId);
-            break;
-        }
-        
-        return {
-          id: `${item.kind}:${item.refId}`,
-          kind: item.kind,
-          data
-        };
-      });
-    }
-    
-    // 如果没有 contentItems，使用默认排序逻辑
-    const mixedItems = [];
-    
-    // 添加文档
-    if (currentPage.referencedDocumentIds) {
-      currentPage.referencedDocumentIds.forEach(doc => {
-        mixedItems.push({
-          id: `Document:${doc._id}`,
-          kind: 'Document',
-          data: doc,
-          updatedAt: doc.updatedAt
-        });
-      });
-    }
-    
-    // 添加引用体
-    if (currentPage.referencedQuoteIds) {
-      currentPage.referencedQuoteIds.forEach(quote => {
-        mixedItems.push({
-          id: `Quote:${quote._id}`,
-          kind: 'Quote',
-          data: quote,
-          updatedAt: quote.updatedAt
-        });
-      });
-    }
-    
-    // 添加附件
-    if (currentPage.referencedAttachmentIds) {
-      currentPage.referencedAttachmentIds.forEach(attachment => {
-        mixedItems.push({
-          id: `Attachment:${attachment._id}`,
-          kind: 'Attachment',
-          data: attachment,
-          updatedAt: attachment.updatedAt
-        });
-      });
-    }
-    
-    // 按更新时间降序排序
-    mixedItems.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    
-    return mixedItems;
-  };
-  
-  
+
   // 处理卡片点击
   const handleItemClick = async (item) => {
     const { kind, data } = item;
@@ -496,8 +300,6 @@ const CustomPage = () => {
 
   // 渲染混合内容网格
   const renderMixedContentGrid = () => {
-    const mixedItems = generateMixedItems();
-    
     // 渲染加载状态
     if (loading) {
       return (
@@ -627,142 +429,15 @@ const CustomPage = () => {
       </Box>
     );
   };
-  
-  
-  // 处理附件拖拽排序
-  const handleAttachmentDragEnd = (event) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id && currentPage) {
-      const oldIndex = currentPage.referencedAttachmentIds.findIndex(
-        item => item._id === active.id
-      );
-      const newIndex = currentPage.referencedAttachmentIds.findIndex(
-        item => item._id === over.id
-      );
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newAttachments = arrayMove(
-          currentPage.referencedAttachmentIds,
-          oldIndex,
-          newIndex
-        );
-        
-        // 防抖更新
-        if (updateTimeoutRef.current) {
-          clearTimeout(updateTimeoutRef.current);
-        }
-        
-        updateTimeoutRef.current = setTimeout(() => {
-          dispatch(updatePage({
-            id: currentPage._id,
-            updateData: {
-              referencedAttachmentIds: newAttachments.map(item => item._id)
-            },
-            options: { populate: 'full', include: 'counts,previews' }
-          }));
-        }, 300);
-      }
-    }
-  };
-  
-  // 处理文档拖拽排序
-  const handleDocumentDragEnd = (event) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id && currentPage) {
-      const oldIndex = currentPage.referencedDocumentIds.findIndex(
-        item => item._id === active.id
-      );
-      const newIndex = currentPage.referencedDocumentIds.findIndex(
-        item => item._id === over.id
-      );
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newDocuments = arrayMove(
-          currentPage.referencedDocumentIds,
-          oldIndex,
-          newIndex
-        );
-        
-        // 防抖更新
-        if (updateTimeoutRef.current) {
-          clearTimeout(updateTimeoutRef.current);
-        }
-        
-        updateTimeoutRef.current = setTimeout(() => {
-          dispatch(updatePage({
-            id: currentPage._id,
-            updateData: {
-              referencedDocumentIds: newDocuments.map(item => item._id)
-            },
-            options: { populate: 'full', include: 'counts,previews' }
-          }));
-        }, 300);
-      }
-    }
-  };
-  
-  // 处理引用体拖拽排序
-  const handleQuoteDragEnd = (event) => {
-    const { active, over } = event;
-    
-    if (active.id !== over.id && currentPage) {
-      const oldIndex = currentPage.referencedQuoteIds.findIndex(
-        item => item._id === active.id
-      );
-      const newIndex = currentPage.referencedQuoteIds.findIndex(
-        item => item._id === over.id
-      );
-      
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newQuotes = arrayMove(
-          currentPage.referencedQuoteIds,
-          oldIndex,
-          newIndex
-        );
-        
-        // 防抖更新
-        if (updateTimeoutRef.current) {
-          clearTimeout(updateTimeoutRef.current);
-        }
-        
-        updateTimeoutRef.current = setTimeout(() => {
-          dispatch(updatePage({
-            id: currentPage._id,
-            updateData: {
-              referencedQuoteIds: newQuotes.map(item => item._id)
-            },
-            options: { populate: 'full', include: 'counts,previews' }
-          }));
-        }, 300);
-      }
-    }
-  };
-  
-  // 加载页面数据
-  useEffect(() => {
-    if (name) {
-      dispatch(fetchPageByName({
-        name: decodeURIComponent(name),
-        options: { populate: 'full', include: 'counts,previews' }
-      }));
-    }
-    
-    return () => {
-      dispatch(clearError());
-    };
-  }, [dispatch, name]);
 
   // 编辑模式状态管理
   useEffect(() => {
     if (isEditLayout && currentPage) {
-      const items = generateMixedItems();
-      setMixedItemsLocal(items);
-      setOriginalMixedItems([...items]);
+      setMixedItemsLocal(mixedItems);
+      setOriginalMixedItems([...mixedItems]);
       setIsLayoutDirty(false);
     }
-  }, [isEditLayout, currentPage]);
+  }, [isEditLayout, currentPage, mixedItems]);
   
   // 处理重命名
   const handleRename = () => {
