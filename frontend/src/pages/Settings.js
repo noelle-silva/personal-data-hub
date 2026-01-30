@@ -40,8 +40,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   OpenInNew as OpenInNewIcon,
-  VideoLibrary as VideoIcon,
-  BugReport as BugReportIcon,
   SmartToy as BotIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
@@ -64,12 +62,8 @@ import {
   clearError
 } from '../store/customPagesSlice';
 import {
-  selectVideoTestEnabled,
-  selectInteractiveTestEnabled,
   selectCustomPagesEnabled,
   selectCustomPagesVisibility,
-  toggleVideoTest,
-  toggleInteractiveTest,
   toggleCustomPages,
   toggleCustomPageVisibility,
 } from '../store/settingsSlice';
@@ -127,8 +121,6 @@ const Settings = () => {
   const customPages = useSelector(selectAllPages);
   const saving = useSelector(selectSaving);
   const error = useSelector(selectError);
-  const videoTestEnabled = useSelector(selectVideoTestEnabled);
-  const interactiveTestEnabled = useSelector(selectInteractiveTestEnabled);
   const customPagesEnabled = useSelector(selectCustomPagesEnabled);
   const customPagesVisibility = useSelector(selectCustomPagesVisibility);
   const user = useSelector(selectUser);
@@ -691,36 +683,6 @@ const Settings = () => {
             功能开关
           </Typography>
           <List sx={{ p: 0 }}>
-            <ListItem>
-              <ListItemIcon>
-                <VideoIcon />
-              </ListItemIcon>
-              <ListItemText
-                primary="视频测试"
-                secondary="在侧边栏显示或隐藏视频测试功能"
-              />
-              <Switch
-                checked={videoTestEnabled}
-                onChange={() => dispatch(toggleVideoTest())}
-                color="primary"
-              />
-            </ListItem>
-            <Divider />
-            <ListItem>
-              <ListItemIcon>
-                <BugReportIcon />
-              </ListItemIcon>
-              <ListItemText
-                primary="交互测试"
-                secondary="在侧边栏显示或隐藏交互测试功能"
-              />
-              <Switch
-                checked={interactiveTestEnabled}
-                onChange={() => dispatch(toggleInteractiveTest())}
-                color="primary"
-              />
-            </ListItem>
-            <Divider />
             <ListItem>
               <ListItemIcon>
                 <CollectionsBookmarkIcon />

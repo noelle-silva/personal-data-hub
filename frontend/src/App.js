@@ -7,16 +7,12 @@ import Notes from './pages/Notes';
 import TagFilter from './pages/TagFilter';
 import Quotes from './pages/Quotes';
 import Attachments from './pages/Attachments';
-import VideoTest from './pages/VideoTest';
-import InteractiveTest from './pages/InteractiveTest';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 import CustomPage from './pages/CustomPage';
 import AIChat from './pages/AIChat';
 import AIChatTest from './pages/AIChatTest';
-import SSETest from './pages/SSETest';
-import ShortcutTest from './pages/ShortcutTest';
 import ProtectedRoute from './components/ProtectedRoute';
 import { checkAuth, selectIsAuthenticated } from './store/authSlice';
 import { fetchAttachmentConfig } from './store/attachmentsSlice';
@@ -58,13 +54,9 @@ function App() {
         <Route path="/标签筛选" element={<TagFilter />} />
         <Route path="/引用体" element={<Quotes />} />
         <Route path="/附件" element={<Attachments />} />
-        <Route path="/视频测试" element={<VideoTest />} />
-        <Route path="/交互测试" element={<InteractiveTest />} />
         <Route path="/设置" element={<Settings />} />
         <Route path="/AI-Chat" element={<AIChat />} />
         <Route path="/AI-Chat-Test" element={<AIChatTest />} />
-        <Route path="/SSE-Test" element={<SSETest />} />
-        <Route path="/快捷键测试" element={<ShortcutTest />} />
         <Route path="/自定义/:name" element={<CustomPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>

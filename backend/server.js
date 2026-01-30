@@ -17,7 +17,6 @@ const quoteRoutes = require('./routes/quotes');
 const attachmentRoutes = require('./routes/attachments');
 const customPageRoutes = require('./routes/customPages');
 const aiRoutes = require('./routes/ai');
-const testRoutes = require('./routes/test');
 const themeRoutes = require('./routes/themes');
 const transparencyRoutes = require('./routes/transparency');
 const connectDB = require('./config/database');
@@ -158,9 +157,6 @@ app.use('/api/auth', authRoutes);
 
 // 除 /api/auth 外，其他 /api 全部需要 JWT Bearer
 app.use('/api', requireAuth);
-
-// 测试相关路由（需要认证，仅用于开发测试）
-app.use('/api/test', testRoutes);
 
 // 附件相关路由（需要认证）
 app.use('/api/attachments', attachmentRoutes);

@@ -23,8 +23,6 @@ import {
   LocalOffer as LocalOfferIcon,
   FormatQuote as FormatQuoteIcon,
   AttachFile as AttachFileIcon,
-  VideoLibrary as VideoIcon,
-  BugReport as BugReportIcon,
   Settings as SettingsIcon,
   CollectionsBookmark as CollectionsBookmarkIcon,
   SmartToy as SmartToyIcon,
@@ -48,8 +46,6 @@ import {
 } from '../store/windowsSlice';
 import { selectAllPages } from '../store/customPagesSlice';
 import {
-  selectVideoTestEnabled,
-  selectInteractiveTestEnabled,
   selectCustomPagesEnabled,
   selectCustomPagesVisibility,
 } from '../store/settingsSlice';
@@ -119,16 +115,6 @@ const fixedNavigationItems = [
     icon: <AttachFileIcon />,
   },
   {
-    text: '视频测试',
-    path: '/视频测试',
-    icon: <VideoIcon />,
-  },
-  {
-    text: '交互测试',
-    path: '/交互测试',
-    icon: <BugReportIcon />,
-  },
-  {
     text: 'AI Chat',
     path: '/AI-Chat',
     icon: <SmartToyIcon />,
@@ -150,8 +136,6 @@ const MainLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const dispatch = useDispatch();
   const customPages = useSelector(selectAllPages);
-  const videoTestEnabled = useSelector(selectVideoTestEnabled);
-  const interactiveTestEnabled = useSelector(selectInteractiveTestEnabled);
   const customPagesEnabled = useSelector(selectCustomPagesEnabled);
   const customPagesVisibility = useSelector(selectCustomPagesVisibility);
 
@@ -350,16 +334,7 @@ const MainLayout = () => {
 
   // 生成动态导航项
   const navigationItems = React.useMemo(() => {
-    // 根据功能开关状态过滤固定导航项
-    const filteredFixedItems = fixedNavigationItems.filter(item => {
-      if (item.text === '视频测试' && !videoTestEnabled) {
-        return false;
-      }
-      if (item.text === '交互测试' && !interactiveTestEnabled) {
-        return false;
-      }
-      return true;
-    });
+    const filteredFixedItems = fixedNavigationItems;
 
     // 只有在自定义页面功能开启时才生成自定义页面项
     const visibility = customPagesVisibility || {}; // 防御性编程，防止 undefined
@@ -384,7 +359,7 @@ const MainLayout = () => {
     
     // 如果没找到"设置"项，直接追加到末尾
     return [...filteredFixedItems, ...customPageItems];
-  }, [customPages, videoTestEnabled, interactiveTestEnabled, customPagesEnabled, customPagesVisibility]);
+  }, [customPages, customPagesEnabled, customPagesVisibility]);
 
   // 获取当前页面标题
   const getPageTitle = React.useCallback(() => {

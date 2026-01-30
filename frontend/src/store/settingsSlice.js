@@ -3,8 +3,6 @@ import { createPage as createPageAction, deletePage as deletePageAction } from '
 
 // 默认状态
 const DEFAULT_STATE = {
-  videoTestEnabled: true,
-  interactiveTestEnabled: true,
   customPagesEnabled: true,
   customPagesVisibility: {},
 };
@@ -17,11 +15,9 @@ const loadStateFromLocalStorage = () => {
       return DEFAULT_STATE;
     }
     const parsed = JSON.parse(serializedState);
-    // 合并默认值，确保新增的字段存在
+    // 仅保留当前仍在使用的字段（丢弃旧测试页开关等历史字段）
     return {
-      ...DEFAULT_STATE,
-      ...parsed,
-      // 确保 customPagesVisibility 始终是一个对象
+      customPagesEnabled: parsed.customPagesEnabled ?? DEFAULT_STATE.customPagesEnabled,
       customPagesVisibility: parsed.customPagesVisibility || {},
     };
   } catch (e) {
@@ -46,14 +42,6 @@ const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
-    toggleVideoTest: (state) => {
-      state.videoTestEnabled = !state.videoTestEnabled;
-      saveStateToLocalStorage(state);
-    },
-    toggleInteractiveTest: (state) => {
-      state.interactiveTestEnabled = !state.interactiveTestEnabled;
-      saveStateToLocalStorage(state);
-    },
     toggleCustomPages: (state) => {
       state.customPagesEnabled = !state.customPagesEnabled;
       saveStateToLocalStorage(state);
@@ -84,14 +72,6 @@ const settingsSlice = createSlice({
         state.customPagesVisibility = {};
       }
       state.customPagesVisibility = { ...state.customPagesVisibility, ...action.payload };
-      saveStateToLocalStorage(state);
-    },
-    setVideoTestEnabled: (state, action) => {
-      state.videoTestEnabled = action.payload;
-      saveStateToLocalStorage(state);
-    },
-    setInteractiveTestEnabled: (state, action) => {
-      state.interactiveTestEnabled = action.payload;
       saveStateToLocalStorage(state);
     },
     setCustomPagesEnabled: (state, action) => {
@@ -132,20 +112,14 @@ const settingsSlice = createSlice({
 
 // 导出 action creators
 export const {
-  toggleVideoTest,
-  toggleInteractiveTest,
   toggleCustomPages,
   toggleCustomPageVisibility,
   setCustomPageVisibility,
   setCustomPagesVisibilityBulk,
-  setVideoTestEnabled,
-  setInteractiveTestEnabled,
   setCustomPagesEnabled,
 } = settingsSlice.actions;
 
 // 导出 selectors
-export const selectVideoTestEnabled = (state) => state.settings.videoTestEnabled;
-export const selectInteractiveTestEnabled = (state) => state.settings.interactiveTestEnabled;
 export const selectCustomPagesEnabled = (state) => state.settings.customPagesEnabled;
 export const selectCustomPagesVisibility = (state) => state.settings.customPagesVisibility || {};
 export const selectIsCustomPageEnabledById = (state, pageId) => {

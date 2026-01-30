@@ -167,10 +167,6 @@ const initialState = {
   updateStatus: 'idle', // 'idle' | 'updating' | 'succeeded' | 'failed'
   updateError: null,
   
-  // 更新状态
-  updateStatus: 'idle', // 'idle' | 'updating' | 'succeeded' | 'failed'
-  updateError: null,
-  
   // 性能统计（开发环境）
   stats: {
     cacheHits: 0,
