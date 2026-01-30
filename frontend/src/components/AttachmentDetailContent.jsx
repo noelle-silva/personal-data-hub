@@ -2,18 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
-  Chip,
   IconButton,
   Button,
   Menu,
   MenuItem,
   CircularProgress,
-  Tooltip,
-  Slider,
   TextField,
   ListItemIcon,
-  ListItemText,
-  Fab
+  ListItemText
 } from '@mui/material';
 import {
   GetApp as DownloadIcon,
@@ -24,8 +20,6 @@ import {
   Description as DocumentIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon
@@ -38,7 +32,6 @@ import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import AttachmentCopyButton from './AttachmentCopyButton';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  selectSelectedAttachment,
   selectAttachmentById,
   selectAttachmentUrlCache,
   selectInflightUrlRequests,
@@ -555,12 +548,7 @@ const AttachmentDetailContent = ({
       fetchAttachmentUrl();
       fetchMetadata();
     }
-  }, [selectedAttachmentId]); // 移除函数依赖，避免无限循环
-
-  // EPUB 实例引用
-  const epubBookRef = useRef(null);
-  const epubEventHandlersRef = useRef({});
-  const epubRenditionRef = useRef(null);
+  }, [selectedAttachmentId, fetchAttachmentUrl, fetchMetadata]);
 
   // 当组件卸载时，清理状态
   useEffect(() => {

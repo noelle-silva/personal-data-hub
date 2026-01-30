@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect, useCallback } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { GlobalStyles } from '@mui/material';
 import { lightTheme, darkTheme } from '../theme';
@@ -163,7 +163,7 @@ export const ThemeProvider = ({ children }) => {
   }, [mode, dynamicColorsEnabled, themeColors, selectedVariant]);
 
   // 加载主题颜色数据
-  const loadThemeColors = async () => {
+  const loadThemeColors = useCallback(async () => {
     if (!dynamicColorsEnabled) {
       setThemeColors(null);
       return;
@@ -187,7 +187,7 @@ export const ThemeProvider = ({ children }) => {
     } finally {
       setThemeLoading(false);
     }
-  };
+  }, [dynamicColorsEnabled]);
 
   // 重新生成主题颜色
   const regenerateThemeColors = async (wallpaperId) => {
@@ -262,7 +262,7 @@ export const ThemeProvider = ({ children }) => {
       // 未认证时清空主题颜色
       setThemeColors(null);
     }
-  }, [dynamicColorsEnabled, currentWallpaper, isAuthenticated]);
+  }, [dynamicColorsEnabled, currentWallpaper, isAuthenticated, loadThemeColors]);
 
   // 监控认证状态变化，从已认证变为未认证时重置壁纸状态
   useEffect(() => {

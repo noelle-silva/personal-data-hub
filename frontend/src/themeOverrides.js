@@ -90,8 +90,6 @@ export const buildComponentsOverrides = (theme) => {
         root: {
           backdropFilter: 'blur(4px)',
         },
-      },
-      styleOverrides: {
         backdrop: {
           backgroundColor: isDark 
             ? 'rgba(0, 0, 0, 0.7)' 
@@ -378,7 +376,9 @@ export const buildCustomColors = (theme) => {
   };
 };
 
-export default {
+const themeOverrides = {
   buildComponentsOverrides,
   buildCustomColors,
 };
+
+export default themeOverrides;

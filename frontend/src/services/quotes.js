@@ -23,6 +23,8 @@ export const updateQuote = async (id, updateData, options = {}) => {
   return response.data;
 };
 
-export default {
-  updateQuote
+const quotesService = {
+  updateQuote,
 };
+
+export default quotesService;

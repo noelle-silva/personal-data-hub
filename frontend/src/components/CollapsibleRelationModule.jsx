@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  IconButton,
   Collapse,
-  Tooltip,
   useTheme,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 // 关系模块容器
 const RelationModule = styled(Box)(({ theme }) => ({

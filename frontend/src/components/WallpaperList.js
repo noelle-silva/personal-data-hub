@@ -23,7 +23,6 @@ import {
   CircularProgress,
   Alert,
   Chip,
-  useTheme,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -182,7 +181,6 @@ const EditDescriptionDialog = ({ open, wallpaper, onClose, onSave }) => {
 };
 
 const WallpaperList = () => {
-  const theme = useTheme();
   const dispatch = useDispatch();
   
   const wallpapers = useSelector(selectWallpapers);

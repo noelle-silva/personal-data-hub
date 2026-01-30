@@ -28,7 +28,6 @@ import {
 } from '../store/documentsSlice';
 import {
   openQuoteWindowAndFetch,
-  openWindowAndFetch
 } from '../store/windowsSlice';
 
 // 样式化的卡片容器

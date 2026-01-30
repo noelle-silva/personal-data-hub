@@ -39,10 +39,6 @@ import {
   selectHighlightedIndex
 } from '../store/searchSlice';
 import {
-  fetchDocumentById,
-  openDocumentModal
-} from '../store/documentsSlice';
-import {
   openWindowAndFetch
 } from '../store/windowsSlice';
 

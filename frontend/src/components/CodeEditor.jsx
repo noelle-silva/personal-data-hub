@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Box } from '@mui/material';
-import { lazy, Suspense } from 'react';
 
 // 懒加载 Monaco Editor 组件
 const Editor = lazy(() => import('@monaco-editor/react'));
@@ -60,7 +59,6 @@ const CodeEditor = ({
   const containerRef = useRef(null);
   const [editorHeight, setEditorHeight] = useState(minHeight);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const [isEditorFocused, setIsEditorFocused] = useState(false);
   const debounceTimerRef = useRef(null);
   const keydownHandlerRef = useRef(null);
 
@@ -105,7 +103,6 @@ const CodeEditor = ({
 
     // 设置编辑器聚焦/失焦事件处理
     const handleEditorFocus = () => {
-      setIsEditorFocused(true);
       if (shieldExtensionShortcuts) {
         // 添加冒泡阶段的按键事件监听器，阻止扩展快捷键
         // 注意：改为冒泡阶段以确保 Monaco 先处理所有编辑键（如删除、覆盖等）
@@ -123,10 +120,9 @@ const CodeEditor = ({
     };
 
     const handleEditorBlur = () => {
-      setIsEditorFocused(false);
       // 移除按键事件监听器
       if (keydownHandlerRef.current) {
-        document.removeEventListener('keydown', keydownHandlerRef.current, true);
+        document.removeEventListener('keydown', keydownHandlerRef.current, false);
         keydownHandlerRef.current = null;
       }
     };
@@ -182,9 +178,7 @@ const CodeEditor = ({
           const newHeight = Math.max(minHeight, Math.min(contentHeight, maxHeightPixels));
           
           // 只有高度变化超过阈值时才更新，减少不必要的重渲染
-          if (Math.abs(newHeight - editorHeight) > 1) {
-            setEditorHeight(newHeight);
-          }
+          setEditorHeight((prev) => (Math.abs(newHeight - prev) > 1 ? newHeight : prev));
         }, 100);
       };
 
@@ -213,7 +207,7 @@ const CodeEditor = ({
       }
       // 清理按键事件监听器
       if (keydownHandlerRef.current) {
-        document.removeEventListener('keydown', keydownHandlerRef.current, true);
+        document.removeEventListener('keydown', keydownHandlerRef.current, false);
         keydownHandlerRef.current = null;
       }
     };

@@ -16,7 +16,6 @@ import {
   selectIsModalOpen,
   openDocumentModal,
   closeDocumentModal,
-  fetchDocumentById,
 } from '../store/documentsSlice';
 import {
   openWindowAndFetch

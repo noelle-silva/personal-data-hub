@@ -170,7 +170,6 @@ class KeybindingManager {
       }
 
       const combo = this.platformMapper(entry.primary, this.platform);
-      const filter = this.createFilter(entry.scope);
       
       const wrapped = this.createHandler(actionId as ShortcutActionId, entry.scope, (event, combo) => {
         // 调用注册的处理器
@@ -226,7 +225,6 @@ class KeybindingManager {
     handler: ShortcutHandler
   ): void {
     const mappedCombo = this.platformMapper(combo, this.platform);
-    const filter = this.createFilter(scope);
     
     const wrappedHandler = this.createHandler(actionId, scope, handler);
 

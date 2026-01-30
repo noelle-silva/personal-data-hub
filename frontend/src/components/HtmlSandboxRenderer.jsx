@@ -80,7 +80,7 @@ const HtmlSandboxRenderer = ({
     } finally {
       setProcessingContent(false);
     }
-  }, [ttl]);
+  }, []);
 
   // 当内容变化时预处理
   useEffect(() => {
@@ -102,7 +102,7 @@ const HtmlSandboxRenderer = ({
     return () => {
       isMounted = false;
     };
-  }, [content, preprocessContent]);
+  }, [content, ttl, preprocessContent]);
 
   // 生成完整的 HTML 文档
   const fullHtml = useMemo(() => {
@@ -122,7 +122,7 @@ const HtmlSandboxRenderer = ({
     });
 
     // 检测内容是否已定义 base 标签
-    const hasExistingBase = /<base[^>]*>/i.test(content);
+    const hasExistingBase = /<base[^>]*>/i.test(processedContent);
     
     // 生成 head 内容
     let headContent = `

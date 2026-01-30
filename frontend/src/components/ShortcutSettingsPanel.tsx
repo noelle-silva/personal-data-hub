@@ -4,16 +4,12 @@ import {
   Card,
   CardContent,
   Typography,
-  TextField,
   Button,
   Switch,
   FormControlLabel,
   Alert,
   Divider,
   Tooltip,
-  IconButton,
-  Menu,
-  MenuItem,
   Chip,
   Snackbar,
 } from '@mui/material';
@@ -24,7 +20,6 @@ import {
   FileUpload as UploadIcon,
   Keyboard as KeyboardIcon,
   Info as InfoIcon,
-  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import KeyCaptureInput from './KeyCaptureInput';
@@ -39,7 +34,6 @@ import {
   selectReservedKeys,
   setShortcut,
   toggleShortcut,
-  setShortcutScope,
   resetShortcut,
   resetAllShortcuts,
   toggleGlobalEnabled,
@@ -66,7 +60,6 @@ const ShortcutSettingsPanel = () => {
   // 本地状态
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
   const [editingCombo, setEditingCombo] = useState('');
-  const [importExportAnchor, setImportExportAnchor] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [conflictWarning, setConflictWarning] = useState('');
@@ -463,7 +456,7 @@ const ShortcutSettingsPanel = () => {
             <Button
               variant="outlined"
               startIcon={<UploadIcon />}
-              onClick={() => setImportExportAnchor(document.getElementById('import-input'))}
+              onClick={() => document.getElementById('import-input')?.click()}
             >
               导入
             </Button>

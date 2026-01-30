@@ -8,8 +8,7 @@ import {
   Button,
   TextField,
   Switch,
-  FormControlLabel,
-  Divider
+  FormControlLabel
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import MarkdownInlineRenderer from '../components/MarkdownInlineRenderer';

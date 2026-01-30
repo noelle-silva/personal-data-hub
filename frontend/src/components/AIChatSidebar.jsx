@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, IconButton, useTheme, useMediaQuery, Backdrop } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
 import AIChatPanel from './AIChatPanel';
 
 // 侧边栏容器
@@ -72,7 +71,6 @@ const AIChatSidebar = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [width, setWidth] = useState(defaultWidth);
-  const [isDragging, setIsDragging] = useState(false);
   const [isOverlay, setIsOverlay] = useState(false);
   const sidebarRef = useRef(null);
   const dragStartX = useRef(0);
@@ -110,7 +108,6 @@ const AIChatSidebar = ({
   const handleMouseDown = useCallback((e) => {
     if (isMobile) return; // 移动端不支持拖拽
     
-    setIsDragging(true);
     isDraggingRef.current = true;
     dragStartX.current = e.clientX;
     dragStartWidth.current = width;
@@ -145,7 +142,6 @@ const AIChatSidebar = ({
     // 内联定义鼠标释放处理函数
     const handleMouseUp = () => {
       isDraggingRef.current = false;
-      setIsDragging(false);
       
       // 移除全局鼠标事件监听
       document.removeEventListener('mousemove', handleMouseMove);
@@ -161,7 +157,7 @@ const AIChatSidebar = ({
     
     // 禁用文本选择
     document.body.style.userSelect = 'none';
-  }, [width, isMobile, minWidth, maxWidth, overlayGap, checkOverlayMode]);
+  }, [width, isMobile, minWidth, maxWidth, overlayGap, overlayThreshold, checkOverlayMode]);
 
   // 处理背景点击（仅移动端）
   const handleBackdropClick = useCallback(() => {

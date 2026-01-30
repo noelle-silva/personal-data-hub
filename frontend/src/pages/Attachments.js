@@ -28,11 +28,9 @@ import {
   selectAttachmentsError,
   clearError,
   selectAttachmentsStats,
-  setAttachmentData,
   setSelectedAttachment,
   setModalOpen,
   fetchAttachmentConfig,
-  selectAttachmentConfig,
   selectAttachmentConfigStatus
 } from '../store/attachmentsSlice';
 import { selectIsAuthenticated } from '../store/authSlice';
@@ -81,7 +79,6 @@ const AttachmentsPage = () => {
   const dispatch = useDispatch();
   const error = useSelector(selectAttachmentsError);
   const stats = useSelector(selectAttachmentsStats);
-  const attachmentConfig = useSelector(selectAttachmentConfig);
   const configStatus = useSelector(selectAttachmentConfigStatus);
   const isAuthenticated = useSelector(selectIsAuthenticated);
   

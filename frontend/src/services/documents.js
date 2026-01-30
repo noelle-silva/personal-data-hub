@@ -39,7 +39,9 @@ export const updateDocument = async (id, updateData, options = {}) => {
   return response.data;
 };
 
-export default {
+const documentsService = {
   createDocument,
-  updateDocument
+  updateDocument,
 };
+
+export default documentsService;

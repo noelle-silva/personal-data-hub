@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   Button,
   Box,
-  Typography,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -10,7 +9,6 @@ import {
   Snackbar
 } from '@mui/material';
 import {
-  CloudUpload as CloudUploadIcon,
   Image as ImageIcon,
   VideoLibrary as VideoIcon,
   Description as DocumentIcon,
@@ -30,7 +28,6 @@ import {
   selectAttachmentConfigStatus,
   fetchAttachmentConfig
 } from '../store/attachmentsSlice';
-import { selectIsAuthenticated } from '../store/authSlice';
 
 // 样式化上传按钮
 const UploadButton = styled(Button)(({ theme }) => ({
@@ -52,7 +49,6 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
   const uploadStatus = useSelector(selectUploadStatus);
   const attachmentConfig = useSelector(selectAttachmentConfig);
   const configStatus = useSelector(selectAttachmentConfigStatus);
-  const isAuthenticated = useSelector(selectIsAuthenticated);
   
   const fileInputRef = useRef(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);

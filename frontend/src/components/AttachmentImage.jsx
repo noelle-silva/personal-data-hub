@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { 
@@ -87,7 +87,7 @@ const AttachmentImage = ({
   const imageRef = useRef(null);
 
   // 加载附件URL（本机网关转发）
-  const loadAttachmentUrl = async () => {
+  const loadAttachmentUrl = useCallback(async () => {
     if (!id) return;
 
     setLoading(true);
@@ -106,7 +106,7 @@ const AttachmentImage = ({
         onError(err);
       }
     }
-  };
+  }, [id, onError]);
 
   // 处理图片加载成功
   const handleImageLoad = (event) => {
@@ -156,7 +156,7 @@ const AttachmentImage = ({
   // 组件挂载时加载附件URL
   useEffect(() => {
     loadAttachmentUrl();
-  }, [id, ttl]);
+  }, [loadAttachmentUrl, ttl]);
 
   // 当URL变化时重置状态
   useEffect(() => {

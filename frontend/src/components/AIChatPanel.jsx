@@ -17,11 +17,8 @@ import {
   CircularProgress,
   Switch,
   FormControlLabel,
-  Divider,
-  Tooltip,
   Slider,
   Collapse,
-  useMediaQuery
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -30,9 +27,6 @@ import {
   SmartToy as BotIcon,
   Person as PersonIcon,
   Settings as SettingsIcon,
-  Tune as TuneIcon,
-  Refresh as RefreshIcon,
-  History as HistoryIcon,
   Add as AddIcon,
   Close as CloseIcon,
   ExpandMore as ExpandMoreIcon,
@@ -41,11 +35,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import aiService from '../services/ai';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyles';
-import { preprocessAIMessageContent } from '../utils/aiChatPreprocessor';
 
-// 生成作用域样式
-const aiChatStyles = generateAIChatEnhancedStylesScoped('ai-chat-panel');
 
 // 样式化的消息容器
 const MessageContainer = styled(Box)(({ theme }) => ({
@@ -101,7 +91,6 @@ const PanelHeader = styled(Box)(({ theme }) => ({
 const AIChatPanel = ({ onClose, injectionSource }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [models, setModels] = useState([]);
@@ -117,11 +106,6 @@ const AIChatPanel = ({ onClose, injectionSource }) => {
   const [roles, setRoles] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState('none'); // 默认为'none'
   const [rolesLoading, setRolesLoading] = useState(false);
-  
-  // 聊天历史相关状态
-  const [chatHistories, setChatHistories] = useState([]);
-  const [selectedHistoryId, setSelectedHistoryId] = useState('');
-  const [historiesLoading, setHistoriesLoading] = useState(false);
   
   // 温度相关状态
   const [temperature, setTemperature] = useState(0.7);
@@ -212,29 +196,8 @@ ${content}
     loadRoles();
   }, []);
 
-  // 加载聊天历史列表
-  const loadChatHistories = async () => {
-    try {
-      setHistoriesLoading(true);
-      const response = await aiService.listChatHistories({
-        role_id: selectedRoleId === 'none' || !selectedRoleId ? 'all' : selectedRoleId,
-        limit: 50
-      });
-      if (response.success) {
-        setChatHistories(response.data.histories);
-      }
-    } catch (error) {
-      console.error('加载聊天历史失败:', error);
-    } finally {
-      setHistoriesLoading(false);
-    }
-  };
-
   // 当角色改变时，重新加载聊天历史列表
   useEffect(() => {
-    loadChatHistories();
-    // 切换角色时，清除选中的聊天历史
-    setSelectedHistoryId('');
     setMessages([]);
   }, [selectedRoleId]);
 
@@ -385,11 +348,6 @@ ${content}
       };
     }
 
-    // 添加聊天历史ID（如果已选择）
-    if (selectedHistoryId) {
-      requestParams.history_id = selectedHistoryId;
-    }
-
     // 添加角色或系统提示词参数
     if (selectedRoleId === 'none') {
       requestParams.disable_system_prompt = true;
@@ -415,14 +373,6 @@ ${content}
               streamDebounceRef.current = setTimeout(() => {
                 setCurrentResponse(streamBufferRef.current);
               }, 150);
-            }
-          },
-          onHistory: (historyData) => {
-            // 接收到新创建的聊天历史信息
-            if (historyData.id) {
-              setSelectedHistoryId(historyData.id);
-              // 重新加载聊天历史列表
-              loadChatHistories();
             }
           },
           onFinish: (finishData) => {
@@ -493,13 +443,6 @@ ${content}
             incomplete: choice.finish_reason === 'length'
           };
           setMessages(prev => [...prev, assistantMessage]);
-          
-          // 如果返回了新的historyId，更新选中的聊天历史
-          if (response.data.meta?.historyId) {
-            setSelectedHistoryId(response.data.meta.historyId);
-            // 重新加载聊天历史列表
-            loadChatHistories();
-          }
         }
       }
     } catch (error) {
@@ -550,30 +493,9 @@ ${content}
     }
   };
 
-  // 处理历史选择
-  const handleHistorySelect = async (historyId) => {
-    try {
-      setSelectedHistoryId(historyId);
-      const response = await aiService.getChatHistoryById(historyId);
-      if (response.success) {
-        const formattedMessages = response.data.messages.map(msg => ({
-          id: `${msg.role}-${Date.now()}-${Math.random()}`,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.timestamp)
-        }));
-        setMessages(formattedMessages);
-      }
-    } catch (error) {
-      console.error('加载聊天历史失败:', error);
-      setError('加载聊天历史失败，请重试');
-    }
-  };
-
   // 新建聊天
   const handleNewChat = () => {
     setMessages([]);
-    setSelectedHistoryId('');
     setError(null);
   };
 

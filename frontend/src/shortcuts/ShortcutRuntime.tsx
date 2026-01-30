@@ -30,8 +30,6 @@ const ShortcutRuntime: React.FC = () => {
     actionDispatcherRef.current = ActionDispatcher.getInstance();
     
     console.debug('快捷键运行时已初始化');
-    console.debug('当前快捷键配置:', shortcuts);
-    console.debug('快捷键系统启用状态:', enabled);
   }, []);
 
   // 监听快捷键配置变化

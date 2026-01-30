@@ -120,83 +120,6 @@ function transformMaidDiaryBlocks(text) {
 }
 
 /**
- * 处理工具结果汇总块
- * @param {string} text - 需要处理的文本
- * @returns {string} 处理后的文本
- */
-function transformToolResultBlocks(text) {
-  const toolResultRegex = /\[\[VCP调用结果信息汇总:(.*?)\]\]/gs;
-  
-  return text.replace(toolResultRegex, (match, rawContent) => {
-    const content = rawContent.trim();
-    const lines = content.split('\n').filter(line => line.trim() !== '');
-
-    let toolName = 'Unknown Tool';
-    let status = 'Unknown Status';
-    const details = [];
-    let otherContent = [];
-
-    lines.forEach(line => {
-      const kvMatch = line.match(/-\s*([^:]+):\s*(.*)/);
-      if (kvMatch) {
-        const key = kvMatch[1].trim();
-        const value = kvMatch[2].trim();
-        if (key === '工具名称') {
-          toolName = value;
-        } else if (key === '执行状态') {
-          status = value;
-        } else {
-          details.push({ key, value });
-        }
-      } else {
-        otherContent.push(line);
-      }
-    });
-
-    let html = `<div class="vcp-tool-result-bubble collapsible">`;
-    html += `<div class="vcp-tool-result-header">`;
-    html += `<span class="vcp-tool-result-label">VCP-ToolResult</span>`;
-    html += `<span class="vcp-tool-result-name">${escapeHtml(toolName)}</span>`;
-    html += `<span class="vcp-tool-result-status">${escapeHtml(status)}</span>`;
-    html += `<span class="vcp-result-toggle-icon"></span>`;
-    html += `</div>`;
-
-    html += `<div class="vcp-tool-result-collapsible-content">`;
-
-    html += `<div class="vcp-tool-result-details">`;
-    details.forEach(({ key, value }) => {
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      let processedValue = escapeHtml(value);
-      
-      if ((key === '可访问URL' || key === '返回内容') && value.match(/\.(jpeg|jpg|png|gif)$/i)) {
-        processedValue = `<a href="${value}" target="_blank" rel="noopener noreferrer" title="点击预览"><img src="${value}" class="vcp-tool-result-image" alt="Generated Image"></a>`;
-      } else {
-        processedValue = processedValue.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-      }
-      
-      if (key === '返回内容') {
-        processedValue = processedValue.replace(/###(.*?)###/g, '<strong>$1</strong>');
-      }
-
-      html += `<div class="vcp-tool-result-item">`;
-      html += `<span class="vcp-tool-result-item-key">${escapeHtml(key)}:</span> `;
-      html += `<span class="vcp-tool-result-item-value">${processedValue}</span>`;
-      html += `</div>`;
-    });
-    html += `</div>`;
-
-    if (otherContent.length > 0) {
-      html += `<div class="vcp-tool-result-footer"><pre>${escapeHtml(otherContent.join('\n'))}</pre></div>`;
-    }
-
-    html += `</div>`;
-    html += `</div>`;
-
-    return html;
-  });
-}
-
-/**
  * 预处理AI聊天内容
  * @param {string} text - 原始文本内容
  * @returns {string} 处理后的文本
@@ -222,8 +145,6 @@ export function preprocessAIMessageContent(text) {
 
   // 步骤3：转换特殊块为HTML
   processed = transformToolUseBlocks(processed);
-  // 暂时注释掉工具结果转换，本轮不处理
-  // processed = transformToolResultBlocks(processed);
   processed = transformMaidDiaryBlocks(processed);
 
   // 步骤4：恢复保护的代码块

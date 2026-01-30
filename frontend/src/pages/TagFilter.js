@@ -22,7 +22,6 @@ import apiClient from '../services/apiClient';
 import DocumentGrid from '../components/DocumentGrid';
 import DocumentFormModal from '../components/DocumentFormModal';
 import {
-  fetchAvailableTags,
   fetchByTags,
   fetchAllDocumentsPaged,
   selectSelectedTags,

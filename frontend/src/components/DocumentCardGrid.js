@@ -12,7 +12,6 @@ import DocumentCard from './DocumentCard';
 import DocumentDetailModal from './DocumentDetailModal';
 import {
   fetchDocuments,
-  fetchDocumentById,
   selectAllDocuments,
   selectDocumentsStatus,
   selectDocumentsError,

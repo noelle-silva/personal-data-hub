@@ -20,9 +20,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
-  Cancel as CancelIcon,
   Note as NoteIcon,
-  Launch as LaunchIcon,
   MoreVert as MoreVertIcon,
   Add as AddIcon,
   DragIndicator as DragIndicatorIcon,
@@ -40,7 +38,6 @@ import DocumentCopyButton from './DocumentCopyButton';
 import AttachmentCopyButton from './AttachmentCopyButton';
 import { useDispatch } from 'react-redux';
 import {
-  fetchDocumentById,
   openWindowAndFetch,
   openQuoteWindowAndFetch,
   openAttachmentWindowAndFetch
@@ -50,8 +47,6 @@ import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import CodeEditor from './CodeEditor';
-import MarkdownPreview from './MarkdownPreview';
-import { useMediaQuery } from '@mui/material';
 import DocumentFormModal from './DocumentFormModal';
 import QuoteFormModal from './QuoteFormModal';
 import { createDocument as createDocumentService } from '../services/documents';
@@ -122,25 +117,6 @@ const RightContentBox = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0, // 允许flex子项收缩
-}));
-
-// 关系模块容器
-const RelationModule = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
-  borderRadius: 16,
-  padding: theme.spacing(2),
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(1.5),
-}));
-
-// 关系模块标题
-const RelationModuleTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  color: theme.palette.primary.main,
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
 }));
 
 // 引用文档列表容器
@@ -215,14 +191,6 @@ const ReferencedQuoteItem = styled(Box)(({ theme }) => ({
   },
 }));
 
-// 操作按钮容器
-const ActionsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: theme.spacing(1),
-}));
-
 // 空状态容器
 const EmptyStateContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -251,91 +219,6 @@ const MetaInfoContainer = styled(Box)(({ theme }) => ({
   justifyContent: 'space-between',
   flexWrap: 'wrap',
   gap: theme.spacing(1),
-}));
-
-// 左侧栏容器样式 - 已弃用，使用RelationsBox替代
-const LeftPanelContainer = styled(Box)(({ theme }) => ({
-  width: '40%',
-  minWidth: 300,
-  paddingRight: theme.spacing(2),
-  height: '100%',
-  overflowY: 'auto',
-  borderRight: `1px solid ${theme.palette.border}`,
-  '&::-webkit-scrollbar': {
-    width: 8,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 4,
-  },
-}));
-
-// 右侧栏容器样式
-const RightPanelContainer = styled(Box)(({ theme }) => ({
-  width: '60%',
-  paddingLeft: theme.spacing(2),
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-}));
-
-// 右侧栏内容区域样式
-const RightPanelContent = styled(Box)(({ theme }) => ({
-  flexGrow: 1,
-  overflowY: 'auto',
-  overscrollBehavior: 'contain',
-  '&::-webkit-scrollbar': {
-    width: 8,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 4,
-  },
-}));
-
-// 样式化的引用文档标题
-const ReferencedDocsTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  marginBottom: theme.spacing(2),
-  color: theme.palette.primary.main,
-}));
-
-// 样式化的引用文档列表
-const ReferencedDocsList = styled(Box)(({ theme }) => ({
-  display: 'grid',
-  gap: theme.spacing(2),
-}));
-
-// 样式化的引用附件标题
-const ReferencedAttachmentsTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  marginBottom: theme.spacing(2),
-  color: theme.palette.primary.main,
-}));
-
-// 样式化的引用附件列表
-const ReferencedAttachmentsList = styled(Box)(({ theme }) => ({
-  display: 'grid',
-  gap: theme.spacing(2),
-}));
-
-// 样式化的引用引用体标题
-const ReferencedQuotesTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  marginBottom: theme.spacing(2),
-  color: theme.palette.primary.main,
-}));
-
-// 样式化的引用引用体列表
-const ReferencedQuotesList = styled(Box)(({ theme }) => ({
-  display: 'grid',
-  gap: theme.spacing(2),
 }));
 
 // 编辑器容器 - 大屏使用 Grid，小屏使用 Flex
@@ -817,7 +700,6 @@ const QuoteDetailContent = ({
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
-  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     description: '',
@@ -836,21 +718,21 @@ const QuoteDetailContent = ({
   
   // 引用列表相关状态
   const [referencedDocuments, setReferencedDocuments] = useState([]);
-  const [originalReferencedIds, setOriginalReferencedIds] = useState([]);
+  const [, setOriginalReferencedIds] = useState([]);
   const [isReferencesDirty, setIsReferencesDirty] = useState(false);
   const [isDocumentPickerOpen, setIsDocumentPickerOpen] = useState(false);
   const [isReferencesEditing, setIsReferencesEditing] = useState(false);
   
   // 引用附件相关状态
   const [referencedAttachments, setReferencedAttachments] = useState([]);
-  const [originalAttachmentIds, setOriginalAttachmentIds] = useState([]);
+  const [, setOriginalAttachmentIds] = useState([]);
   const [isAttachmentReferencesDirty, setIsAttachmentReferencesDirty] = useState(false);
   const [isAttachmentPickerOpen, setIsAttachmentPickerOpen] = useState(false);
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   
   // 引用引用体相关状态
   const [referencedQuotes, setReferencedQuotes] = useState([]);
-  const [originalReferencedQuoteIds, setOriginalReferencedQuoteIds] = useState([]);
+  const [, setOriginalReferencedQuoteIds] = useState([]);
   const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
   const [isQuotePickerOpen, setIsQuotePickerOpen] = useState(false);
   const [isQuoteReferencesEditing, setIsQuoteReferencesEditing] = useState(false);
@@ -949,13 +831,6 @@ const QuoteDetailContent = ({
     if (error) setError('');
   };
 
-  // 处理标签变化
-  const handleTagsChange = (event) => {
-    const tagsString = event.target.value;
-    const tags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag);
-    handleFieldChange('tags', tags);
-  };
-  
   // 添加标签 - 与DocumentDetailContent保持一致
   const handleAddTag = () => {
     if (tagInput.trim() && !editForm.tags.includes(tagInput.trim())) {
@@ -980,23 +855,6 @@ const QuoteDetailContent = ({
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddTag();
-    }
-  };
-
-  // 处理查看文档
-  const handleViewDocument = async (doc) => {
-    const docId = doc._id || doc;
-    const title = doc.title || '查看详情';
-    
-    try {
-      // 使用新的 openWindowAndFetch thunk，原子化创建窗口和获取文档
-      await dispatch(openWindowAndFetch({
-        docId,
-        label: title,
-        source: 'quote-detail'
-      })).unwrap();
-    } catch (error) {
-      console.error('获取文档详情失败:', error);
     }
   };
 

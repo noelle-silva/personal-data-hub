@@ -30,7 +30,6 @@ import {
   deleteAttachmentById
 } from '../store/attachmentsSlice';
 import { getPlaceholderImage } from '../services/attachments';
-import AttachmentCopyButton from './AttachmentCopyButton';
 
 // 样式化卡片
 const StyledCard = styled(Card)(({ theme }) => ({

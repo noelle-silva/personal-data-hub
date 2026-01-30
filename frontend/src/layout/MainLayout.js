@@ -36,10 +36,6 @@ import GlobalActionPortal from '../components/GlobalActionPortal';
 import ShortcutRuntime from '../shortcuts/ShortcutRuntime';
 import { closeDropdown } from '../store/searchSlice';
 import {
-  openDocumentModal,
-  fetchDocumentById
-} from '../store/documentsSlice';
-import {
   openWindowAndFetch,
   openQuoteWindowAndFetch,
   openAttachmentWindowAndFetch

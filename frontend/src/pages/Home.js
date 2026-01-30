@@ -293,7 +293,7 @@ const Home = () => {
   // 处理删除文档
   const handleDeleteDocument = async (id) => {
     try {
-      const response = await apiClient.delete(`/documents/${id}`);
+      await apiClient.delete(`/documents/${id}`);
 
       console.log('文档删除成功');
       

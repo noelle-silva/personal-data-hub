@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -45,6 +45,21 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
   const [displayText, setDisplayText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentComboRef = useRef('');
+  const onChangeRef = useRef(onChange);
+  const onCancelRecordingRef = useRef(onCancelRecording);
+
+  useEffect(() => {
+    currentComboRef.current = currentCombo;
+  }, [currentCombo]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    onCancelRecordingRef.current = onCancelRecording;
+  }, [onCancelRecording]);
 
   // 初始化显示文本
   useEffect(() => {
@@ -54,13 +69,13 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
   }, [value, isRecording]);
 
   // 清理录制状态
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     setIsRecording(false);
     if (recordingTimeoutRef.current) {
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
-  };
+  }, []);
 
   // 开始录制
   const startRecording = () => {
@@ -83,7 +98,7 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
   };
 
   // 处理键盘事件
-  const handleKeyDown = (event: KeyboardEvent) => {
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!isRecording) return;
 
     // 阻止默认行为和冒泡
@@ -95,7 +110,7 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
       stopRecording();
       setCurrentCombo('');
       setDisplayText('已取消录制');
-      onCancelRecording?.();
+      onCancelRecordingRef.current?.();
       return;
     }
 
@@ -103,15 +118,15 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
       stopRecording();
       setCurrentCombo('');
       setDisplayText('已清空快捷键');
-      onCancelRecording?.();
+      onCancelRecordingRef.current?.();
       return;
     }
 
     if (event.key === 'Enter') {
-      if (currentCombo) {
+      if (currentComboRef.current) {
         stopRecording();
-        onChange?.(currentCombo);
-        setDisplayText(comboToDisplayText(currentCombo));
+        onChangeRef.current?.(currentComboRef.current);
+        setDisplayText(comboToDisplayText(currentComboRef.current));
       }
       return;
     }
@@ -127,8 +142,8 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
     setDisplayText(comboToDisplayText(combo));
     
     // 实时回传给父组件，确保父组件的 editingCombo 始终与最新录制同步
-    onChange?.(combo);
-  };
+    onChangeRef.current?.(combo);
+  }, [isRecording, stopRecording]);
 
   // 添加/移除键盘事件监听
   useEffect(() => {
@@ -139,7 +154,7 @@ const KeyCaptureInput: React.FC<KeyCaptureInputProps> = ({
         // 不在这里调用 stopRecording，避免录制过程中被意外清理
       };
     }
-  }, [isRecording]); // 移除 currentCombo 依赖，避免每次按键都重新绑定
+  }, [isRecording, handleKeyDown]); // handler 内部使用 ref 读取最新值，避免每次按键都重新绑定
 
   // 清空快捷键
   const handleClear = () => {

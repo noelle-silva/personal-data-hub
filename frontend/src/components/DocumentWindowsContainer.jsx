@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Box, Fab, Typography, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import RestoreIcon from '@mui/icons-material/Restore';
 import CloseIcon from '@mui/icons-material/Close';
 import DocumentWindow from './DocumentWindow';
 import QuoteWindow from './QuoteWindow';
@@ -23,7 +22,6 @@ import {
   closeLimitPrompt,
   fetchWindowDocument,
   fetchWindowQuote,
-  fetchWindowAttachment,
   openWindowAndFetch,
   saveDocumentQuoteReferences
 } from '../store/windowsSlice';

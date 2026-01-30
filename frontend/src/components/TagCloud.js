@@ -114,6 +114,8 @@ const TagCloud = ({ tags = [], onTagClick }) => {
             size={getTagSize(tag.count)}
             color={tag.color || generateRandomColor()}
             variant="outlined"
+            clickable
+            onClick={() => handleTagClick(tag)}
           />
         ))}
       </Box>

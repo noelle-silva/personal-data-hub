@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import parse from 'html-react-parser';
@@ -143,11 +143,11 @@ const MarkdownInlineRenderer = ({
       const attachmentId = node.attribs && node.attribs['data-attachment-id'];
       const action = node.attribs && node.attribs['data-action'];
       const label = node.attribs && node.attribs['data-label'];
-      const variant = node.attribs && node.attribs['data-variant'] || 'primary';
+      const variant = (node.attribs && node.attribs['data-variant']) || 'primary';
       
       // 处理 open-document 动作
       if (action === 'open-document' && docId) {
-        const buttonText = label || node.children && node.children[0] && node.children[0].data || '查看详情';
+        const buttonText = label || (node.children && node.children[0] && node.children[0].data) || '查看详情';
         
         // 创建一个原生按钮元素，使用共享的炫酷样式
         return (
@@ -174,7 +174,7 @@ const MarkdownInlineRenderer = ({
       
       // 处理 open-quote 动作
       if (action === 'open-quote' && quoteId) {
-        const buttonText = label || node.children && node.children[0] && node.children[0].data || '查看引用体';
+        const buttonText = label || (node.children && node.children[0] && node.children[0].data) || '查看引用体';
         
         // 创建一个原生按钮元素，使用引用体专用的炫酷样式
         return (
@@ -201,7 +201,7 @@ const MarkdownInlineRenderer = ({
       
       // 处理 open-attachment 动作
       if (action === 'open-attachment' && attachmentId) {
-        const buttonText = label || node.children && node.children[0] && node.children[0].data || '查看附件';
+        const buttonText = label || (node.children && node.children[0] && node.children[0].data) || '查看附件';
         
         // 创建一个原生按钮元素，使用附件专用的炫酷样式
         return (

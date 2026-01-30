@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { 
@@ -105,7 +105,7 @@ const AttachmentVideo = ({
   const videoRef = useRef(null);
 
   // 加载附件URL（本机网关转发）
-  const loadAttachmentUrl = async () => {
+  const loadAttachmentUrl = useCallback(async () => {
     if (!id) return;
 
     setLoading(true);
@@ -124,10 +124,10 @@ const AttachmentVideo = ({
         onError(err);
       }
     }
-  };
+  }, [id, onError]);
 
   // 处理视频加载成功
-  const handleVideoLoad = (event) => {
+  const handleVideoLoad = useCallback((event) => {
     setLoading(false);
     setError(null);
     setRetryCount(0);
@@ -137,7 +137,7 @@ const AttachmentVideo = ({
     if (onLoad) {
       onLoad(event);
     }
-  };
+  }, [onLoad]);
 
   // 处理视频加载失败
   const handleVideoError = (event) => {
@@ -178,7 +178,7 @@ const AttachmentVideo = ({
   // 组件挂载时加载附件URL
   useEffect(() => {
     loadAttachmentUrl();
-  }, [id, ttl]);
+  }, [loadAttachmentUrl, ttl]);
 
   // 当URL变化时重置状态
   useEffect(() => {
@@ -192,7 +192,7 @@ const AttachmentVideo = ({
         handleVideoLoad();
       }
     }
-  }, [attachmentUrl]);
+  }, [attachmentUrl, handleVideoLoad]);
 
   // 构建样式对象
   const containerStyle = {

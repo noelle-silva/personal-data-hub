@@ -91,9 +91,11 @@ export const clearAuthData = () => {
   // no-op
 };
 
-export default {
+const authService = {
   login,
   getCurrentUser,
   logout,
-  clearAuthData
+  clearAuthData,
 };
+
+export default authService;

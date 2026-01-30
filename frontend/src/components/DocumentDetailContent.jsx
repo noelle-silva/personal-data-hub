@@ -4,7 +4,6 @@ import {
   Typography,
   Chip,
   IconButton,
-  Paper,
   TextField,
   Button,
   Menu,
@@ -33,7 +32,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import apiClient from '../services/apiClient';
 import ListItemText from '@mui/material/ListItemText';
 import NoteIcon from '@mui/icons-material/Note';
-import LaunchIcon from '@mui/icons-material/Launch';
 import UndoIcon from '@mui/icons-material/Undo';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import CodeIcon from '@mui/icons-material/Code';
@@ -79,7 +77,6 @@ import QuoteFormModal from './QuoteFormModal';
 import { createQuote } from '../store/quotesSlice';
 import CodeEditor from './CodeEditor';
 import DocumentFormModal from './DocumentFormModal';
-import { createDocument } from '../store/documentsSlice';
 import { createDocument as createDocumentService } from '../services/documents';
 
 // 内容区域
@@ -127,25 +124,6 @@ const RightContentBox = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   minWidth: 0, // 允许flex子项收缩
-}));
-
-// 关系模块容器
-const RelationModule = styled(Box)(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
-  borderRadius: 16,
-  padding: theme.spacing(2),
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(1.5),
-}));
-
-// 关系模块标题
-const RelationModuleTitle = styled(Typography)(({ theme }) => ({
-  fontWeight: 'bold',
-  color: theme.palette.primary.main,
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
 }));
 
 // 引用体列表容器
@@ -218,14 +196,6 @@ const ReferencedAttachmentItem = styled(Box)(({ theme }) => ({
   '&:hover': {
     backgroundColor: theme.palette.surfaceVariant.dark,
   },
-}));
-
-// 操作按钮容器
-const ActionsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: theme.spacing(1),
 }));
 
 // 空状态容器
@@ -815,7 +785,7 @@ const DocumentDetailContent = ({
   
   // 引用列表相关状态
   const [referencedDocuments, setReferencedDocuments] = useState([]);
-  const [originalReferencedIds, setOriginalReferencedIds] = useState([]);
+  const [, setOriginalReferencedIds] = useState([]);
   const [isReferencesDirty, setIsReferencesDirty] = useState(false);
   const [isDocumentPickerOpen, setIsDocumentPickerOpen] = useState(false);
   const [referencingQuotes, setReferencingQuotes] = useState([]);
@@ -824,7 +794,7 @@ const DocumentDetailContent = ({
   
   // 引用体相关状态
   const [referencedQuotes, setReferencedQuotes] = useState([]);
-  const [originalQuoteIds, setOriginalQuoteIds] = useState([]);
+  const [, setOriginalQuoteIds] = useState([]);
   const [isQuotesEditing, setIsQuotesEditing] = useState(false);
   const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
   const [isQuotePickerOpen, setIsQuotePickerOpen] = useState(false);
@@ -837,7 +807,7 @@ const DocumentDetailContent = ({
   
   // 引用附件相关状态
   const [referencedAttachments, setReferencedAttachments] = useState([]);
-  const [originalAttachmentIds, setOriginalAttachmentIds] = useState([]);
+  const [, setOriginalAttachmentIds] = useState([]);
   const [isAttachmentReferencesDirty, setIsAttachmentReferencesDirty] = useState(false);
   const [isAttachmentPickerOpen, setIsAttachmentPickerOpen] = useState(false);
   

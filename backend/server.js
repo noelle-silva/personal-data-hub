@@ -53,7 +53,11 @@ console.log('==================');
 const app = express();
 
 // 安全中间件
-app.use(helmet());
+app.use(helmet({
+  // 桌面端附件资源需要被 WebView 跨 origin 加载（本机网关随机端口）
+  // Helmet 默认的 CORP: same-origin 会导致附件 200 但被浏览器/WebView 直接拦截
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 /**
  * 连接到MongoDB数据库

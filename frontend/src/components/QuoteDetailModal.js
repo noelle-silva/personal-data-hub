@@ -44,9 +44,6 @@ import {
   openDocumentModal
 } from '../store/documentsSlice';
 import {
-  openWindowAndFetch
-} from '../store/windowsSlice';
-import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -64,7 +61,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useSelector } from 'react-redux';
 import DocumentPickerDialog from './DocumentPickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import CodeEditor from './CodeEditor';
@@ -465,23 +461,6 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
     const tagsString = event.target.value;
     const tags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag);
     handleFieldChange('tags', tags);
-  };
-
-  // 处理查看文档
-  const handleViewDocument = async (doc) => {
-    const docId = doc._id || doc;
-    const title = doc.title || '查看详情';
-    
-    try {
-      // 使用新的 openWindowAndFetch thunk，原子化创建窗口和获取文档
-      await dispatch(openWindowAndFetch({
-        docId,
-        label: title,
-        source: 'quote-detail'
-      })).unwrap();
-    } catch (error) {
-      console.error('获取文档详情失败:', error);
-    }
   };
 
   // 处理保存

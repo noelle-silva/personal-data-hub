@@ -3,8 +3,6 @@ import { Box, Button, Typography, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
   Add as AddIcon,
-  Search as SearchIcon,
-  Tag as TagIcon,
   FormatQuote as QuoteIcon,
   AttachFile as AttachFileIcon,
   Settings as SettingsIcon,

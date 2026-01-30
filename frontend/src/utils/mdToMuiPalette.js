@@ -287,8 +287,10 @@ function getDefaultPalette(mode) {
   }
 }
 
-export default {
+const mdToMuiPaletteUtils = {
   mdToMuiPalette,
   adjustColor,
-  getDefaultPalette
+  getDefaultPalette,
 };
+
+export default mdToMuiPaletteUtils;

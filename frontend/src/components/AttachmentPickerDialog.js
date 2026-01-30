@@ -3,7 +3,7 @@
  * 用于选择现有附件作为引用对象
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,6 @@ import {
   Select,
   MenuItem,
   Checkbox,
-  ListItemText,
   Pagination,
   Box,
   Typography,
@@ -69,11 +68,6 @@ const AttachmentPickerDialog = ({
   // 每页显示数量
   const pageSize = 20;
 
-  // 生成稳定的 excludeIds 键，避免每次渲染都触发重新加载
-  const excludeIdsKey = useMemo(() => {
-    return JSON.stringify(excludeIds.sort());
-  }, [excludeIds]);
-
   // 监听认证错误事件
   // 加载附件列表
   const loadAttachments = useCallback(async () => {
@@ -114,7 +108,7 @@ const AttachmentPickerDialog = ({
     } finally {
       setLoading(false);
     }
-  }, [page, category, searchTerm, excludeIdsKey]);
+  }, [page, category, searchTerm, excludeIds]);
 
   // 初始化和参数变化时加载附件
   useEffect(() => {

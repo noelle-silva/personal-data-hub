@@ -15,6 +15,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import apiClient from '../services/apiClient';
+import { getAttachmentProxyUrl } from '../services/serverConfig';
 import { styled } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
@@ -674,7 +675,10 @@ const QuoteFormModal = ({
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <IconButton
                           size="small"
-                          onClick={() => window.open(`/attachments/${attachment._id}`, '_blank')}
+                          onClick={() => {
+                            const url = getAttachmentProxyUrl(attachment._id);
+                            if (url) window.open(url, '_blank');
+                          }}
                           aria-label="查看附件"
                         >
                           <LaunchIcon fontSize="small" />

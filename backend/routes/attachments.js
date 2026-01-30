@@ -43,8 +43,17 @@ const imageUpload = multer({
 // 配置视频和文档上传的磁盘存储
 const fs = require('fs');
 
+const resolveStoragePath = (dirPath) => {
+  if (!dirPath) return dirPath;
+  if (path.isAbsolute(dirPath)) return dirPath;
+
+  // 相对路径统一相对于项目根目录（与 AttachmentService.resolveStoragePath 对齐）
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  return path.resolve(projectRoot, dirPath);
+};
+
 // 确保临时目录存在
-const tmpDir = process.env.ATTACHMENTS_TMP_DIR || 'backend/attachments/tmp';
+const tmpDir = resolveStoragePath(process.env.ATTACHMENTS_TMP_DIR || 'backend/attachments/tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
 }

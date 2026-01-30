@@ -1,13 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { 
   ShortcutActionId, 
-  ShortcutEntry, 
   ShortcutMap, 
   ShortcutScope, 
   ShortcutOptions,
   ActionMetadata,
   ShortcutConflict,
-  Platform
 } from '../shortcuts/types';
 import { getPlatform } from '../shortcuts/Persistence';
 

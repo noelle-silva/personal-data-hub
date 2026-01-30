@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Box, CircularProgress, Typography, IconButton, Fab } from '@mui/material';
+import { Box, CircularProgress, Typography, Fab } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { NavigateBefore as NavigateBeforeIcon, NavigateNext as NavigateNextIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
 import ePub from 'epubjs';
 
 // 全局注册 epub.js 的 worker，避免重复加载
@@ -28,17 +28,6 @@ const EpubViewerArea = styled(Box)(({ theme }) => ({
   minHeight: 0, // Crucial for flexbox to allow shrinking
 }));
 
-// 样式化翻页控件容器
-const NavigationControls = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  width: '100%',
-  padding: theme.spacing(1),
-  backgroundColor: theme.palette.background.paper,
-  borderTop: `1px solid ${theme.palette.divider}`,
-}));
-
 /**
  * EPUB 文件渲染组件
  *
@@ -54,7 +43,6 @@ const EpubViewer = ({
   className
 }) => {
   const viewerRef = useRef(null);
-  const [rendition, setRendition] = useState(null);
   const [renditionReady, setRenditionReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -292,7 +280,6 @@ const EpubViewer = ({
           // 检查组件是否仍然挂载
           if (isMountedRef.current) {
             console.log('[EpubViewer] Rendition displayed successfully.');
-            setRendition(renditionInstance);
             setRenditionReady(true);
             setIsLoading(false); // 确保加载遮罩移除
           }
@@ -323,7 +310,7 @@ const EpubViewer = ({
       
     // 返回清理函数，确保在组件卸载时正确清理
     return cleanupEpub;
-  }, [src, cleanupEpub]);
+  }, [src, cleanupEpub, onError]);
 
   // 当组件卸载时，清理状态
   useEffect(() => {

@@ -98,11 +98,13 @@ export const searchPages = async (searchTerm, options = {}) => {
   return response.data;
 };
 
-export default {
+const customPagesService = {
   listPages,
   getByName,
   createPage,
   updatePage,
   deletePage,
-  searchPages
+  searchPages,
 };
+
+export default customPagesService;

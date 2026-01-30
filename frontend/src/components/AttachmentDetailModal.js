@@ -468,7 +468,7 @@ const AttachmentDetailModal = () => {
       setIsEpubLoading(true);
       setEpubError(null);
     }
-  }, [modalOpen]); // 移除 epubRendition 依赖，避免在 rendition 变化时重复执行清理
+  }, [modalOpen, epubRendition]);
 
   // EPUB 实例引用
   const epubBookRef = useRef(null);

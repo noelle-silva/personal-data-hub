@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -17,11 +17,9 @@ import {
   IconButton,
   Paper,
   Avatar,
-  useTheme,
   CircularProgress,
   Switch,
   FormControlLabel,
-  Divider,
   Tooltip,
   Slider
 } from '@mui/material';
@@ -31,10 +29,8 @@ import {
   Stop as StopIcon,
   SmartToy as BotIcon,
   Person as PersonIcon,
-  Settings as SettingsIcon,
   Tune as TuneIcon,
   Refresh as RefreshIcon,
-  History as HistoryIcon,
   Add as AddIcon
 } from '@mui/icons-material';
 import aiService from '../services/ai';
@@ -83,7 +79,6 @@ const ControlPanel = styled(Card)(({ theme }) => ({
 }));
 
 const AIChat = () => {
-  const theme = useTheme();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -144,7 +139,7 @@ const AIChat = () => {
   }, [selectedModel]);
 
   // 加载AI角色列表
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       setRolesLoading(true);
       const response = await aiService.listRoles();
@@ -156,15 +151,15 @@ const AIChat = () => {
     } finally {
       setRolesLoading(false);
     }
-  };
+  }, []);
 
   // 初始化时加载角色列表
   useEffect(() => {
     loadRoles();
-  }, []);
+  }, [loadRoles]);
 
   // 加载聊天历史列表
-  const loadChatHistories = async () => {
+  const loadChatHistories = useCallback(async () => {
     try {
       setHistoriesLoading(true);
       const response = await aiService.listChatHistories({
@@ -179,7 +174,7 @@ const AIChat = () => {
     } finally {
       setHistoriesLoading(false);
     }
-  };
+  }, [selectedRoleId]);
 
   // 当页面获得焦点时刷新角色列表（从设置页返回时）
   useEffect(() => {
@@ -202,7 +197,7 @@ const AIChat = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [loadRoles, loadChatHistories]);
 
   // 监听供应商切换事件，刷新模型列表
   useEffect(() => {
@@ -246,7 +241,7 @@ const AIChat = () => {
     // 切换角色时，清除选中的聊天历史
     setSelectedHistoryId('');
     setMessages([]);
-  }, [selectedRoleId]);
+  }, [selectedRoleId, loadChatHistories]);
 
   // 从localStorage恢复上次选择的角色和温度
   useEffect(() => {
