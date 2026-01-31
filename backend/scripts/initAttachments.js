@@ -3,8 +3,7 @@
  * 扫描现有图片文件并创建对应的元数据记录
  */
 
-require('dotenv').config({ path: './db.env' });
-require('dotenv').config({ path: '../file.env' });
+require('../config/env');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const path = require('path');

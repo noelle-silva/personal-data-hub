@@ -5,10 +5,7 @@
 
 const express = require('express');
 const path = require('path');
-require('dotenv').config({ path: './db.env' });
-require('dotenv').config({ path: '../port.env' });
-require('dotenv').config({ path: '../file.env' });
-require('dotenv').config({ path: '../login.env' });
+const config = require('./config/config');
 
 // 导入路由和中间件
 const authRoutes = require('./routes/auth');
@@ -25,14 +22,14 @@ const helmet = require('helmet');
 
 // 输出关键配置信息用于调试
 console.log('=== 附件系统配置检查 ===');
-console.log('ATTACHMENTS_ENABLE_RANGE:', process.env.ATTACHMENTS_ENABLE_RANGE);
-console.log('ATTACHMENTS_VIDEO_DIR:', process.env.ATTACHMENTS_VIDEO_DIR);
-console.log('ATTACHMENTS_CACHE_TTL:', process.env.ATTACHMENTS_CACHE_TTL);
+console.log('ATTACHMENTS_ENABLE_RANGE:', config.attachments.enableRange);
+console.log('ATTACHMENTS_VIDEO_DIR:', config.attachments.dirs.video);
+console.log('ATTACHMENTS_CACHE_TTL:', config.attachments.cacheTtl);
 console.log('========================');
 
 // 输出自定义页面配置信息
 console.log('=== 自定义页面配置检查 ===');
-console.log('CUSTOM_PAGE_COLLECTION:', process.env.CUSTOM_PAGE_COLLECTION || 'custom-pages');
+console.log('CUSTOM_PAGE_COLLECTION:', config.mongo.collections.customPages);
 console.log('========================');
 
 // 导入AI配置服务
@@ -43,8 +40,8 @@ console.log('=== AI配置检查 ===');
 console.log('AI_ENABLED:', aiConfigService.isEnabled());
 console.log('AI_CURRENT_PROVIDER:', aiConfigService.getConfig().current || '未设置');
 console.log('AI_PROVIDERS_COUNT:', Object.keys(aiConfigService.getProviders()).length);
-console.log('AI_ROLES_COLLECTION:', process.env.AI_ROLES_COLLECTION || 'AI-roles');
-console.log('AI_CHAT_HISTORY_COLLECTION:', process.env.AI_CHAT_HISTORY_COLLECTION || 'ai-chat-history');
+console.log('AI_ROLES_COLLECTION:', config.mongo.collections.aiRoles);
+console.log('AI_CHAT_HISTORY_COLLECTION:', config.mongo.collections.aiChatHistory);
 console.log('==================');
 
 /**
@@ -69,7 +66,7 @@ connectDB();
  */
 
 // 从环境变量获取全局请求大小限制，默认为10MB
-const maxRequestBodySize = process.env.MAX_REQUEST_BODY_SIZE || '10mb';
+const maxRequestBodySize = config.server.maxRequestBodySize;
 
 // 解析JSON请求体
 app.use(express.json({ limit: maxRequestBodySize }));
@@ -235,25 +232,25 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // 默认服务器错误
+// 默认服务器错误
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || '服务器内部错误',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    ...(config.nodeEnv === 'development' && { stack: err.stack })
   });
 });
 
 /**
  * 获取端口号
  */
-const PORT = process.env.BACKEND_PORT || 5000;
+const PORT = config.server.port;
 
 /**
  * 启动服务器
  */
 const server = app.listen(PORT, () => {
   console.log(`服务器运行在端口 ${PORT}`);
-  console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`环境: ${config.nodeEnv}`);
   console.log(`API文档: http://localhost:${PORT}/api`);
   console.log(`健康检查: http://localhost:${PORT}/health`);
 });

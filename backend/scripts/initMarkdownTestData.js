@@ -4,7 +4,7 @@
  */
 
 const mongoose = require('mongoose');
-require('dotenv').config({ path: './db.env' });
+require('../config/env');
 const Document = require('../models/Document');
 
 // 测试 Markdown 内容

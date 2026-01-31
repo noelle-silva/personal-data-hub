@@ -4,7 +4,6 @@
  */
 
 const mongoose = require('mongoose');
-require('dotenv').config({ path: './db.env' });
 
 /**
  * 文档Schema定义

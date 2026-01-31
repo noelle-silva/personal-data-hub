@@ -3,7 +3,7 @@
  * 基于现有文档随机创建示例引用体数据
  */
 
-require('dotenv').config({ path: '../db.env' });
+require('../config/env');
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');

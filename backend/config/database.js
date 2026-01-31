@@ -4,7 +4,7 @@
  */
 
 const mongoose = require('mongoose');
-require('dotenv').config({ path: './db.env' });
+const config = require('./config');
 
 /**
  * 连接到MongoDB数据库
@@ -13,7 +13,7 @@ require('dotenv').config({ path: './db.env' });
 const connectDB = async () => {
   try {
     // 从环境变量获取数据库连接字符串
-    const mongoURI = process.env.MONGODB_URI;
+    const mongoURI = config.mongo.uri;
     
     if (!mongoURI) {
       throw new Error('MONGODB_URI环境变量未定义');
@@ -30,7 +30,7 @@ const connectDB = async () => {
     
     console.log(`MongoDB连接成功: ${conn.connection.host}`);
     console.log(`使用数据库: ${conn.connection.name}`);
-    console.log(`使用集合: ${process.env.DOCUMENT_COLLECTION || 'documents'}`);
+    console.log(`使用集合: ${config.mongo.collections.documents}`);
     
     // 监听连接事件
     mongoose.connection.on('error', (err) => {

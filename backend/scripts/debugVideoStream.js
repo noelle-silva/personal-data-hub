@@ -7,8 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 加载环境变量
-require('dotenv').config({ path: '../db.env' });
-require('dotenv').config({ path: '../../file.env' });
+require('../config/env');
 
 const attachmentService = require('../services/attachmentService');
 const Attachment = require('../models/Attachment');

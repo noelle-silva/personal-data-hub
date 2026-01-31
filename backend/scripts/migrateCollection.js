@@ -5,7 +5,7 @@
  */
 
 const mongoose = require('mongoose');
-require('dotenv').config({ path: '../db.env' });
+require('../config/env');
 
 /**
  * 集合迁移类

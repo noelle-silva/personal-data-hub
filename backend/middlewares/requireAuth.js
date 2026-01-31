@@ -4,6 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
+const config = require('../config/config');
 
 /**
  * JWT 认证中间件
@@ -30,7 +31,7 @@ const requireAuth = (req, res, next) => {
     }
 
     // 验证 JWT Token
-    const jwtSecret = process.env.JWT_SECRET;
+    const jwtSecret = config.auth.jwtSecret;
     if (!jwtSecret) {
       console.error('JWT_SECRET 环境变量未配置');
       return res.status(500).json({

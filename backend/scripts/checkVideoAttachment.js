@@ -6,7 +6,7 @@
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config({ path: '../file.env' });
+require('../config/env');
 
 // 导入附件模型
 const Attachment = require('../models/Attachment');

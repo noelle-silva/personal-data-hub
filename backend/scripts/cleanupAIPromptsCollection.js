@@ -3,7 +3,7 @@
  * 删除或清空 AI_PROMPTS 集合，完成提示词系统的彻底清理
  */
 
-require('dotenv').config({ path: '../db.env' });
+require('../config/env');
 
 const mongoose = require('mongoose');
 

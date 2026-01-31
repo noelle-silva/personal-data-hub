@@ -17,6 +17,7 @@ frontend/package-lock.json
 # 环境变量文件
 backend/.env
 frontend/.env
+.env
 backend/db.env
 port.env
 file.env

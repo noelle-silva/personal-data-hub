@@ -3,7 +3,7 @@
  * 用于将测试数据导入到MongoDB数据库中
  */
 
-require('dotenv').config({ path: './db.env' });
+require('../config/env');
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 

@@ -104,6 +104,19 @@ npm install
 
 ### 3. 配置环境变量
 
+#### 推荐：使用单一 `.env`（更简单）
+
+项目已支持在仓库根目录使用一个统一的 `.env` 文件（后端启动时优先读取）。
+
+```bash
+# 在项目根目录执行
+cp .env.example .env
+```
+
+然后编辑 `.env`，按需修改 MongoDB、端口、附件、登录认证配置即可。
+
+> 兼容说明：旧的 `backend/db.env`、`port.env`、`file.env`、`login.env` 仍然可用；如果同时存在 `.env`，会以 `.env` 为优先。
+
 #### 3.1 数据库配置
 
 复制并配置数据库连接文件：
@@ -195,25 +208,9 @@ JWT_EXPIRES_IN=24h
 
 #### 3.5 AI服务配置
 
-```bash
-# 在项目根目录执行
-cp ai.env.example ai.env
-```
+AI 配置已从环境变量迁移到前端设置页面管理，并由后端以 JSON 文件持久化存储：`backend/config/ai/settings.json`。
 
-编辑 `ai.env` 文件：
-
-```
-# AI 服务配置
-AI_BASE_URL=https://api.openai.com
-AI_API_KEY=your-openai-api-key-here
-AI_DEFAULT_MODEL=gpt-4o-mini
-AI_ENABLED=true
-AI_STREAM_ENABLED=true
-AI_REQUEST_TIMEOUT_MS=60000
-AI_ALLOWED_MODELS=
-AI_MAX_TOKENS=4096
-AI_TEMPERATURE=0.7
-```
+详细说明请参考：`docs/AI配置说明.md`。
 
 ### 4. 启动应用
 
