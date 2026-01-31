@@ -4,6 +4,7 @@
  */
 
 const mongoose = require('mongoose');
+const config = require('../config/config');
 
 /**
  * AI 聊天历史 Schema
@@ -80,7 +81,7 @@ const aiChatHistorySchema = new mongoose.Schema({
 }, {
   timestamps: true,
   // 集合名由环境变量决定，默认为 'ai-chat-history'
-  collection: process.env.AI_CHAT_HISTORY_COLLECTION || 'ai-chat-history'
+  collection: config.mongo.collections.aiChatHistory
 });
 
 // 创建索引

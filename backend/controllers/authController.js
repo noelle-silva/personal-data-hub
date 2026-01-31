@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const config = require('../config/config');
 
 /**
  * 创建登录限流中间件
@@ -15,8 +16,7 @@ const crypto = require('crypto');
 const createLoginRateLimit = () => {
   // 桌面端默认关闭（避免输错几次就被锁 15 分钟）
   // 如需开启：设置 LOGIN_RATE_LIMIT_ENABLED=true
-  const override = (process.env.LOGIN_RATE_LIMIT_ENABLED || '').toLowerCase();
-  if (override !== 'true') return (req, res, next) => next();
+  if (!config.auth.loginRateLimitEnabled) return (req, res, next) => next();
 
   return rateLimit({
     windowMs: 15 * 60 * 1000, // 15分钟
@@ -49,10 +49,10 @@ const login = async (req, res, next) => {
     }
 
     // 获取环境变量中的用户信息
-    const envUsername = process.env.LOGIN_USERNAME;
-    const envPasswordHash = process.env.LOGIN_PASSWORD_HASH;
-    const jwtSecret = process.env.JWT_SECRET;
-    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '24h';
+    const envUsername = config.auth.loginUsername;
+    const envPasswordHash = config.auth.loginPasswordHash;
+    const jwtSecret = config.auth.jwtSecret;
+    const jwtExpiresIn = config.auth.jwtExpiresIn;
 
     // 检查必要的环境变量是否配置
     if (!envUsername || !envPasswordHash || !jwtSecret) {
@@ -68,7 +68,7 @@ const login = async (req, res, next) => {
     }
 
     // 获取或生成管理员用户ID（必须是有效的ObjectId格式）
-    let adminUserId = process.env.ADMIN_USER_ID;
+    let adminUserId = config.auth.adminUserId;
     
     // 如果没有配置ADMIN_USER_ID，则基于用户名和JWT_SECRET生成一个稳定的ObjectId
     if (!adminUserId) {

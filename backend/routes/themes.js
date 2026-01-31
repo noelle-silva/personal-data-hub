@@ -9,6 +9,7 @@ const router = express.Router();
 const WallpaperController = require('../controllers/wallpaperController');
 const ThemeColorController = require('../controllers/themeColorController');
 const requireAuth = require('../middlewares/requireAuth');
+const config = require('../config/config');
 
 /**
  * 配置multer用于壁纸上传
@@ -18,7 +19,7 @@ const wallpaperStorage = multer.memoryStorage();
 // 文件过滤器，只允许图片文件
 const wallpaperFileFilter = (req, file, cb) => {
   // 检查MIME类型
-  const allowedMimeTypes = (process.env.WALLPAPER_ALLOWED_TYPES || 'image/jpeg,image/png,image/webp').split(',');
+  const allowedMimeTypes = config.wallpapers.allowedTypes;
   
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -31,7 +32,7 @@ const wallpaperFileFilter = (req, file, cb) => {
 const wallpaperUpload = multer({
   storage: wallpaperStorage,
   limits: {
-    fileSize: parseInt(process.env.WALLPAPER_MAX_SIZE) || 10485760, // 默认10MB
+    fileSize: config.wallpapers.maxSizeBytes,
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: wallpaperFileFilter

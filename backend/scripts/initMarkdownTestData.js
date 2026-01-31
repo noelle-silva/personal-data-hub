@@ -4,7 +4,7 @@
  */
 
 const mongoose = require('mongoose');
-require('../config/env');
+const config = require('../config/config');
 const Document = require('../models/Document');
 
 // 测试 Markdown 内容
@@ -142,7 +142,7 @@ $$
 async function initMarkdownTestData() {
   try {
     // 连接数据库
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/notes-app');
+    await mongoose.connect(config.mongo.uri || 'mongodb://localhost:27017/notes-app');
     console.log('已连接到 MongoDB');
 
     // 检查是否已存在测试文档

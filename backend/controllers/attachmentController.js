@@ -4,6 +4,7 @@
  */
 
 const attachmentService = require('../services/attachmentService');
+const config = require('../config/config');
 
 /**
  * 附件控制器类
@@ -108,7 +109,7 @@ class AttachmentController {
         'Content-Type': attachment.mimeType,
         'ETag': attachment.hash,
         'Last-Modified': fileInfo.mtime.toUTCString(),
-        'Cache-Control': `private, max-age=${process.env.ATTACHMENTS_CACHE_TTL || 3600}`,
+        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}`,
         'Content-Disposition': contentDisposition
       };
 
@@ -122,7 +123,7 @@ class AttachmentController {
       } else {
         headers['Content-Length'] = fileInfo.size;
         // 即使是200响应，如果启用了Range支持，也添加Accept-Ranges头
-        if (process.env.ATTACHMENTS_ENABLE_RANGE === 'true') {
+        if (config.attachments.enableRange) {
           headers['Accept-Ranges'] = 'bytes';
         }
         res.status(200);
@@ -219,12 +220,12 @@ class AttachmentController {
         'Content-Length': fileInfo.size,
         'ETag': attachment.hash,
         'Last-Modified': fileInfo.mtime.toUTCString(),
-        'Cache-Control': `private, max-age=${process.env.ATTACHMENTS_CACHE_TTL || 3600}`,
+        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}`,
         'Content-Disposition': contentDisposition
       };
 
       // 如果启用了Range支持，添加Accept-Ranges头
-      if (process.env.ATTACHMENTS_ENABLE_RANGE === 'true') {
+      if (config.attachments.enableRange) {
         headers['Accept-Ranges'] = 'bytes';
       }
 

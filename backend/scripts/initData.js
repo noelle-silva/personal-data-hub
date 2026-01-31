@@ -3,7 +3,7 @@
  * 用于将测试数据导入到MongoDB数据库中
  */
 
-require('../config/env');
+const config = require('../config/config');
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 
@@ -250,7 +250,7 @@ const sampleDocuments = [
 async function initializeDatabase() {
   try {
     // 连接到数据库
-    const mongoURI = process.env.MONGODB_URI;
+    const mongoURI = config.mongo.uri;
     if (!mongoURI) {
       throw new Error('MONGODB_URI环境变量未定义');
     }

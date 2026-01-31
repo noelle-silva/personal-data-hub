@@ -3,7 +3,7 @@
  * 扫描现有图片文件并创建对应的元数据记录
  */
 
-require('../config/env');
+const config = require('../config/config');
 const mongoose = require('mongoose');
 const fs = require('fs').promises;
 const path = require('path');
@@ -194,15 +194,15 @@ async function initAttachments() {
     console.log('开始初始化附件数据...');
     
     // 连接数据库
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(config.mongo.uri);
     console.log('数据库连接成功');
     
     // 获取集合名称
-    const attachmentCollection = process.env.ATTACHMENT_COLLECTION || 'attachments';
+    const attachmentCollection = config.mongo.collections.attachments;
     console.log(`使用附件集合: ${attachmentCollection}`);
     
     // 获取图片存储目录
-    const imageDir = process.env.ATTACHMENTS_IMAGE_DIR || 'backend/attachments/images';
+    const imageDir = config.attachments.dirs.image;
     const resolvedImageDir = resolveStoragePath(imageDir);
     console.log(`扫描图片目录: ${resolvedImageDir}`);
     console.log(`项目根目录: ${getProjectRoot()}`);

@@ -7,6 +7,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
 const sharp = require('sharp');
+const config = require('../config/config');
 const Wallpaper = require('../models/Wallpaper');
 const themeColorService = require('./themeColorService');
 
@@ -63,7 +64,7 @@ class WallpaperService {
    * @returns {Boolean} 是否为支持的格式
    */
   static isValidImageFormat(mimeType) {
-    const allowedTypes = (process.env.WALLPAPER_ALLOWED_TYPES || 'image/jpeg,image/png,image/webp').split(',');
+    const allowedTypes = config.wallpapers.allowedTypes;
     return allowedTypes.includes(mimeType);
   }
 

@@ -3,7 +3,7 @@
  * 基于现有文档随机创建示例引用体数据
  */
 
-require('../config/env');
+const config = require('../config/config');
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');
@@ -149,12 +149,12 @@ async function initQuotes() {
     console.log('开始初始化引用体数据...');
     
     // 连接数据库
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(config.mongo.uri);
     console.log('数据库连接成功');
     
     // 获取集合名称
-    const documentCollection = process.env.DOCUMENT_COLLECTION || 'documents';
-    const quoteCollection = process.env.QUOTE_COLLECTION || 'quotes';
+    const documentCollection = config.mongo.collections.documents;
+    const quoteCollection = config.mongo.collections.quotes;
     
     console.log(`使用文档集合: ${documentCollection}`);
     console.log(`使用引用体集合: ${quoteCollection}`);

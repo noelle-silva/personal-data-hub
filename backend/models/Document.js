@@ -4,6 +4,7 @@
  */
 
 const mongoose = require('mongoose');
+const config = require('../config/config');
 
 /**
  * 文档Schema定义
@@ -82,7 +83,7 @@ const documentSchema = new mongoose.Schema(
   },
   {
     // 指定集合名称，从环境变量读取，默认为documents
-    collection: process.env.DOCUMENT_COLLECTION || 'documents',
+    collection: config.mongo.collections.documents,
     
     // 启用时间戳，自动管理createdAt和updatedAt字段
     timestamps: true,

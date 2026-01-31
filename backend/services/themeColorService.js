@@ -7,6 +7,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const sharp = require('sharp');
+const config = require('../config/config');
 const {
   CorePalette,
   QuantizerCelebi,
@@ -20,15 +21,15 @@ const Wallpaper = require('../models/Wallpaper');
 
 // 通用配置阈值（可通过环境变量覆盖）
 const CONFIG = {
-  PRIMARY_MIN_SHARE: parseFloat(process.env.THEME_COLOR_PRIMARY_MIN_SHARE) || 0.18,
-  MIN_SATURATION: parseFloat(process.env.THEME_COLOR_MIN_SATURATION) || 0.28,
-  CLUSTER_K: parseInt(process.env.THEME_COLOR_CLUSTER_K, 10) || 128,
-  TINT_MAX_LIGHT: parseFloat(process.env.THEME_COLOR_TINT_MAX_LIGHT) || 0.02,
-  TINT_MAX_DARK: parseFloat(process.env.THEME_COLOR_TINT_MAX_DARK) || 0.04,
-  NEUTRAL_SAT_THRESHOLD: parseFloat(process.env.THEME_COLOR_NEUTRAL_SAT_THRESHOLD) || 0.08,
-  NEUTRAL_SHARE_THRESHOLD: parseFloat(process.env.THEME_COLOR_NEUTRAL_SHARE) || 0.60,
-  MIN_HUE_DISTANCE: parseFloat(process.env.THEME_COLOR_MIN_HUE_DISTANCE) || 30,
-  TOPN_DIAGNOSTICS: parseInt(process.env.THEME_COLOR_TOPN_DIAGNOSTICS, 10) || 8
+  PRIMARY_MIN_SHARE: config.themeColor.primaryMinShare,
+  MIN_SATURATION: config.themeColor.minSaturation,
+  CLUSTER_K: config.themeColor.clusterK,
+  TINT_MAX_LIGHT: config.themeColor.tintMaxLight,
+  TINT_MAX_DARK: config.themeColor.tintMaxDark,
+  NEUTRAL_SAT_THRESHOLD: config.themeColor.neutralSatThreshold,
+  NEUTRAL_SHARE_THRESHOLD: config.themeColor.neutralShareThreshold,
+  MIN_HUE_DISTANCE: config.themeColor.minHueDistance,
+  TOPN_DIAGNOSTICS: config.themeColor.topnDiagnostics
 };
 
 /**

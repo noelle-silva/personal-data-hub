@@ -4,6 +4,7 @@
  */
 
 const mongoose = require('mongoose');
+const config = require('../config/config');
 
 /**
  * 引用体Schema定义
@@ -75,7 +76,7 @@ const quoteSchema = new mongoose.Schema(
   },
   {
     // 指定集合名称，从环境变量读取，默认为quotes
-    collection: process.env.QUOTE_COLLECTION || 'quotes',
+    collection: config.mongo.collections.quotes,
     
     // 启用时间戳，自动管理createdAt和updatedAt字段
     timestamps: true,

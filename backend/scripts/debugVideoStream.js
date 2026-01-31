@@ -6,15 +6,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// 加载环境变量
-require('../config/env');
+const config = require('../config/config');
 
 const attachmentService = require('../services/attachmentService');
 const Attachment = require('../models/Attachment');
 
 async function debugVideoStream() {
   console.log('=== 调试视频流问题 ===');
-  console.log('ATTACHMENTS_ENABLE_RANGE:', process.env.ATTACHMENTS_ENABLE_RANGE);
+  console.log('ATTACHMENTS_ENABLE_RANGE:', config.attachments.enableRange);
   
   try {
     // 查找第一个视频附件

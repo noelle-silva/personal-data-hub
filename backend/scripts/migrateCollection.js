@@ -5,7 +5,7 @@
  */
 
 const mongoose = require('mongoose');
-require('../config/env');
+const config = require('../config/config');
 
 /**
  * 集合迁移类
@@ -26,12 +26,12 @@ class CollectionMigrator {
    */
   async connectDB() {
     try {
-      const mongoURI = process.env.MONGODB_URI;
+      const mongoURI = config.mongo.uri;
       if (!mongoURI) {
         throw new Error('MONGODB_URI环境变量未定义');
       }
 
-      await mongoose.connect(mongoURI, {
+      await mongoose.connect(config.mongo.uri, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
       });
@@ -183,7 +183,7 @@ async function main() {
   
   // 解析命令行参数
   const sourceCollection = args[0] || 'documents';
-  const targetCollection = args[1] || process.env.DOCUMENT_COLLECTION || 'documents';
+  const targetCollection = args[1] || config.mongo.collections.documents;
   const force = args.includes('--force');
   const help = args.includes('--help') || args.includes('-h');
 

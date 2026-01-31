@@ -6,7 +6,7 @@
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-require('../config/env');
+const config = require('../config/config');
 
 // 导入附件模型
 const Attachment = require('../models/Attachment');
@@ -16,7 +16,7 @@ const Attachment = require('../models/Attachment');
  */
 async function connectDB() {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/document-cards';
+    const mongoUri = config.mongo.uri || 'mongodb://localhost:27017/document-cards';
     await mongoose.connect(mongoUri);
     console.log('MongoDB 连接成功');
   } catch (error) {
@@ -29,9 +29,9 @@ async function connectDB() {
  * 获取类别对应的存储目录
  */
 function getCategoryStorageDir(category) {
-  const imageDir = process.env.ATTACHMENTS_IMAGE_DIR || 'backend/attachments/images';
-  const videoDir = process.env.ATTACHMENTS_VIDEO_DIR || 'backend/attachments/videos';
-  const documentDir = process.env.ATTACHMENTS_FILE_DIR || 'backend/attachments/files';
+  const imageDir = config.attachments.dirs.image;
+  const videoDir = config.attachments.dirs.video;
+  const documentDir = config.attachments.dirs.document;
 
   switch (category) {
     case 'image':
@@ -124,9 +124,9 @@ async function checkAttachment(attachmentId) {
     
     // 4. 检查配置
     console.log('\n⚙️  配置检查:');
-    console.log('  - ATTACHMENTS_ENABLE_RANGE:', process.env.ATTACHMENTS_ENABLE_RANGE);
-    console.log('  - ATTACHMENTS_VIDEO_DIR:', process.env.ATTACHMENTS_VIDEO_DIR);
-    console.log('  - ATTACHMENTS_CACHE_TTL:', process.env.ATTACHMENTS_CACHE_TTL);
+    console.log('  - ATTACHMENTS_ENABLE_RANGE:', config.attachments.enableRange);
+    console.log('  - ATTACHMENTS_VIDEO_DIR:', config.attachments.dirs.video);
+    console.log('  - ATTACHMENTS_CACHE_TTL:', config.attachments.cacheTtl);
     
   } catch (error) {
     console.error('检查附件时出错:', error);

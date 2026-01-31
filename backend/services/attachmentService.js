@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const mime = require('mime-types');
+const config = require('../config/config');
 const Attachment = require('../models/Attachment');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');
@@ -58,10 +59,10 @@ class AttachmentService {
    * @returns {String} 存储目录路径
    */
   getCategoryStorageDir(category) {
-    const imageDir = process.env.ATTACHMENTS_IMAGE_DIR || 'backend/attachments/images';
-    const videoDir = process.env.ATTACHMENTS_VIDEO_DIR || 'backend/attachments/videos';
-    const documentDir = process.env.ATTACHMENTS_FILE_DIR || 'backend/attachments/document-file';
-    const scriptDir = process.env.ATTACHMENTS_SCRIPT_DIR || 'backend/attachments/scripts';
+    const imageDir = config.attachments.dirs.image;
+    const videoDir = config.attachments.dirs.video;
+    const documentDir = config.attachments.dirs.document;
+    const scriptDir = config.attachments.dirs.script;
 
     switch (category) {
       case 'image':
@@ -88,7 +89,7 @@ class AttachmentService {
     const normalizedExtension = extension.toLowerCase();
     
     if (category === 'image') {
-      const allowedTypes = (process.env.ATTACHMENTS_ALLOWED_IMAGE_TYPES || 'image/png,image/jpeg,image/webp,image/gif').split(',');
+      const allowedTypes = config.attachments.allowedTypes.image;
       const allowedExtensions = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
       
       return allowedTypes.includes(mimeType) &&
@@ -96,7 +97,7 @@ class AttachmentService {
     }
     
     if (category === 'video') {
-      const allowedTypes = (process.env.ATTACHMENTS_ALLOWED_VIDEO_TYPES || 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv').split(',');
+      const allowedTypes = config.attachments.allowedTypes.video;
       const allowedExtensions = ['mp4', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'wmv', 'flv', 'mkv'];
       
       return allowedTypes.includes(mimeType) &&
@@ -104,7 +105,7 @@ class AttachmentService {
     }
     
     if (category === 'document') {
-      const allowedTypes = (process.env.ATTACHMENTS_ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').split(',');
+      const allowedTypes = config.attachments.allowedTypes.document;
       const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'xls', 'xlsx', 'epub'];
       
       return allowedTypes.includes(mimeType) &&
@@ -112,7 +113,7 @@ class AttachmentService {
     }
 
     if (category === 'script') {
-      const allowedTypes = (process.env.ATTACHMENTS_ALLOWED_SCRIPT_TYPES || 'text/x-python,application/x-msdos-program,text/x-shellscript,application/javascript,text/x-c++src,application/x-msdownload').split(',');
+      const allowedTypes = config.attachments.allowedTypes.script;
       const allowedExtensions = ['py', 'sh', 'bat', 'js', 'cpp', 'exe', 'ps1'];
       
       return allowedTypes.includes(mimeType) &&
@@ -130,19 +131,19 @@ class AttachmentService {
    */
   getMaxFileSize(category) {
     if (category === 'image') {
-      return parseInt(process.env.ATTACHMENTS_MAX_IMAGE_SIZE) || 10485760; // 默认10MB
+      return config.attachments.maxSizeBytes.image;
     }
     
     if (category === 'video') {
-      return parseInt(process.env.ATTACHMENTS_MAX_VIDEO_SIZE) || 1073741824; // 默认1GB
+      return config.attachments.maxSizeBytes.video;
     }
     
     if (category === 'document') {
-      return parseInt(process.env.ATTACHMENTS_MAX_DOCUMENT_SIZE) || 52428800; // 默认50MB
+      return config.attachments.maxSizeBytes.document;
     }
 
     if (category === 'script') {
-      return parseInt(process.env.ATTACHMENTS_MAX_SCRIPT_SIZE) || 10485760; // 默认10MB
+      return config.attachments.maxSizeBytes.script;
     }
     
     // 默认大小
@@ -265,7 +266,7 @@ class AttachmentService {
       const hash = await this.calculateFileHash(filePath);
       
       // 检查是否启用去重
-      const enableDeduplication = process.env.ATTACHMENTS_ENABLE_DEDUPLICATION === 'true';
+      const enableDeduplication = config.attachments.enableDeduplication;
       if (enableDeduplication) {
         const existingAttachment = await Attachment.findByHash(hash);
         if (existingAttachment) {
@@ -325,7 +326,7 @@ class AttachmentService {
    */
   getAttachmentFilePath(attachment) {
     // 使用数据库中存储的 relativeDir 来构建路径，而不是依赖 category 的 switch-case
-    const baseDir = this.resolveStoragePath(process.env.ATTACHMENTS_BASE_DIR || 'backend/attachments');
+    const baseDir = this.resolveStoragePath(config.attachments.baseDir);
     return path.join(baseDir, attachment.relativeDir, attachment.diskFilename);
   }
 
@@ -608,7 +609,7 @@ class AttachmentService {
       }
       
       // 检查是否启用Range支持
-      const enableRange = process.env.ATTACHMENTS_ENABLE_RANGE === 'true';
+      const enableRange = config.attachments.enableRange;
       console.log(`[getAttachmentStream] Range支持: ${enableRange}`);
       
       // 如果没有Range请求头或未启用Range支持，返回完整文件流
@@ -929,21 +930,21 @@ class AttachmentService {
     return {
       image: {
         maxSize: this.getMaxFileSize('image'),
-        allowedTypes: (process.env.ATTACHMENTS_ALLOWED_IMAGE_TYPES || 'image/png,image/jpeg,image/webp,image/gif').split(','),
-        acceptString: process.env.ATTACHMENTS_ALLOWED_IMAGE_TYPES || 'image/png,image/jpeg,image/webp,image/gif',
-        maxFiles: parseInt(process.env.ATTACHMENTS_MAX_IMAGE_FILES) || 10
+        allowedTypes: config.attachments.allowedTypes.image,
+        acceptString: config.attachments.allowedTypes.image.join(','),
+        maxFiles: config.attachments.maxFiles.image
       },
       video: {
         maxSize: this.getMaxFileSize('video'),
-        allowedTypes: (process.env.ATTACHMENTS_ALLOWED_VIDEO_TYPES || 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv').split(','),
-        acceptString: process.env.ATTACHMENTS_ALLOWED_VIDEO_TYPES || 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv',
-        maxFiles: parseInt(process.env.ATTACHMENTS_MAX_VIDEO_FILES) || 3
+        allowedTypes: config.attachments.allowedTypes.video,
+        acceptString: config.attachments.allowedTypes.video.join(','),
+        maxFiles: config.attachments.maxFiles.video
       },
       document: {
         maxSize: this.getMaxFileSize('document'),
-        allowedTypes: (process.env.ATTACHMENTS_ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').split(','),
-        acceptString: process.env.ATTACHMENTS_ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        maxFiles: parseInt(process.env.ATTACHMENTS_MAX_DOCUMENT_FILES) || 10
+        allowedTypes: config.attachments.allowedTypes.document,
+        acceptString: config.attachments.allowedTypes.document.join(','),
+        maxFiles: config.attachments.maxFiles.document
       }
     };
   }

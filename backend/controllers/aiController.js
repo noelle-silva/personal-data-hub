@@ -7,6 +7,7 @@ const AIRole = require('../models/AIRole');
 const AIChatHistory = require('../models/AIChatHistory');
 const aiChatHistoryController = require('./aiChatHistoryController');
 const aiConfigService = require('../config/ai/configService');
+const config = require('../config/config');
 
 /**
  * AI 控制器类
@@ -107,7 +108,7 @@ class AIController {
     // 清理可能的空行
     cleaned = cleaned.replace(/^\n+|\n+$/g, '');
     
-    if (process.env.DEBUG_EPHEMERAL_INJECTION === 'true' && cleaned !== content) {
+    if (config.debug.ephemeralInjection && cleaned !== content) {
       console.log('[DEBUG] 兜底剥离注入内容:', {
         originalLength: content.length,
         cleanedLength: cleaned.length,
@@ -416,7 +417,7 @@ class AIController {
           const originalContent = processedMessages[lastUserMessageIndex].content;
           processedMessages[lastUserMessageIndex].content = `${ephemeral_injection.content}\n\n${originalContent}`;
           
-          if (process.env.DEBUG_EPHEMERAL_INJECTION === 'true') {
+          if (config.debug.ephemeralInjection) {
             console.log('[DEBUG] 临时注入应用:', {
               type: ephemeral_injection.type,
               injectionLength: ephemeral_injection.content.length,
@@ -433,7 +434,7 @@ class AIController {
       }
 
       // 调试日志：输出系统提示词信息（验证用）
-      if (process.env.DEBUG_SYSTEM_PROMPT === 'true' && processedMessages.length > 0) {
+      if (config.debug.systemPrompt && processedMessages.length > 0) {
         const firstMessage = processedMessages[0];
         console.log('[DEBUG] 系统提示词注入结果:', {
           role: firstMessage.role,

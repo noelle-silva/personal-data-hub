@@ -3,13 +3,13 @@
  * 删除或清空 AI_PROMPTS 集合，完成提示词系统的彻底清理
  */
 
-require('../config/env');
+const config = require('../config/config');
 
 const mongoose = require('mongoose');
 
 // 从现有连接字符串中提取认证信息
 const getAuthOptions = () => {
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/personal-data-hub';
+  const uri = config.mongo.uri || 'mongodb://localhost:27017/personal-data-hub';
   const url = new URL(uri);
   
   return {
@@ -25,7 +25,7 @@ const getAuthOptions = () => {
 const connectDB = async () => {
   try {
     const authOptions = getAuthOptions();
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/personal-data-hub', authOptions);
+    const conn = await mongoose.connect(config.mongo.uri || 'mongodb://localhost:27017/personal-data-hub', authOptions);
     console.log(`MongoDB 连接成功: ${conn.connection.host}`);
   } catch (error) {
     console.error('MongoDB 连接失败:', error);
@@ -41,7 +41,7 @@ const cleanupAIPromptsCollection = async () => {
     console.log('开始清理 AI 提示词集合...');
     
     // 获取集合名称
-    const collectionName = process.env.AI_PROMPTS_COLLECTION || 'AI-prompts';
+    const collectionName = config.mongo.collections.aiPrompts;
     console.log(`目标集合: ${collectionName}`);
     
     // 尝试直接操作集合，如果不存在会自动处理错误

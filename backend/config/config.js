@@ -59,6 +59,8 @@ const config = Object.freeze({
     loginPasswordHash: process.env.LOGIN_PASSWORD_HASH,
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    adminUserId: process.env.ADMIN_USER_ID || null,
+    loginRateLimitEnabled: toBool(process.env.LOGIN_RATE_LIMIT_ENABLED, false),
   }),
 
   attachments: Object.freeze({
@@ -94,10 +96,15 @@ const config = Object.freeze({
     maxFiles: Object.freeze({
       image: toInt(process.env.ATTACHMENTS_MAX_IMAGE_FILES, 10),
       video: toInt(process.env.ATTACHMENTS_MAX_VIDEO_FILES, 3),
+      document: toInt(process.env.ATTACHMENTS_MAX_DOCUMENT_FILES, 10),
+      script: toInt(process.env.ATTACHMENTS_MAX_SCRIPT_FILES, 10),
     }),
     enableDeduplication: toBool(process.env.ATTACHMENTS_ENABLE_DEDUPLICATION, false),
     enableRange: toBool(process.env.ATTACHMENTS_ENABLE_RANGE, false),
     cacheTtl: process.env.ATTACHMENTS_CACHE_TTL,
+    secret: process.env.ATTACHMENTS_SECRET || null,
+    bearerToken: process.env.ATTACHMENTS_BEARER_TOKEN || null,
+    signedUrlTtlSeconds: toInt(process.env.ATTACHMENTS_SIGNED_URL_TTL, 3600),
   }),
 
   wallpapers: Object.freeze({
@@ -116,7 +123,11 @@ const config = Object.freeze({
     minHueDistance: toFloat(process.env.THEME_COLOR_MIN_HUE_DISTANCE, 30),
     topnDiagnostics: toInt(process.env.THEME_COLOR_TOPN_DIAGNOSTICS, 8),
   }),
+
+  debug: Object.freeze({
+    ephemeralInjection: toBool(process.env.DEBUG_EPHEMERAL_INJECTION, false),
+    systemPrompt: toBool(process.env.DEBUG_SYSTEM_PROMPT, false),
+  }),
 });
 
 module.exports = config;
-

@@ -9,6 +9,7 @@ const path = require('path');
 const router = express.Router();
 const attachmentController = require('../controllers/attachmentController');
 const requireAuth = require('../middlewares/requireAuth');
+const config = require('../config/config');
 
 // 桌面端专用：所有附件接口都要求登录态（JWT Bearer）
 router.use(requireAuth);
@@ -21,7 +22,7 @@ const imageStorage = multer.memoryStorage();
 // 文件过滤器，只允许图片文件
 const imageFileFilter = (req, file, cb) => {
   // 检查MIME类型
-  const allowedMimeTypes = (process.env.ATTACHMENTS_ALLOWED_IMAGE_TYPES || 'image/png,image/jpeg,image/webp,image/gif').split(',');
+  const allowedMimeTypes = config.attachments.allowedTypes.image;
   
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -34,7 +35,7 @@ const imageFileFilter = (req, file, cb) => {
 const imageUpload = multer({
   storage: imageStorage,
   limits: {
-    fileSize: parseInt(process.env.ATTACHMENTS_MAX_IMAGE_SIZE) || 10485760, // 默认10MB
+    fileSize: config.attachments.maxSizeBytes.image,
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: imageFileFilter
@@ -53,7 +54,7 @@ const resolveStoragePath = (dirPath) => {
 };
 
 // 确保临时目录存在
-const tmpDir = resolveStoragePath(process.env.ATTACHMENTS_TMP_DIR || 'backend/attachments/tmp');
+const tmpDir = resolveStoragePath(config.attachments.tmpDir);
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
 }
@@ -73,7 +74,7 @@ const diskStorage = multer.diskStorage({
 // 文件过滤器，只允许视频文件
 const videoFileFilter = (req, file, cb) => {
   // 检查MIME类型
-  const allowedMimeTypes = (process.env.ATTACHMENTS_ALLOWED_VIDEO_TYPES || 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv').split(',');
+  const allowedMimeTypes = config.attachments.allowedTypes.video;
   
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -85,7 +86,7 @@ const videoFileFilter = (req, file, cb) => {
 // 文件过滤器，只允许文档文件
 const documentFileFilter = (req, file, cb) => {
   // 检查MIME类型
-  const allowedMimeTypes = (process.env.ATTACHMENTS_ALLOWED_DOCUMENT_TYPES || 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').split(',');
+  const allowedMimeTypes = config.attachments.allowedTypes.document;
   
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -98,7 +99,7 @@ const documentFileFilter = (req, file, cb) => {
 const videoUpload = multer({
   storage: diskStorage,
   limits: {
-    fileSize: parseInt(process.env.ATTACHMENTS_MAX_VIDEO_SIZE) || 1073741824, // 默认1GB
+    fileSize: config.attachments.maxSizeBytes.video,
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: videoFileFilter
@@ -108,7 +109,7 @@ const videoUpload = multer({
 const documentUpload = multer({
   storage: diskStorage,
   limits: {
-    fileSize: parseInt(process.env.ATTACHMENTS_MAX_DOCUMENT_SIZE) || 52428800, // 默认50MB
+    fileSize: config.attachments.maxSizeBytes.document,
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: documentFileFilter
@@ -117,7 +118,7 @@ const documentUpload = multer({
 // 文件过滤器，只允许脚本和程序文件
 const scriptFileFilter = (req, file, cb) => {
   // 检查MIME类型
-  const allowedMimeTypes = (process.env.ATTACHMENTS_ALLOWED_SCRIPT_TYPES || 'text/x-python,application/x-msdos-program,text/x-shellscript,application/javascript,text/x-c++src,application/x-msdownload').split(',');
+  const allowedMimeTypes = config.attachments.allowedTypes.script;
   
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -130,7 +131,7 @@ const scriptFileFilter = (req, file, cb) => {
 const scriptUpload = multer({
   storage: diskStorage,
   limits: {
-    fileSize: parseInt(process.env.ATTACHMENTS_MAX_SCRIPT_SIZE) || 10485760, // 默认10MB
+    fileSize: config.attachments.maxSizeBytes.script,
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: scriptFileFilter

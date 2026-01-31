@@ -4,6 +4,7 @@
  */
 
 const mongoose = require('mongoose');
+const config = require('../config/config');
 
 /**
  * AI 角色 Schema
@@ -68,7 +69,7 @@ const aiRoleSchema = new mongoose.Schema({
 }, {
   timestamps: true,
   // 集合名由环境变量决定，默认为 'AI-roles'
-  collection: process.env.AI_ROLES_COLLECTION || 'AI-roles'
+  collection: config.mongo.collections.aiRoles
 });
 
 // 创建索引

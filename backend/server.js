@@ -110,7 +110,7 @@ app.get('/health', (req, res) => {
     success: true,
     message: '服务器运行正常',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: config.nodeEnv
   });
 });
 
