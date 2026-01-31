@@ -16,8 +16,7 @@ import { styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import NoteIcon from '@mui/icons-material/Note';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import AutoModeIcon from '@mui/icons-material/AutoMode';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import DocumentWindow from './DocumentWindow';
 import QuoteWindow from './QuoteWindow';
 import AttachmentWindow from './AttachmentWindow';
@@ -76,31 +75,36 @@ const AddWindowFab = styled(Fab)(({ theme }) => ({
 }));
 
 const APP_DRAWER_WIDTH = 240;
+const OPEN_NOTES_BAR_HEIGHT = 44;
 
 const OpenNotesSidebar = styled(Paper, {
-  shouldForwardProp: (prop) => prop !== 'sidebarWidth' && prop !== 'collapsed'
-})(({ theme, sidebarWidth, collapsed }) => ({
+  shouldForwardProp: (prop) =>
+    prop !== 'sidebarWidth' && prop !== 'expanded' && prop !== 'panelHeight' && prop !== 'dock'
+})(({ theme, sidebarWidth, expanded, panelHeight, dock }) => ({
   position: 'fixed',
-  top: 76, // 避开顶部 AppBar（desktop）
-  left: 0,
-  right: 'auto',
-  width: collapsed ? 44 : sidebarWidth,
-  height: 'calc(100vh - 88px)',
+  top: 64, // 贴合 AppBar 底部（desktop）
+  left: dock === 'left' ? 0 : 'auto',
+  right: dock === 'right' ? 0 : 'auto',
+  width: sidebarWidth,
+  height: expanded ? panelHeight : OPEN_NOTES_BAR_HEIGHT,
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: '0 20px 20px 0',
+  borderRadius: dock === 'left'
+    ? (expanded ? '0 20px 20px 0' : '0 999px 999px 0')
+    : (expanded ? '20px 0 0 20px' : '999px 0 0 999px'),
   overflow: 'hidden',
-  borderRight: `1px solid ${theme.palette.divider}`,
+  borderRight: dock === 'left' ? `1px solid ${theme.palette.divider}` : 'none',
+  borderLeft: dock === 'right' ? `1px solid ${theme.palette.divider}` : 'none',
   backgroundColor: theme.palette.background.paper,
   zIndex: theme.zIndex.modal + 102,
   pointerEvents: 'auto',
-  transition: 'width 0.2s ease',
+  transition: 'height 0.18s ease, border-radius 0.18s ease',
+  boxShadow: 'none',
   [theme.breakpoints.up('md')]: {
-    left: APP_DRAWER_WIDTH, // 避开左侧导航 Drawer（desktop）
+    left: dock === 'left' ? APP_DRAWER_WIDTH : 'auto', // 避开左侧导航 Drawer（desktop）
   },
   [theme.breakpoints.down('sm')]: {
-    top: 68, // 避开顶部 AppBar（mobile）
-    height: 'calc(100vh - 80px)',
+    top: 56, // 贴合 AppBar 底部（mobile）
   },
 }));
 
@@ -114,11 +118,14 @@ const OpenNotesSidebarHeader = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
 }));
 
-const SidebarResizeHandle = styled(Box)(({ theme }) => ({
+const SidebarResizeHandle = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'dock',
+})(({ theme, dock }) => ({
   position: 'absolute',
   top: 0,
   bottom: 0,
-  right: 0,
+  right: dock === 'left' ? 0 : 'auto',
+  left: dock === 'right' ? 0 : 'auto',
   width: 6,
   cursor: 'col-resize',
   touchAction: 'none',
@@ -138,12 +145,15 @@ const DocumentWindowsContainer = () => {
   const OPEN_NOTES_SIDEBAR_MAX_WIDTH = 520;
   const OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH = 280;
 
-  const [openNotesSidebarCollapsed, setOpenNotesSidebarCollapsed] = useState(false);
-  const [openNotesSidebarAuto, setOpenNotesSidebarAuto] = useState(false);
   const [openNotesSidebarHovering, setOpenNotesSidebarHovering] = useState(false);
+  const [openNotesDockSide, setOpenNotesDockSide] = useState('left'); // 'left' | 'right'
   const [openNotesSidebarWidth, setOpenNotesSidebarWidth] = useState(OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const resizeRef = useRef({ startX: 0, startWidth: OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH });
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+  }));
 
   const documentWindows = useMemo(() => {
     return windows
@@ -151,7 +161,30 @@ const DocumentWindowsContainer = () => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [windows]);
 
-  const isSidebarCollapsed = openNotesSidebarAuto ? !openNotesSidebarHovering : openNotesSidebarCollapsed;
+  const openNotesExpanded = openNotesSidebarHovering || isResizingSidebar;
+
+  const openNotesPanelHeight = useMemo(() => {
+    const headerHeight = OPEN_NOTES_BAR_HEIGHT;
+    const rowHeight = 40; // ListItemButton(dense) 近似高度
+    const dividerHeight = 1;
+    const emptyHeight = 56;
+    const footerPadding = 8;
+
+    const desired = documentWindows.length === 0
+      ? headerHeight + dividerHeight + emptyHeight + footerPadding
+      : headerHeight + dividerHeight + (documentWindows.length * rowHeight);
+
+    const topOffsetDesktop = viewport.width < 600 ? 56 : 64;
+    const bottomMargin = 12;
+    const maxHeight = Math.max(OPEN_NOTES_BAR_HEIGHT, viewport.height - topOffsetDesktop - bottomMargin);
+    return Math.min(desired, maxHeight);
+  }, [documentWindows.length, viewport.height, viewport.width]);
+
+  useEffect(() => {
+    const handleResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 侧边栏拖拽调整宽度
   useEffect(() => {
@@ -159,7 +192,9 @@ const DocumentWindowsContainer = () => {
 
     const handlePointerMove = (e) => {
       const dx = e.clientX - resizeRef.current.startX;
-      const nextWidth = resizeRef.current.startWidth - dx;
+      const nextWidth = openNotesDockSide === 'left'
+        ? resizeRef.current.startWidth + dx
+        : resizeRef.current.startWidth - dx;
       const clamped = Math.max(
         OPEN_NOTES_SIDEBAR_MIN_WIDTH,
         Math.min(OPEN_NOTES_SIDEBAR_MAX_WIDTH, nextWidth)
@@ -177,7 +212,7 @@ const DocumentWindowsContainer = () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [isResizingSidebar]);
+  }, [isResizingSidebar, openNotesDockSide]);
   
   // 管理背景滚动锁定状态
   useEffect(() => {
@@ -489,7 +524,6 @@ const DocumentWindowsContainer = () => {
   
   // 渲染最小化窗口
   const handleSidebarResizeStart = (e) => {
-    if (isSidebarCollapsed) return;
     setIsResizingSidebar(true);
     setOpenNotesSidebarHovering(true);
     resizeRef.current = {
@@ -499,21 +533,15 @@ const DocumentWindowsContainer = () => {
     e.preventDefault();
   };
 
-  const handleToggleSidebarAutoMode = () => {
-    setOpenNotesSidebarAuto((current) => {
-      const next = !current;
-      if (next) {
-        setOpenNotesSidebarHovering(true);
-      } else {
-        setOpenNotesSidebarHovering(false);
-      }
-      return next;
-    });
+  const handleToggleDockSide = () => {
+    setOpenNotesDockSide((side) => (side === 'left' ? 'right' : 'left'));
   };
 
   const handleActivateWindowFromSidebar = (windowId) => {
     dispatch(activateWindow(windowId));
   };
+
+  const dockTooltipPlacement = openNotesDockSide === 'left' ? 'right' : 'left';
   
   return (
     <>
@@ -521,91 +549,66 @@ const DocumentWindowsContainer = () => {
         {renderWindows()}
       </WindowsContainer>
 
-      {/* 右侧“已打开笔记”标签栏 */}
+      {/* 左上角“已打开笔记”横条：悬停展开 */}
       <OpenNotesSidebar
         sidebarWidth={openNotesSidebarWidth}
-        collapsed={isSidebarCollapsed}
-        elevation={8}
+        expanded={openNotesExpanded}
+        panelHeight={openNotesPanelHeight}
+        dock={openNotesDockSide}
+        elevation={0}
         aria-label="已打开笔记"
         onMouseEnter={() => {
-          if (openNotesSidebarAuto) setOpenNotesSidebarHovering(true);
+          setOpenNotesSidebarHovering(true);
         }}
         onMouseLeave={() => {
-          if (openNotesSidebarAuto && !isResizingSidebar) setOpenNotesSidebarHovering(false);
+          if (!isResizingSidebar) setOpenNotesSidebarHovering(false);
         }}
       >
-        {!isSidebarCollapsed && (
-          <SidebarResizeHandle
-            onPointerDown={handleSidebarResizeStart}
-            aria-label="调整侧边栏宽度"
-          />
-        )}
+        <SidebarResizeHandle
+          dock={openNotesDockSide}
+          onPointerDown={handleSidebarResizeStart}
+          aria-label="调整侧边栏宽度"
+        />
 
         <OpenNotesSidebarHeader>
-          {isSidebarCollapsed ? (
-            <Tooltip title={`已打开笔记（${documentWindows.length}）`} placement="right">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 0.75, minWidth: 0 }}>
+            <NoteIcon fontSize="small" />
+            <Typography
+              variant="subtitle2"
+              sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            >
+              已打开笔记
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {documentWindows.length}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.25 }}>
+            <Tooltip title="悬停展开 / 离开收起" placement={dockTooltipPlacement}>
+              <Box sx={{ px: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  悬停
+                </Typography>
+              </Box>
+            </Tooltip>
+
+            <Tooltip
+              title={openNotesDockSide === 'left' ? '切到右侧' : '切到左侧'}
+              placement={dockTooltipPlacement}
+            >
               <IconButton
                 size="small"
-                onClick={() => setOpenNotesSidebarCollapsed(false)}
-                aria-label="展开已打开笔记侧边栏"
+                onClick={handleToggleDockSide}
+                aria-label={openNotesDockSide === 'left' ? '将已打开笔记横条切换到右侧' : '将已打开笔记横条切换到左侧'}
               >
-                <NoteIcon fontSize="small" />
+                <SwapHorizIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-          ) : (
-            <>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 0.5, minWidth: 0 }}>
-                <NoteIcon fontSize="small" />
-                <Typography
-                  variant="subtitle2"
-                  sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                >
-                  已打开笔记
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {documentWindows.length}
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={openNotesSidebarAuto ? '自动模式：悬停展开/离开收起' : '手动模式'} placement="right">
-                  <IconButton
-                    size="small"
-                    onClick={handleToggleSidebarAutoMode}
-                    aria-label={openNotesSidebarAuto ? '切换到手动模式' : '切换到自动模式'}
-                    sx={{
-                      color: openNotesSidebarAuto ? 'primary.main' : 'inherit',
-                      backgroundColor: openNotesSidebarAuto ? 'action.selected' : 'transparent',
-                      '&:hover': {
-                        backgroundColor: openNotesSidebarAuto ? 'action.selected' : 'action.hover',
-                      },
-                    }}
-                  >
-                    <AutoModeIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip
-                  title={openNotesSidebarAuto ? '自动模式下由悬停控制' : '收起'}
-                  placement="right"
-                >
-                  <span>
-                    <IconButton
-                      size="small"
-                      disabled={openNotesSidebarAuto}
-                      onClick={() => setOpenNotesSidebarCollapsed(true)}
-                      aria-label="收起已打开笔记侧边栏"
-                    >
-                      <ChevronLeftIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
-            </>
-          )}
+          </Box>
         </OpenNotesSidebarHeader>
 
-        {!isSidebarCollapsed && (
+        {openNotesExpanded && (
           <>
             <Divider />
             <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
@@ -644,7 +647,7 @@ const DocumentWindowsContainer = () => {
                         }}
                         secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
                       />
-                      <Tooltip title="关闭" placement="right">
+                      <Tooltip title="关闭" placement={dockTooltipPlacement}>
                         <IconButton
                           size="small"
                           onClick={(e) => {
