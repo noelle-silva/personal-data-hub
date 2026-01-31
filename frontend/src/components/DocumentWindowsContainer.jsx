@@ -96,7 +96,8 @@ const OpenNotesSidebar = styled(Paper, {
   borderRight: dock === 'left' ? `1px solid ${theme.palette.divider}` : 'none',
   borderLeft: dock === 'right' ? `1px solid ${theme.palette.divider}` : 'none',
   backgroundColor: theme.palette.background.paper,
-  zIndex: theme.zIndex.modal + 102,
+  // 必须低于浮动窗口（windowsSlice 的窗口 zIndex 从 ~1400 起），避免盖住窗口标题栏/按钮
+  zIndex: theme.zIndex.modal - 10,
   pointerEvents: 'auto',
   transition: 'height 0.18s ease, border-radius 0.18s ease',
   boxShadow: 'none',
