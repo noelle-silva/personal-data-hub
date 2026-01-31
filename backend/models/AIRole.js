@@ -73,7 +73,6 @@ const aiRoleSchema = new mongoose.Schema({
 });
 
 // 创建索引
-aiRoleSchema.index({ name: 1 }, { unique: true });
 aiRoleSchema.index({ isDefault: 1 });
 
 // 确保只有一个默认角色的中间件

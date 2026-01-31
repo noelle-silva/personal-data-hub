@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const HttpError = require('../../utils/HttpError');
 
 // 配置文件路径
 const CONFIG_FILE_PATH = path.join(__dirname, 'settings.json');
@@ -235,11 +236,11 @@ class AIConfigService {
    */
   upsertProvider(key, provider) {
     if (typeof key !== 'string' || !key.trim()) {
-      throw new Error('供应商键名必须是非空字符串');
+      throw new HttpError(400, '供应商键名必须是非空字符串', 'AI_PROVIDER_KEY_INVALID');
     }
 
     if (!this.validateProvider(provider)) {
-      throw new Error('供应商配置无效');
+      throw new HttpError(400, '供应商配置无效', 'AI_PROVIDER_INVALID');
     }
 
     const newConfig = { ...this.config };
@@ -269,7 +270,7 @@ class AIConfigService {
     const newConfig = { ...this.config };
     
     if (!newConfig.providers[key]) {
-      throw new Error('供应商不存在');
+      throw new HttpError(404, '供应商不存在', 'AI_PROVIDER_NOT_FOUND');
     }
 
     delete newConfig.providers[key];
@@ -297,7 +298,7 @@ class AIConfigService {
     }
 
     if (key !== null && !this.config.providers[key]) {
-      throw new Error('供应商不存在');
+      throw new HttpError(404, '供应商不存在', 'AI_PROVIDER_NOT_FOUND');
     }
 
     return this.updateConfig({ current: key });

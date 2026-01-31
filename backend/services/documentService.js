@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');
 const Attachment = require('../models/Attachment');
+const HttpError = require('../utils/HttpError');
 
 /**
  * 文档服务类
@@ -62,6 +63,7 @@ class DocumentService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取文档列表失败: ${error.message}`);
     }
   }
@@ -118,7 +120,7 @@ class DocumentService {
       const document = await query.exec();
       
       if (!document) {
-        throw new Error('文档不存在');
+        throw new HttpError(404, '文档不存在', 'DOCUMENT_NOT_FOUND');
       }
       
       // 转换为普通对象以便添加额外字段
@@ -139,6 +141,7 @@ class DocumentService {
       
       return result;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取文档失败: ${error.message}`);
     }
   }
@@ -176,6 +179,7 @@ class DocumentService {
       
       return savedDocument;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`创建文档失败: ${error.message}`);
     }
   }
@@ -212,7 +216,7 @@ class DocumentService {
       );
 
       if (!document) {
-        throw new Error('文档不存在');
+        throw new HttpError(404, '文档不存在', 'DOCUMENT_NOT_FOUND');
       }
 
       // 如果有查询选项，重新获取完整数据
@@ -222,6 +226,7 @@ class DocumentService {
 
       return document;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`更新文档失败: ${error.message}`);
     }
   }
@@ -263,7 +268,7 @@ class DocumentService {
       }).select('_id');
       
       if (existingDocs.length !== uniqueIds.length) {
-        throw new Error('部分引用的文档不存在');
+        throw new HttpError(400, '部分引用的文档不存在', 'REFERENCED_DOCUMENT_NOT_FOUND');
       }
       
       return true;
@@ -304,7 +309,7 @@ class DocumentService {
       }).select('_id');
       
       if (existingAttachments.length !== uniqueIds.length) {
-        throw new Error('部分引用的附件不存在或已删除');
+        throw new HttpError(400, '部分引用的附件不存在或已删除', 'REFERENCED_ATTACHMENT_NOT_FOUND');
       }
       
       return true;
@@ -344,7 +349,7 @@ class DocumentService {
       }).select('_id');
       
       if (existingQuotes.length !== uniqueIds.length) {
-        throw new Error('部分引用的引用体不存在');
+        throw new HttpError(400, '部分引用的引用体不存在', 'REFERENCED_QUOTE_NOT_FOUND');
       }
       
       return true;
@@ -418,6 +423,7 @@ class DocumentService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取引用体列表失败: ${error.message}`);
     }
   }
@@ -432,7 +438,7 @@ class DocumentService {
       const document = await Document.findByIdAndDelete(id);
       
       if (!document) {
-        throw new Error('文档不存在');
+        throw new HttpError(404, '文档不存在', 'DOCUMENT_NOT_FOUND');
       }
 
       // 从引用体中移除已删除的文档ID
@@ -476,6 +482,7 @@ class DocumentService {
 
       return { message: '文档删除成功', id };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`删除文档失败: ${error.message}`);
     }
   }
@@ -563,6 +570,7 @@ class DocumentService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`按标签搜索失败: ${error.message}`);
     }
   }
@@ -628,6 +636,7 @@ class DocumentService {
         hasMore
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`搜索文档失败: ${error.message}`);
     }
   }
@@ -650,6 +659,7 @@ class DocumentService {
         tagStats
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取统计信息失败: ${error.message}`);
     }
   }

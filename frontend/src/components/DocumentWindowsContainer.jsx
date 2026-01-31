@@ -20,17 +20,23 @@ import {
   setWindowPosition,
   setWindowSize,
   closeLimitPrompt,
-  fetchWindowDocument,
-  fetchWindowQuote,
   openWindowAndFetch,
-  saveDocumentQuoteReferences
+  deleteAttachmentById,
+  deleteDocumentById,
+  deleteQuoteById,
+  saveAttachmentReferences,
+  saveDocumentQuoteReferences,
+  saveDocumentReferences,
+  saveQuoteAttachmentReferences,
+  saveQuoteDocumentReferences,
+  saveQuoteReferences,
+  updateDocumentById,
+  updateQuoteById
 } from '../store/windowsSlice';
 import {
   fetchDocumentById,
   openDocumentModal
 } from '../store/documentsSlice';
-import apiClient from '../services/apiClient';
-import { deleteAttachment } from '../services/attachments';
 
 // 窗口容器
 const WindowsContainer = styled(Box)(({ theme }) => ({
@@ -148,20 +154,15 @@ const DocumentWindowsContainer = () => {
   // 处理文档窗口保存
   const handleSaveDocument = async (id, documentData) => {
     try {
-      const response = await apiClient.put(`/documents/${id}`, documentData);
-      const result = response.data;
+      const result = await dispatch(updateDocumentById({
+        documentId: id,
+        documentData
+      })).unwrap();
+
       console.log('文档更新成功:', result);
-      
-      // 更新所有引用了该文档的窗口
-      windows.forEach(window => {
-        if ((window.docId === id || window.resourceId === id) &&
-            window.document && window.document._id === id) {
-          dispatch(fetchWindowDocument({ windowId: window.id, docId: id }));
-        }
-      });
     } catch (error) {
       console.error('更新文档失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '更新文档失败，请重试';
+      const errorMessage = error.error || error.message || '更新文档失败，请重试';
       alert(errorMessage);
     }
   };
@@ -169,19 +170,11 @@ const DocumentWindowsContainer = () => {
   // 处理文档窗口删除
   const handleDeleteDocument = async (id) => {
     try {
-      const response = await apiClient.delete(`/documents/${id}`);
-      const result = response.data;
+      const result = await dispatch(deleteDocumentById({ documentId: id })).unwrap();
       console.log('文档删除成功:', result);
-      
-      // 关闭所有引用了该文档的窗口
-      windows.forEach(window => {
-        if (window.docId === id || window.resourceId === id) {
-          dispatch(closeWindow(window.id));
-        }
-      });
     } catch (error) {
       console.error('删除文档失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '删除文档失败，请重试';
+      const errorMessage = error.error || error.message || '删除文档失败，请重试';
       alert(errorMessage);
     }
   };
@@ -189,29 +182,17 @@ const DocumentWindowsContainer = () => {
   // 处理文档引用关系保存
   const handleSaveDocumentReferences = async (id, referencedDocumentIds) => {
     try {
-      const response = await apiClient.put(`/documents/${id}`, { referencedDocumentIds }, {
-        params: {
-          populate: 'full',
-          include: 'referencingQuotes',
-          quotesLimit: 20
-        }
-      });
+      const result = await dispatch(saveDocumentReferences({
+        documentId: id,
+        referencedDocumentIds
+      })).unwrap();
 
-      const result = response.data;
       console.log('引用关系更新成功:', result);
-      
-      // 更新所有引用了该文档的窗口
-      windows.forEach(window => {
-        if ((window.docId === id || window.resourceId === id) &&
-            window.document && window.document._id === id) {
-          dispatch(fetchWindowDocument({ windowId: window.id, docId: id }));
-        }
-      });
-      
-      return result.data;
+      return result.document;
     } catch (error) {
       console.error('更新引用关系失败:', error);
-      alert('更新引用关系失败，请重试');
+      const errorMessage = error.error || error.message || '更新引用关系失败，请重试';
+      alert(errorMessage);
       throw error;
     }
   };
@@ -219,29 +200,16 @@ const DocumentWindowsContainer = () => {
   // 处理文档附件引用保存
   const handleSaveDocumentAttachmentReferences = async (id, referencedAttachmentIds) => {
     try {
-      const response = await apiClient.put(`/documents/${id}`, { referencedAttachmentIds }, {
-        params: {
-          populate: 'full',
-          include: 'referencingQuotes',
-          quotesLimit: 20
-        }
-      });
+      const result = await dispatch(saveAttachmentReferences({
+        documentId: id,
+        referencedAttachmentIds
+      })).unwrap();
 
-      const result = response.data;
       console.log('文档附件引用关系更新成功:', result);
-      
-      // 更新所有引用了该文档的窗口
-      windows.forEach(window => {
-        if ((window.docId === id || window.resourceId === id) &&
-            window.document && window.document._id === id) {
-          dispatch(fetchWindowDocument({ windowId: window.id, docId: id }));
-        }
-      });
-      
-      return result.data;
+      return result.document;
     } catch (error) {
       console.error('更新文档附件引用关系失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '更新文档附件引用关系失败，请重试';
+      const errorMessage = error.error || error.message || '更新文档附件引用关系失败，请重试';
       alert(errorMessage);
       throw error;
     }
@@ -250,19 +218,15 @@ const DocumentWindowsContainer = () => {
   // 处理引用体窗口保存
   const handleSaveQuote = async (id, quoteData) => {
     try {
-      const response = await apiClient.put(`/quotes/${id}`, quoteData);
-      const result = response.data;
+      const result = await dispatch(updateQuoteById({
+        quoteId: id,
+        quoteData
+      })).unwrap();
+
       console.log('引用体更新成功:', result);
-      
-      // 更新所有引用了该引用体的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id && window.quote && window.quote._id === id) {
-          dispatch(fetchWindowQuote({ windowId: window.id, quoteId: id }));
-        }
-      });
     } catch (error) {
       console.error('更新引用体失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '更新引用体失败，请重试';
+      const errorMessage = error.error || error.message || '更新引用体失败，请重试';
       alert(errorMessage);
     }
   };
@@ -270,19 +234,11 @@ const DocumentWindowsContainer = () => {
   // 处理引用体窗口删除
   const handleDeleteQuote = async (id) => {
     try {
-      const response = await apiClient.delete(`/quotes/${id}`);
-      const result = response.data;
+      const result = await dispatch(deleteQuoteById({ quoteId: id })).unwrap();
       console.log('引用体删除成功:', result);
-      
-      // 关闭所有引用了该引用体的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id) {
-          dispatch(closeWindow(window.id));
-        }
-      });
     } catch (error) {
       console.error('删除引用体失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '删除引用体失败，请重试';
+      const errorMessage = error.error || error.message || '删除引用体失败，请重试';
       alert(errorMessage);
     }
   };
@@ -290,22 +246,17 @@ const DocumentWindowsContainer = () => {
   // 处理引用体引用关系保存
   const handleSaveQuoteReferences = async (id, referencedDocumentIds) => {
     try {
-      const response = await apiClient.put(`/quotes/${id}`, { referencedDocumentIds });
+      const result = await dispatch(saveQuoteDocumentReferences({
+        quoteId: id,
+        referencedDocumentIds
+      })).unwrap();
 
-      const result = response.data;
       console.log('引用体引用关系更新成功:', result);
-      
-      // 更新所有引用了该引用体的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id && window.quote && window.quote._id === id) {
-          dispatch(fetchWindowQuote({ windowId: window.id, quoteId: id }));
-        }
-      });
-      
-      return result.data;
+      return result.quote;
     } catch (error) {
       console.error('更新引用体引用关系失败:', error);
-      alert('更新引用体引用关系失败，请重试');
+      const errorMessage = error.error || error.message || '更新引用体引用关系失败，请重试';
+      alert(errorMessage);
       throw error;
     }
   };
@@ -313,22 +264,17 @@ const DocumentWindowsContainer = () => {
   // 处理引用引用体关系保存
   const handleSaveQuoteQuoteReferences = async (id, referencedQuoteIds) => {
     try {
-      const response = await apiClient.put(`/quotes/${id}`, { referencedQuoteIds });
+      const result = await dispatch(saveQuoteReferences({
+        quoteId: id,
+        referencedQuoteIds
+      })).unwrap();
 
-      const result = response.data;
       console.log('引用引用体关系更新成功:', result);
-      
-      // 更新所有引用了该引用体的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id && window.quote && window.quote._id === id) {
-          dispatch(fetchWindowQuote({ windowId: window.id, quoteId: id }));
-        }
-      });
-      
-      return result.data;
+      return result.quote;
     } catch (error) {
       console.error('更新引用引用体关系失败:', error);
-      alert('更新引用引用体关系失败，请重试');
+      const errorMessage = error.error || error.message || '更新引用引用体关系失败，请重试';
+      alert(errorMessage);
       throw error;
     }
   };
@@ -336,22 +282,16 @@ const DocumentWindowsContainer = () => {
   // 处理引用体附件引用保存
   const handleSaveQuoteAttachmentReferences = async (id, referencedAttachmentIds) => {
     try {
-      const response = await apiClient.put(`/quotes/${id}`, { referencedAttachmentIds });
+      const result = await dispatch(saveQuoteAttachmentReferences({
+        quoteId: id,
+        referencedAttachmentIds
+      })).unwrap();
 
-      const result = response.data;
       console.log('引用体附件引用关系更新成功:', result);
-      
-      // 更新所有引用了该引用体的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id && window.quote && window.quote._id === id) {
-          dispatch(fetchWindowQuote({ windowId: window.id, quoteId: id }));
-        }
-      });
-      
-      return result.data;
+      return result.quote;
     } catch (error) {
       console.error('更新引用体附件引用关系失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '更新引用体附件引用关系失败，请重试';
+      const errorMessage = error.error || error.message || '更新引用体附件引用关系失败，请重试';
       alert(errorMessage);
       throw error;
     }
@@ -366,14 +306,7 @@ const DocumentWindowsContainer = () => {
       })).unwrap();
       
       console.log('文档引用体引用关系更新成功:', result);
-      
-      // 更新所有引用了该文档的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id && window.document && window.document._id === id) {
-          dispatch(fetchWindowDocument({ windowId: window.id, docId: id }));
-        }
-      });
-      
+
       return result.document;
     } catch (error) {
       console.error('更新文档引用体引用关系失败:', error);
@@ -386,19 +319,11 @@ const DocumentWindowsContainer = () => {
   // 处理附件窗口删除
   const handleDeleteAttachment = async (id) => {
     try {
-      // 使用 attachments 服务中的 deleteAttachment 方法，它会自动处理认证头
-      await deleteAttachment(id);
-      console.log('附件删除成功');
-      
-      // 关闭所有引用了该附件的窗口
-      windows.forEach(window => {
-        if (window.resourceId === id) {
-          dispatch(closeWindow(window.id));
-        }
-      });
+      const result = await dispatch(deleteAttachmentById({ attachmentId: id })).unwrap();
+      console.log('附件删除成功:', result);
     } catch (error) {
       console.error('删除附件失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '删除附件失败，请重试';
+      const errorMessage = error.error || error.message || '删除附件失败，请重试';
       alert(errorMessage);
     }
   };

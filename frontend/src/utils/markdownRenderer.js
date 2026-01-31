@@ -97,7 +97,9 @@ const RENDER_CONFIG = {
   // 缓存开关
   ENABLE_CACHE: true,
   // 性能埋点开关
-  ENABLE_PERFORMANCE_LOG: true,
+  ENABLE_PERFORMANCE_LOG:
+    process.env.NODE_ENV === 'development' &&
+    process.env.REACT_APP_ENABLE_PERFORMANCE_LOG === 'true',
   // 降级模式开关
   ENABLE_FAST_MODE: true,
   // 数学公式渲染开关
@@ -130,7 +132,9 @@ const mdFull = new MarkdownIt({
       const lineCount = str.split('\n').length;
       if (str.length > RENDER_CONFIG.CODE_HIGHLIGHT_MAX_LENGTH ||
           lineCount > RENDER_CONFIG.CODE_HIGHLIGHT_MAX_LINES) {
-        console.log(`[Markdown渲染] 跳过高亮: 语言=${lang}, 长度=${str.length}, 行数=${lineCount}`);
+        if (RENDER_CONFIG.ENABLE_PERFORMANCE_LOG) {
+          console.log(`[Markdown渲染] 跳过高亮: 语言=${lang}, 长度=${str.length}, 行数=${lineCount}`);
+        }
         return ''; // 跳过高亮
       }
       

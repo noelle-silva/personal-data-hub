@@ -60,7 +60,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import DocumentPickerDialog from './DocumentPickerDialog';
-import QuoteDetailModal from './QuoteDetailModal';
+import QuoteDetailModal from './legacy/QuoteDetailModal';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
 import CodeEditor from './CodeEditor';

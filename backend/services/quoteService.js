@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const Quote = require('../models/Quote');
 const Document = require('../models/Document');
 const Attachment = require('../models/Attachment');
+const HttpError = require('../utils/HttpError');
 
 /**
  * 引用体服务类
@@ -99,6 +100,7 @@ class QuoteService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取引用体列表失败: ${error.message}`);
     }
   }
@@ -150,11 +152,12 @@ class QuoteService {
       const quote = await query.exec();
       
       if (!quote) {
-        throw new Error('引用体不存在');
+        throw new HttpError(404, '引用体不存在', 'QUOTE_NOT_FOUND');
       }
       
       return quote;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取引用体失败: ${error.message}`);
     }
   }
@@ -186,7 +189,7 @@ class QuoteService {
         });
 
         if (documents.length !== quoteData.referencedDocumentIds.length) {
-          throw new Error('部分引用的文档不存在');
+          throw new HttpError(400, '部分引用的文档不存在', 'REFERENCED_DOCUMENT_NOT_FOUND');
         }
       }
 
@@ -217,6 +220,7 @@ class QuoteService {
       // 默认填充标题信息返回
       return await this.getQuoteById(savedQuote._id, 'title');
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`创建引用体失败: ${error.message}`);
     }
   }
@@ -253,7 +257,7 @@ class QuoteService {
       }).select('_id');
       
       if (existingAttachments.length !== uniqueIds.length) {
-        throw new Error('部分引用的附件不存在或已删除');
+        throw new HttpError(400, '部分引用的附件不存在或已删除', 'REFERENCED_ATTACHMENT_NOT_FOUND');
       }
       
       return true;
@@ -304,7 +308,7 @@ class QuoteService {
       }).select('_id');
       
       if (existingQuotes.length !== uniqueIds.length) {
-        throw new Error('部分引用的引用体不存在');
+        throw new HttpError(400, '部分引用的引用体不存在', 'REFERENCED_QUOTE_NOT_FOUND');
       }
       
       return true;
@@ -336,7 +340,7 @@ class QuoteService {
         });
 
         if (documents.length !== updateData.referencedDocumentIds.length) {
-          throw new Error('部分引用的文档不存在');
+          throw new HttpError(400, '部分引用的文档不存在', 'REFERENCED_DOCUMENT_NOT_FOUND');
         }
       }
 
@@ -358,12 +362,13 @@ class QuoteService {
       );
 
       if (!quote) {
-        throw new Error('引用体不存在');
+        throw new HttpError(404, '引用体不存在', 'QUOTE_NOT_FOUND');
       }
 
       // 默认填充标题信息返回
       return await this.getQuoteById(quote._id, 'title');
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`更新引用体失败: ${error.message}`);
     }
   }
@@ -378,7 +383,7 @@ class QuoteService {
       const quote = await Quote.findByIdAndDelete(id);
       
       if (!quote) {
-        throw new Error('引用体不存在');
+        throw new HttpError(404, '引用体不存在', 'QUOTE_NOT_FOUND');
       }
 
       // 清理其他引用体中对已删除引用体的引用
@@ -399,6 +404,7 @@ class QuoteService {
 
       return { message: '引用体删除成功', id };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`删除引用体失败: ${error.message}`);
     }
   }
@@ -515,6 +521,7 @@ class QuoteService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`按标签搜索引用体失败: ${error.message}`);
     }
   }
@@ -618,6 +625,7 @@ class QuoteService {
         hasMore
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`搜索引用体失败: ${error.message}`);
     }
   }
@@ -762,6 +770,7 @@ class QuoteService {
         hasMore
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`复合搜索引用体失败: ${error.message}`);
     }
   }
@@ -784,6 +793,7 @@ class QuoteService {
         tagStats
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取统计信息失败: ${error.message}`);
     }
   }
@@ -805,6 +815,7 @@ class QuoteService {
         modifiedCount: result.modifiedCount
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`移除文档引用失败: ${error.message}`);
     }
   }
@@ -826,6 +837,7 @@ class QuoteService {
         modifiedCount: result.modifiedCount
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`移除引用体引用失败: ${error.message}`);
     }
   }

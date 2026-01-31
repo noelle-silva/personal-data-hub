@@ -65,12 +65,6 @@ const wallpaperSchema = new mongoose.Schema({
     trim: true,
     maxlength: 500
   },
-  // 上传时间
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    index: true
-  },
   // 最后使用时间
   lastUsedAt: {
     type: Date

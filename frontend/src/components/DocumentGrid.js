@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DocumentCard from './DocumentCard';
-import DocumentDetailModal from './DocumentDetailModal';
+import DocumentDetailModal from './legacy/DocumentDetailModal';
 import {
   selectSelectedDocument,
   selectIsModalOpen,

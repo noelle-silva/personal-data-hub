@@ -11,8 +11,8 @@ import {
 import apiClient from '../services/apiClient';
 import { styled } from '@mui/material/styles';
 import QuoteCard from './QuoteCard';
-import QuoteDetailModal from './QuoteDetailModal';
-import DocumentDetailModal from './DocumentDetailModal';
+import QuoteDetailModal from './legacy/QuoteDetailModal';
+import DocumentDetailModal from './legacy/DocumentDetailModal';
 import {
   selectSelectedQuote,
   selectIsQuoteModalOpen,

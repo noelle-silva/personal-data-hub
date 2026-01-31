@@ -18,6 +18,7 @@ const {
   themeFromSourceColor
 } = require('@material/material-color-utilities');
 const Wallpaper = require('../models/Wallpaper');
+const extractDiverseSeedsPolicy = require('./themeColor/extractDiverseSeeds');
 
 // 通用配置阈值（可通过环境变量覆盖）
 const CONFIG = {
@@ -30,6 +31,12 @@ const CONFIG = {
   NEUTRAL_SHARE_THRESHOLD: config.themeColor.neutralShareThreshold,
   MIN_HUE_DISTANCE: config.themeColor.minHueDistance,
   TOPN_DIAGNOSTICS: config.themeColor.topnDiagnostics
+};
+
+const debugLog = (...args) => {
+  if (config.nodeEnv === 'development') {
+    console.log(...args);
+  }
 };
 
 /**
@@ -147,18 +154,18 @@ class ThemeColorService {
    */
   static async generateThemeFromWallpaper(wallpaperId, userId) {
     try {
-      console.log(`开始为用户 ${userId} 和壁纸 ${wallpaperId} 生成主题颜色`);
+      debugLog(`开始为用户 ${userId} 和壁纸 ${wallpaperId} 生成主题颜色`);
       
       // 获取壁纸信息
       const wallpaper = await Wallpaper.findOne({ _id: wallpaperId, userId });
       if (!wallpaper) {
         throw new Error('壁纸不存在或无权访问');
       }
-      console.log(`找到壁纸: ${wallpaper.originalName}, 路径: ${wallpaper.filePath}`);
+      debugLog(`找到壁纸: ${wallpaper.originalName}, 路径: ${wallpaper.filePath}`);
 
       // 读取壁纸文件
       const imageBuffer = await fs.readFile(wallpaper.filePath);
-      console.log(`成功读取壁纸文件，大小: ${imageBuffer.length} 字节`);
+      debugLog(`成功读取壁纸文件，大小: ${imageBuffer.length} 字节`);
 
       // 使用sharp获取图像信息并调整大小以提高性能
       const { data, info } = await sharp(imageBuffer)
@@ -170,7 +177,7 @@ class ThemeColorService {
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-      console.log(`图像处理完成，尺寸: ${info.width}x${info.height}`);
+      debugLog(`图像处理完成，尺寸: ${info.width}x${info.height}`);
 
       // 提取像素数据
       const pixelCount = info.width * info.height;
@@ -191,7 +198,7 @@ class ThemeColorService {
         }
       }
 
-      console.log(`提取到 ${imagePixels.length} 个不透明像素`);
+      debugLog(`提取到 ${imagePixels.length} 个不透明像素`);
 
       if (imagePixels.length === 0) {
         throw new Error('图像中没有找到不透明像素，无法生成主题');
@@ -199,7 +206,7 @@ class ThemeColorService {
 
       // 使用QuantizerCelebi进行颜色量化
       const quantizerResult = QuantizerCelebi.quantize(imagePixels, CONFIG.CLUSTER_K);
-      console.log(`颜色量化完成，生成 ${quantizerResult.size} 个颜色`);
+      debugLog(`颜色量化完成，生成 ${quantizerResult.size} 个颜色`);
       
       // 检查量化结果是否有效
       if (!quantizerResult || quantizerResult.size === 0) {
@@ -209,7 +216,7 @@ class ThemeColorService {
       // 构建颜色占比直方图与TopN候选（通用统计）
       const { histogram, topCandidates } = this.buildColorHistogram(quantizerResult, pixelCount, CONFIG.TOPN_DIAGNOSTICS);
       const globalChroma = this.computeGlobalChroma(imagePixels);
-      console.log(`全局色度 Cf: ${globalChroma.toFixed(3)}`);
+      debugLog(`全局色度 Cf: ${globalChroma.toFixed(3)}`);
 
       // 使用Score对颜色进行评分
       const scoredColors = Score.score(quantizerResult);
@@ -221,7 +228,7 @@ class ThemeColorService {
       
       // 提取多样化种子色（通用策略，传入直方图用于占比过滤）
       let seeds = this.extractDiverseSeeds(scoredColors, histogram);
-      console.log(`提取到 ${seeds.length} 个种子色:`, seeds.map(s => hexFromArgb(s.argb)));
+      debugLog(`提取到 ${seeds.length} 个种子色:`, seeds.map(s => hexFromArgb(s.argb)));
       
       // 兜底：如果没有种子色，使用评分最高的颜色作为种子
       if (seeds.length === 0 && scoredColors.length > 0) {
@@ -235,12 +242,12 @@ class ThemeColorService {
           l,
           share: histogram.get(fallbackArgb) || 0
         }];
-        console.log('使用评分最高的颜色作为兜底种子:', hexFromArgb(fallbackArgb));
+        debugLog('使用评分最高的颜色作为兜底种子:', hexFromArgb(fallbackArgb));
       }
       
       const sourceColorArgb = seeds[0]?.argb ?? scoredColors[0];
       const sourceColorHex = hexFromArgb(sourceColorArgb);
-      console.log(`主种子色: ${sourceColorHex} (ARGB: ${sourceColorArgb})`);
+      debugLog(`主种子色: ${sourceColorHex} (ARGB: ${sourceColorArgb})`);
 
       // 生成5种变体的主题方案
       const variants = ['tonalSpot', 'vibrant', 'expressive', 'fidelity', 'muted'];
@@ -253,7 +260,7 @@ class ThemeColorService {
           schemes[variant] = this.generateMultiSeedScheme(seeds, variant, globalChroma);
         }
         
-        console.log('成功生成所有变体的多种子主题方案');
+        debugLog('成功生成所有变体的多种子主题方案');
       } catch (schemeError) {
         console.error('生成多种子主题方案时出错，使用默认方案:', schemeError);
         // 回退到单种子方案
@@ -288,7 +295,7 @@ class ThemeColorService {
           };
         });
         
-        console.log('使用默认方案生成主题方案');
+        debugLog('使用默认方案生成主题方案');
       }
 
       // 构建主题数据（增加诊断信息）
@@ -338,9 +345,9 @@ class ThemeColorService {
       await fs.writeFile(currentFilePath, JSON.stringify(themeData, null, 2));
 
       // 记录关键 token 采样，确保不会出现全黑
-      console.log('多种子主题颜色生成完成，关键颜色采样:');
-      console.log('- 种子色:', seeds.map(s => hexFromArgb(s.argb)));
-      console.log('- Light 模式关键色:', {
+      debugLog('多种子主题颜色生成完成，关键颜色采样:');
+      debugLog('- 种子色:', seeds.map(s => hexFromArgb(s.argb)));
+      debugLog('- Light 模式关键色:', {
         primary: schemes.tonalSpot.light.primary,
         secondary: schemes.tonalSpot.light.secondary,
         tertiary: schemes.tonalSpot.light.tertiary,
@@ -349,7 +356,7 @@ class ThemeColorService {
         onBackground: schemes.tonalSpot.light.onBackground,
         onSurface: schemes.tonalSpot.light.onSurface
       });
-      console.log('- Dark 模式关键色:', {
+      debugLog('- Dark 模式关键色:', {
         primary: schemes.tonalSpot.dark.primary,
         secondary: schemes.tonalSpot.dark.secondary,
         tertiary: schemes.tonalSpot.dark.tertiary,
@@ -359,7 +366,7 @@ class ThemeColorService {
         onSurface: schemes.tonalSpot.dark.onSurface
       });
       
-      console.log(`主题颜色生成成功，保存到: ${filePath} 和 ${currentFilePath}`);
+      debugLog(`主题颜色生成成功，保存到: ${filePath} 和 ${currentFilePath}`);
       return themeData;
     } catch (error) {
       console.error('生成主题颜色失败:', error);
@@ -784,80 +791,15 @@ class ThemeColorService {
    * @returns {Array} 多个种子色对象 {argb, score, hue, sat, l, share}
    */
   static extractDiverseSeeds(scoredColors, histogram) {
-    const seeds = [];
-    const minHueDistance = CONFIG.MIN_HUE_DISTANCE;
-
-    // 预计算每个候选的指标
-    const candidates = scoredColors.map((argb, idx) => {
-      const share = histogram.get(argb) || 0;
-      const { h: hue, s: sat, l } = this.argbToHsl(argb);
-      // 综合权重 = Score排名(隐含) × 占比 × 饱和度 × 稳定性(1-idx*0.05)
-      const stability = Math.max(0.5, 1 - idx * 0.05);
-      const weight = (1 - idx * 0.1) * share * sat * stability;
-      return { argb, hue, sat, l, share, weight, idx };
+    return extractDiverseSeedsPolicy({
+      scoredColors,
+      histogram,
+      primaryMinShare: CONFIG.PRIMARY_MIN_SHARE,
+      minSaturation: CONFIG.MIN_SATURATION,
+      minHueDistance: CONFIG.MIN_HUE_DISTANCE,
+      argbToHsl: (argb) => this.argbToHsl(argb),
+      log: debugLog,
     });
-
-    // 按综合权重降序排序
-    candidates.sort((a, b) => b.weight - a.weight);
-
-    for (const candidate of candidates) {
-      // 通用准入规则：占比与饱和度阈值
-      if (candidate.share < CONFIG.PRIMARY_MIN_SHARE || candidate.sat < CONFIG.MIN_SATURATION) {
-        console.log(`跳过低权重候选: share=${candidate.share.toFixed(3)} sat=${candidate.sat.toFixed(3)} hue=${candidate.hue.toFixed(1)}`);
-        continue;
-      }
-
-      // 检查与已有种子的最小色相间距
-      const isDiverse = seeds.every(seed => {
-        const hueDistance = Math.abs(candidate.hue - seed.hue);
-        const minDist = Math.min(hueDistance, 360 - hueDistance);
-        return minDist >= minHueDistance;
-      });
-
-      if (isDiverse || seeds.length < 3) {
-        seeds.push({
-          argb: candidate.argb,
-          score: candidate.weight,
-          hue: candidate.hue,
-          sat: candidate.sat,
-          l: candidate.l,
-          share: candidate.share
-        });
-        console.log(`种子${seeds.length}: hue=${candidate.hue.toFixed(1)} sat=${candidate.sat.toFixed(3)} share=${candidate.share.toFixed(3)} weight=${candidate.weight.toFixed(4)}`);
-      }
-
-      if (seeds.length >= 5) break;
-    }
-
-    // 如果真实簇不足3个，从已选种子的相邻真实簇补足（不人造旋转）
-    while (seeds.length < 3 && candidates.length > seeds.length) {
-      // 找到未选且与已选种子色相距离最近的候选
-      let bestCandidate = null;
-      let bestDist = Infinity;
-      for (const cand of candidates) {
-        if (seeds.some(s => s.argb === cand.argb)) continue;
-        const minDistToSeeds = Math.min(...seeds.map(s => {
-          const d = Math.abs(cand.hue - s.hue);
-          return Math.min(d, 360 - d);
-        }));
-        if (minDistToSeeds < bestDist && minDistToSeeds >= minHueDistance) {
-          bestDist = minDistToSeeds;
-          bestCandidate = cand;
-        }
-      }
-      if (!bestCandidate) break;
-      seeds.push({
-        argb: bestCandidate.argb,
-        score: bestCandidate.weight,
-        hue: bestCandidate.hue,
-        sat: bestCandidate.sat,
-        l: bestCandidate.l,
-        share: bestCandidate.share
-      });
-      console.log(`补足种子${seeds.length}: hue=${bestCandidate.hue.toFixed(1)} sat=${bestCandidate.sat.toFixed(3)} share=${bestCandidate.share.toFixed(3)}`);
-    }
-
-    return seeds.slice(0, 5);
   }
 
   /**
@@ -1004,7 +946,7 @@ class ThemeColorService {
     const isNearNeutral = lowSaturationRatio >= CONFIG.NEUTRAL_SHARE_THRESHOLD;
     const finalTint = isNearNeutral ? adaptiveTint * 0.2 : adaptiveTint; // 中性场景降到20%
 
-    console.log(`背景着色: Cf=${cg.toFixed(3)} lowSatRatio=${lowSaturationRatio.toFixed(3)} isNearNeutral=${isNearNeutral} finalTint=${finalTint.toFixed(4)}`);
+    debugLog(`背景着色: Cf=${cg.toFixed(3)} lowSatRatio=${lowSaturationRatio.toFixed(3)} isNearNeutral=${isNearNeutral} finalTint=${finalTint.toFixed(4)}`);
 
     // 对背景和表面进行轻度着色
     tokens.background = this.blendHexColors(tokens.background, primaryColor, finalTint);

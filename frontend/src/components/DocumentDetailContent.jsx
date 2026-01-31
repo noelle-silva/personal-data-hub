@@ -78,144 +78,22 @@ import { createQuote } from '../store/quotesSlice';
 import CodeEditor from './CodeEditor';
 import DocumentFormModal from './DocumentFormModal';
 import { createDocument as createDocumentService } from '../services/documents';
+import {
+  ClickableListItem,
+  ContentBox,
+  EmptyStateContainer,
+  RelationsBox,
+  RightContentBox,
+  TagsContainer,
+  VerticalListContainer,
+} from './detail/DetailLayoutParts';
 
-// 内容区域
-const ContentBox = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'row',
-  flexGrow: 1,
-  overflow: 'hidden',
-  minWidth: 0, // 允许flex子项收缩
-}));
-
-// 左侧关系区域
-const RelationsBox = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isCollapsed'
-})(({ theme, isCollapsed }) => ({
-  width: isCollapsed ? 0 : '40%',
-  minWidth: isCollapsed ? 0 : 300,
-  padding: isCollapsed ? 0 : theme.spacing(2),
-  borderRight: isCollapsed ? 'none' : `1px solid ${theme.palette.divider}`,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(2),
-  overflowY: 'auto',
-  overscrollBehavior: 'contain',
-  transition: 'width 0.3s ease, padding 0.3s ease, border-right 0.3s ease',
-  '&::-webkit-scrollbar': {
-    width: 8,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 4,
-  },
-}));
-
-// 右侧内容区域
-const RightContentBox = styled(Box)(({ theme }) => ({
-  width: '100%',
-  padding: theme.spacing(3),
-  overflowY: 'auto',
-  overscrollBehavior: 'contain',
-  flexGrow: 1,
-  display: 'flex',
-  flexDirection: 'column',
-  minWidth: 0, // 允许flex子项收缩
-}));
-
-// 引用体列表容器
-const QuotesListContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(1),
-  // 移除 maxHeight: 200,
-  // 移除 overflowY: 'auto',
-  // 移除滚动条相关样式
-}));
-
-// 引用体项
-const QuoteItem = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(1),
-  backgroundColor: theme.palette.surfaceVariant.main,
-  borderRadius: 12,
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.surfaceVariant.dark,
-  },
-}));
-
-// 引用文档列表容器
-const ReferencedDocsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(1),
-  // 移除 maxHeight: 200,
-  // 移除 overflowY: 'auto',
-  // 移除滚动条相关样式
-}));
-
-// 引用文档项
-const ReferencedDocItem = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(1),
-  backgroundColor: theme.palette.surfaceVariant.main,
-  borderRadius: 12,
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.surfaceVariant.dark,
-  },
-}));
-
-// 引用附件列表容器
-const ReferencedAttachmentsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.spacing(1),
-  // 移除 maxHeight: 200,
-  // 移除 overflowY: 'auto',
-  // 移除滚动条相关样式
-}));
-
-// 引用附件项
-const ReferencedAttachmentItem = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(1),
-  backgroundColor: theme.palette.surfaceVariant.main,
-  borderRadius: 12,
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease',
-  '&:hover': {
-    backgroundColor: theme.palette.surfaceVariant.dark,
-  },
-}));
-
-// 空状态容器
-const EmptyStateContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: theme.spacing(2),
-  color: theme.palette.text.secondary,
-  fontStyle: 'italic',
-}));
-
-// 标签容器
-const TagsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: theme.spacing(1),
-  marginTop: theme.spacing(2),
-}));
+const QuotesListContainer = VerticalListContainer;
+const QuoteItem = ClickableListItem;
+const ReferencedDocsContainer = VerticalListContainer;
+const ReferencedDocItem = ClickableListItem;
+const ReferencedAttachmentsContainer = VerticalListContainer;
+const ReferencedAttachmentItem = ClickableListItem;
 
 // 元信息容器
 const MetaInfoContainer = styled(Box)(({ theme }) => ({

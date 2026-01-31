@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/apiClient';
-import { getAttachmentMetadata } from '../services/attachments';
+import { deleteAttachment, getAttachmentMetadata } from '../services/attachments';
 
 // 异步thunk：获取窗口文档内容
 export const fetchWindowDocument = createAsyncThunk(
@@ -60,7 +60,7 @@ export const fetchWindowAttachment = createAsyncThunk(
       
       return {
         windowId,
-        metadata: metadataResponse.data // 修正：元数据在 response.data 中
+        attachment: metadataResponse.data // 修正：元数据在 response.data 中（统一命名为 attachment）
       };
     } catch (error) {
       // 更详细的错误信息
@@ -224,8 +224,12 @@ export const saveDocumentReferences = createAsyncThunk(
   'windows/saveDocumentReferences',
   async ({ documentId, referencedDocumentIds }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/documents/${documentId}`, {
-        referencedDocumentIds
+      const response = await apiClient.put(`/documents/${documentId}`, { referencedDocumentIds }, {
+        params: {
+          populate: 'full',
+          include: 'referencingQuotes',
+          quotesLimit: 20
+        }
       });
       return {
         documentId,
@@ -246,8 +250,12 @@ export const saveAttachmentReferences = createAsyncThunk(
   'windows/saveAttachmentReferences',
   async ({ documentId, referencedAttachmentIds }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/documents/${documentId}`, {
-        referencedAttachmentIds
+      const response = await apiClient.put(`/documents/${documentId}`, { referencedAttachmentIds }, {
+        params: {
+          populate: 'full',
+          include: 'referencingQuotes',
+          quotesLimit: 20
+        }
       });
       return {
         documentId,
@@ -291,6 +299,125 @@ export const saveDocumentQuoteReferences = createAsyncThunk(
   }
 );
 
+export const updateDocumentById = createAsyncThunk(
+  'windows/updateDocumentById',
+  async ({ documentId, documentData }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/documents/${documentId}`, documentData);
+      return {
+        documentId,
+        document: response.data.data
+      };
+    } catch (error) {
+      return rejectWithValue({
+        documentId,
+        error: error.response?.data?.message || error.message || '更新文档失败'
+      });
+    }
+  }
+);
+
+export const deleteDocumentById = createAsyncThunk(
+  'windows/deleteDocumentById',
+  async ({ documentId }, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/documents/${documentId}`);
+      return { documentId };
+    } catch (error) {
+      return rejectWithValue({
+        documentId,
+        error: error.response?.data?.message || error.message || '删除文档失败'
+      });
+    }
+  }
+);
+
+export const updateQuoteById = createAsyncThunk(
+  'windows/updateQuoteById',
+  async ({ quoteId, quoteData }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/quotes/${quoteId}`, quoteData);
+      return {
+        quoteId,
+        quote: response.data.data
+      };
+    } catch (error) {
+      return rejectWithValue({
+        quoteId,
+        error: error.response?.data?.message || error.message || '更新引用体失败'
+      });
+    }
+  }
+);
+
+export const deleteQuoteById = createAsyncThunk(
+  'windows/deleteQuoteById',
+  async ({ quoteId }, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/quotes/${quoteId}`);
+      return { quoteId };
+    } catch (error) {
+      return rejectWithValue({
+        quoteId,
+        error: error.response?.data?.message || error.message || '删除引用体失败'
+      });
+    }
+  }
+);
+
+export const saveQuoteDocumentReferences = createAsyncThunk(
+  'windows/saveQuoteDocumentReferences',
+  async ({ quoteId, referencedDocumentIds }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/quotes/${quoteId}`, { referencedDocumentIds });
+      return {
+        quoteId,
+        referencedDocumentIds,
+        quote: response.data.data
+      };
+    } catch (error) {
+      return rejectWithValue({
+        quoteId,
+        error: error.response?.data?.message || error.message || '保存引用体引用失败'
+      });
+    }
+  }
+);
+
+export const saveQuoteAttachmentReferences = createAsyncThunk(
+  'windows/saveQuoteAttachmentReferences',
+  async ({ quoteId, referencedAttachmentIds }, { rejectWithValue }) => {
+    try {
+      const response = await apiClient.put(`/quotes/${quoteId}`, { referencedAttachmentIds });
+      return {
+        quoteId,
+        referencedAttachmentIds,
+        quote: response.data.data
+      };
+    } catch (error) {
+      return rejectWithValue({
+        quoteId,
+        error: error.response?.data?.message || error.message || '保存引用体附件引用失败'
+      });
+    }
+  }
+);
+
+export const deleteAttachmentById = createAsyncThunk(
+  'windows/deleteAttachmentById',
+  async ({ attachmentId }, { rejectWithValue }) => {
+    try {
+      await deleteAttachment(attachmentId);
+      return { attachmentId };
+    } catch (error) {
+      return rejectWithValue({
+        attachmentId,
+        error: error.response?.data?.message || error.message || '删除附件失败'
+      });
+    }
+  }
+);
+
 // 获取下一个 zIndex 值
 const getNextZIndex = (windows) => {
   if (windows.length === 0) return 1400; // 基础 zIndex
@@ -317,11 +444,73 @@ const getCascadedPosition = (windows) => {
   };
 };
 
+const getWindowContentData = (window, contentType) => {
+  switch (contentType) {
+    case 'quote':
+      return window.quote;
+    case 'attachment':
+      return window.attachment;
+    case 'document':
+    default:
+      return window.document;
+  }
+};
+
+const isWindowForResource = (window, contentType, resourceId) => {
+  if (window.contentType === contentType &&
+      (window.resourceId === resourceId || window.docId === resourceId)) {
+    return true;
+  }
+
+  const data = getWindowContentData(window, contentType);
+  return data && data._id === resourceId;
+};
+
+const updateWindowsForResource = (state, contentType, resourceId, data) => {
+  state.windows.forEach((window) => {
+    if (!isWindowForResource(window, contentType, resourceId)) return;
+
+    window.status = 'loaded';
+    window.error = null;
+
+    if (contentType === 'document') {
+      window.document = data;
+      window.title = data?.title || window.title || '无标题文档';
+    } else if (contentType === 'quote') {
+      window.quote = data;
+      window.title = data?.title || window.title || '无标题引用体';
+    } else if (contentType === 'attachment') {
+      window.attachment = data;
+      window.title = window.title || data?.originalName || '无标题附件';
+    }
+  });
+};
+
+const closeWindowsForResource = (state, contentType, resourceId) => {
+  const remaining = state.windows.filter((w) => !isWindowForResource(w, contentType, resourceId));
+  const closedActive = state.activeWindowId &&
+    state.windows.some((w) => w.id === state.activeWindowId && isWindowForResource(w, contentType, resourceId));
+
+  state.windows = remaining;
+
+  if (closedActive) {
+    if (state.windows.length > 0) {
+      const topWindow = state.windows.reduce((prev, current) =>
+        (prev.zIndex > current.zIndex) ? prev : current
+      );
+      state.activeWindowId = topWindow.id;
+    } else {
+      state.activeWindowId = null;
+    }
+  }
+};
+
 const initialState = {
   windows: [],
   activeWindowId: null,
   maxZIndex: 1400,
-  isLimitPromptOpen: false
+  isLimitPromptOpen: false,
+  saving: false
 };
 
 // 根据内容类型获取默认窗口尺寸
@@ -564,16 +753,16 @@ const windowsSlice = createSlice({
         }
       })
       .addCase(fetchWindowAttachment.fulfilled, (state, action) => {
-        const { windowId, metadata } = action.payload;
+        const { windowId, attachment } = action.payload;
         const window = state.windows.find(w => w.id === windowId);
         
         if (window) {
           window.status = 'loaded';
           // 合并策略：保留现有的 attachment 数据（来自 initialData），增量合并元数据
           const currentAttachment = window.attachment || {};
-          window.attachment = { ...currentAttachment, ...metadata };
+          window.attachment = { ...currentAttachment, ...attachment };
           // 标题优先使用已有标题，其次使用元数据中的原始名称
-          window.title = window.title || metadata.originalName || '无标题附件';
+          window.title = window.title || attachment.originalName || '无标题附件';
           
           if (process.env.NODE_ENV === 'development') {
             console.debug(`[windowsSlice.fetchWindowAttachment] 成功: windowId=${windowId}, title=${window.title}`);
@@ -590,6 +779,71 @@ const windowsSlice = createSlice({
           window.title = '加载失败';
         }
       })
+      // 更新文档
+      .addCase(updateDocumentById.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(updateDocumentById.fulfilled, (state, action) => {
+        state.saving = false;
+        const { documentId, document } = action.payload;
+        updateWindowsForResource(state, 'document', documentId, document);
+      })
+      .addCase(updateDocumentById.rejected, (state, action) => {
+        state.saving = false;
+        console.error('更新文档失败:', action.payload?.error || action.error?.message);
+      })
+      // 删除文档
+      .addCase(deleteDocumentById.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(deleteDocumentById.fulfilled, (state, action) => {
+        state.saving = false;
+        const { documentId } = action.payload;
+        closeWindowsForResource(state, 'document', documentId);
+      })
+      .addCase(deleteDocumentById.rejected, (state, action) => {
+        state.saving = false;
+        console.error('删除文档失败:', action.payload?.error || action.error?.message);
+      })
+      // 更新引用体
+      .addCase(updateQuoteById.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(updateQuoteById.fulfilled, (state, action) => {
+        state.saving = false;
+        const { quoteId, quote } = action.payload;
+        updateWindowsForResource(state, 'quote', quoteId, quote);
+      })
+      .addCase(updateQuoteById.rejected, (state, action) => {
+        state.saving = false;
+        console.error('更新引用体失败:', action.payload?.error || action.error?.message);
+      })
+      // 删除引用体
+      .addCase(deleteQuoteById.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(deleteQuoteById.fulfilled, (state, action) => {
+        state.saving = false;
+        const { quoteId } = action.payload;
+        closeWindowsForResource(state, 'quote', quoteId);
+      })
+      .addCase(deleteQuoteById.rejected, (state, action) => {
+        state.saving = false;
+        console.error('删除引用体失败:', action.payload?.error || action.error?.message);
+      })
+      // 删除附件
+      .addCase(deleteAttachmentById.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(deleteAttachmentById.fulfilled, (state, action) => {
+        state.saving = false;
+        const { attachmentId } = action.payload;
+        closeWindowsForResource(state, 'attachment', attachmentId);
+      })
+      .addCase(deleteAttachmentById.rejected, (state, action) => {
+        state.saving = false;
+        console.error('删除附件失败:', action.payload?.error || action.error?.message);
+      })
       // 处理保存文档引用
       .addCase(saveDocumentReferences.pending, (state) => {
         state.saving = true;
@@ -598,12 +852,7 @@ const windowsSlice = createSlice({
         state.saving = false;
         const { documentId, document } = action.payload;
         
-        // 更新窗口中的文档数据
-        const window = state.windows.find(w => w.id === documentId);
-        if (window) {
-          window.document = document;
-          window.status = 'loaded';
-        }
+        updateWindowsForResource(state, 'document', documentId, document);
       })
       .addCase(saveDocumentReferences.rejected, (state, action) => {
         state.saving = false;
@@ -617,16 +866,24 @@ const windowsSlice = createSlice({
         state.saving = false;
         const { documentId, document } = action.payload;
         
-        // 更新窗口中的文档数据
-        const window = state.windows.find(w => w.id === documentId);
-        if (window) {
-          window.document = document;
-          window.status = 'loaded';
-        }
+        updateWindowsForResource(state, 'document', documentId, document);
       })
       .addCase(saveAttachmentReferences.rejected, (state, action) => {
         state.saving = false;
         console.error('保存附件引用失败:', action.payload.error);
+      })
+      // 处理保存文档引用体引用
+      .addCase(saveDocumentQuoteReferences.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(saveDocumentQuoteReferences.fulfilled, (state, action) => {
+        state.saving = false;
+        const { documentId, document } = action.payload;
+        updateWindowsForResource(state, 'document', documentId, document);
+      })
+      .addCase(saveDocumentQuoteReferences.rejected, (state, action) => {
+        state.saving = false;
+        console.error('保存引用体引用失败:', action.payload.error);
       })
       // 处理保存引用引用体
       .addCase(saveQuoteReferences.pending, (state) => {
@@ -636,16 +893,37 @@ const windowsSlice = createSlice({
         state.saving = false;
         const { quoteId, quote } = action.payload;
         
-        // 更新窗口中的引用体数据
-        const window = state.windows.find(w => w.id === quoteId);
-        if (window) {
-          window.quote = quote;
-          window.status = 'loaded';
-        }
+        updateWindowsForResource(state, 'quote', quoteId, quote);
       })
       .addCase(saveQuoteReferences.rejected, (state, action) => {
         state.saving = false;
         console.error('保存引用引用体失败:', action.payload.error);
+      })
+      // 处理保存引用体引用（引用文档）
+      .addCase(saveQuoteDocumentReferences.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(saveQuoteDocumentReferences.fulfilled, (state, action) => {
+        state.saving = false;
+        const { quoteId, quote } = action.payload;
+        updateWindowsForResource(state, 'quote', quoteId, quote);
+      })
+      .addCase(saveQuoteDocumentReferences.rejected, (state, action) => {
+        state.saving = false;
+        console.error('保存引用体引用失败:', action.payload.error);
+      })
+      // 处理保存引用体附件引用
+      .addCase(saveQuoteAttachmentReferences.pending, (state) => {
+        state.saving = true;
+      })
+      .addCase(saveQuoteAttachmentReferences.fulfilled, (state, action) => {
+        state.saving = false;
+        const { quoteId, quote } = action.payload;
+        updateWindowsForResource(state, 'quote', quoteId, quote);
+      })
+      .addCase(saveQuoteAttachmentReferences.rejected, (state, action) => {
+        state.saving = false;
+        console.error('保存引用体附件引用失败:', action.payload.error);
       });
   },
 });

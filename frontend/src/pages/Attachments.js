@@ -22,7 +22,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import AttachmentGrid from '../components/AttachmentGrid';
-import AttachmentDetailModal from '../components/AttachmentDetailModal';
+import AttachmentDetailModal from '../components/legacy/AttachmentDetailModal';
 import AttachmentUploadButton from '../components/AttachmentUploadButton';
 import {
   selectAttachmentsError,

@@ -20,29 +20,29 @@ const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
 const helmet = require('helmet');
 
-// 输出关键配置信息用于调试
-console.log('=== 附件系统配置检查 ===');
-console.log('ATTACHMENTS_ENABLE_RANGE:', config.attachments.enableRange);
-console.log('ATTACHMENTS_VIDEO_DIR:', config.attachments.dirs.video);
-console.log('ATTACHMENTS_CACHE_TTL:', config.attachments.cacheTtl);
-console.log('========================');
-
-// 输出自定义页面配置信息
-console.log('=== 自定义页面配置检查 ===');
-console.log('CUSTOM_PAGE_COLLECTION:', config.mongo.collections.customPages);
-console.log('========================');
-
 // 导入AI配置服务
 const aiConfigService = require('./config/ai/configService');
 
-// 输出AI配置信息
-console.log('=== AI配置检查 ===');
-console.log('AI_ENABLED:', aiConfigService.isEnabled());
-console.log('AI_CURRENT_PROVIDER:', aiConfigService.getConfig().current || '未设置');
-console.log('AI_PROVIDERS_COUNT:', Object.keys(aiConfigService.getProviders()).length);
-console.log('AI_ROLES_COLLECTION:', config.mongo.collections.aiRoles);
-console.log('AI_CHAT_HISTORY_COLLECTION:', config.mongo.collections.aiChatHistory);
-console.log('==================');
+// 输出关键配置信息用于调试（仅开发环境）
+if (config.nodeEnv === 'development') {
+  console.log('=== 附件系统配置检查 ===');
+  console.log('ATTACHMENTS_ENABLE_RANGE:', config.attachments.enableRange);
+  console.log('ATTACHMENTS_VIDEO_DIR:', config.attachments.dirs.video);
+  console.log('ATTACHMENTS_CACHE_TTL:', config.attachments.cacheTtl);
+  console.log('========================');
+
+  console.log('=== 自定义页面配置检查 ===');
+  console.log('CUSTOM_PAGE_COLLECTION:', config.mongo.collections.customPages);
+  console.log('========================');
+
+  console.log('=== AI配置检查 ===');
+  console.log('AI_ENABLED:', aiConfigService.isEnabled());
+  console.log('AI_CURRENT_PROVIDER:', aiConfigService.getConfig().current || '未设置');
+  console.log('AI_PROVIDERS_COUNT:', Object.keys(aiConfigService.getProviders()).length);
+  console.log('AI_ROLES_COLLECTION:', config.mongo.collections.aiRoles);
+  console.log('AI_CHAT_HISTORY_COLLECTION:', config.mongo.collections.aiChatHistory);
+  console.log('==================');
+}
 
 /**
  * 创建Express应用实例
@@ -96,7 +96,9 @@ app.use('/api/themes/wallpapers/file', express.static(path.join(__dirname, 'asse
  * 请求日志中间件
  */
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (config.nodeEnv === 'development') {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  }
   next();
 });
 

@@ -5,6 +5,7 @@
 
 const mongoose = require('mongoose');
 const config = require('../config/config');
+const HttpError = require('../utils/HttpError');
 
 /**
  * 自定义页面Schema定义
@@ -63,19 +64,6 @@ const customPageSchema = new mongoose.Schema(
         refPath: 'contentItems.kind'
       }
     }],
-    
-    // 创建时间，自动设置为文档创建时的时间
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      immutable: true
-    },
-    
-    // 更新时间，每次文档更新时自动更新
-    updatedAt: {
-      type: Date,
-      default: Date.now
-    }
   },
   {
     // 指定集合名称，从环境变量读取，默认为custom-pages
@@ -121,7 +109,6 @@ customPageSchema.virtual('url').get(function() {
  */
 customPageSchema.methods.updateCustomPage = function(updateData) {
   Object.assign(this, updateData);
-  this.updatedAt = new Date();
   return this.save();
 };
 
@@ -217,7 +204,7 @@ customPageSchema.statics.validateReferencedDocuments = async function(referenced
     }).select('_id');
     
     if (existingDocs.length !== uniqueIds.length) {
-      throw new Error('部分引用的文档不存在');
+      throw new HttpError(400, '部分引用的文档不存在', 'REFERENCED_DOCUMENT_NOT_FOUND');
     }
     
     return true;
@@ -258,7 +245,7 @@ customPageSchema.statics.validateReferencedQuotes = async function(referencedIds
     }).select('_id');
     
     if (existingQuotes.length !== uniqueIds.length) {
-      throw new Error('部分引用的引用体不存在');
+      throw new HttpError(400, '部分引用的引用体不存在', 'REFERENCED_QUOTE_NOT_FOUND');
     }
     
     return true;
@@ -300,7 +287,7 @@ customPageSchema.statics.validateReferencedAttachments = async function(referenc
     }).select('_id');
     
     if (existingAttachments.length !== uniqueIds.length) {
-      throw new Error('部分引用的附件不存在或已删除');
+      throw new HttpError(400, '部分引用的附件不存在或已删除', 'REFERENCED_ATTACHMENT_NOT_FOUND');
     }
     
     return true;
@@ -513,14 +500,6 @@ customPageSchema.statics.syncContentItemsWithReferences = function(contentItems,
     referencedAttachmentIds: attachmentIds
   };
 };
-
-// 中间件：保存前更新时间戳
-customPageSchema.pre('save', function(next) {
-  if (!this.isNew) {
-    this.updatedAt = new Date();
-  }
-  next();
-});
 
 /**
  * 导出自定义页面模型

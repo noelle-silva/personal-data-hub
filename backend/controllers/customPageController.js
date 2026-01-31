@@ -74,13 +74,6 @@ class CustomPageController {
         message: '获取自定义页面成功'
       });
     } catch (error) {
-      // 如果是页面不存在的错误，返回404
-      if (error.message && error.message.includes('自定义页面不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: '自定义页面不存在'
-        });
-      }
       next(error);
     }
   }
@@ -156,13 +149,6 @@ class CustomPageController {
         message: '自定义页面更新成功'
       });
     } catch (error) {
-      // 如果是页面不存在的错误，返回404
-      if (error.message && error.message.includes('自定义页面不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: '自定义页面不存在'
-        });
-      }
       next(error);
     }
   }
@@ -198,13 +184,6 @@ class CustomPageController {
         message: '自定义页面删除成功'
       });
     } catch (error) {
-      // 如果是页面不存在的错误，返回404
-      if (error.message && error.message.includes('自定义页面不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: '自定义页面不存在'
-        });
-      }
       next(error);
     }
   }

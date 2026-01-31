@@ -73,8 +73,7 @@ const attachmentSchema = new mongoose.Schema(
     hash: {
       type: String,
       required: [true, '文件哈希值是必填项'],
-      trim: true,
-      index: true
+      trim: true
     },
     
     // 附件状态，必填字段
@@ -95,19 +94,6 @@ const attachmentSchema = new mongoose.Schema(
       default: '',
       maxlength: [20000, '内容描述不能超过20000个字符']
     },
-    
-    // 创建时间，自动设置为文档创建时的时间
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      immutable: true
-    },
-    
-    // 更新时间，每次文档更新时自动更新
-    updatedAt: {
-      type: Date,
-      default: Date.now
-    }
   },
   {
     // 指定集合名称，从环境变量读取，默认为attachments
@@ -144,7 +130,6 @@ attachmentSchema.virtual('url').get(function() {
  */
 attachmentSchema.methods.updateStatus = function(status) {
   this.status = status;
-  this.updatedAt = new Date();
   return this.save();
 };
 
@@ -216,14 +201,6 @@ attachmentSchema.statics.searchAttachments = function(searchTerm, options = {}) 
   .limit(limit)
   .exec();
 };
-
-// 中间件：保存前更新时间戳
-attachmentSchema.pre('save', function(next) {
-  if (!this.isNew) {
-    this.updatedAt = new Date();
-  }
-  next();
-});
 
 /**
  * 导出附件模型

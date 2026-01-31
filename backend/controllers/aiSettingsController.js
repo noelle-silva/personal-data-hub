@@ -68,14 +68,6 @@ class AISettingsController {
       });
     } catch (error) {
       console.error('更新AI配置失败:', error);
-      
-      if (error.message.includes('供应商不存在')) {
-        return res.status(400).json({
-          success: false,
-          message: error.message
-        });
-      }
-      
       next(error);
     }
   }
@@ -162,14 +154,6 @@ class AISettingsController {
       });
     } catch (error) {
       console.error('保存供应商失败:', error);
-      
-      if (error.message.includes('供应商配置无效') || error.message.includes('供应商键名必须')) {
-        return res.status(400).json({
-          success: false,
-          message: error.message
-        });
-      }
-      
       next(error);
     }
   }
@@ -269,14 +253,6 @@ class AISettingsController {
       });
     } catch (error) {
       console.error('删除供应商失败:', error);
-      
-      if (error.message.includes('供应商不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: error.message
-        });
-      }
-      
       next(error);
     }
   }
@@ -300,14 +276,6 @@ class AISettingsController {
       });
     } catch (error) {
       console.error('设置当前供应商失败:', error);
-      
-      if (error.message.includes('供应商不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: error.message
-        });
-      }
-      
       next(error);
     }
   }

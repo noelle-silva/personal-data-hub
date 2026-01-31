@@ -67,19 +67,6 @@ const documentSchema = new mongoose.Schema(
       ref: 'Quote',
       default: []
     }],
-    
-    // 创建时间，自动设置为文档创建时的时间
-    createdAt: {
-      type: Date,
-      default: Date.now,
-      immutable: true
-    },
-    
-    // 更新时间，每次文档更新时自动更新
-    updatedAt: {
-      type: Date,
-      default: Date.now
-    }
   },
   {
     // 指定集合名称，从环境变量读取，默认为documents
@@ -131,7 +118,6 @@ documentSchema.virtual('referencingQuotes', {
  */
 documentSchema.methods.updateDocument = function(updateData) {
   Object.assign(this, updateData);
-  this.updatedAt = new Date();
   return this.save();
 };
 
@@ -187,13 +173,6 @@ documentSchema.statics.searchDocuments = function(searchTerm, options = {}) {
 };
 
 // 中间件：保存前更新时间戳
-documentSchema.pre('save', function(next) {
-  if (!this.isNew) {
-    this.updatedAt = new Date();
-  }
-  next();
-});
-
 /**
  * 导出文档模型
  */

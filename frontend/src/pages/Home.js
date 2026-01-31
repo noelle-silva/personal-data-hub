@@ -29,7 +29,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import DocumentFormModal from '../components/DocumentFormModal';
-import DocumentDetailModal from '../components/DocumentDetailModal';
+import DocumentDetailModal from '../components/legacy/DocumentDetailModal';
 import QuickActionsBar from '../components/QuickActionsBar';
 import TagCloud from '../components/TagCloud';
 import {

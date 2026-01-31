@@ -74,13 +74,6 @@ class DocumentController {
         message: '获取文档成功'
       });
     } catch (error) {
-      // 如果是文档不存在的错误，返回404
-      if (error.message && error.message.includes('文档不存在')) {
-        return res.status(404).json({
-          success: false,
-          message: '文档不存在'
-        });
-      }
       next(error);
     }
   }

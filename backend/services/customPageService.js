@@ -8,6 +8,7 @@ const CustomPage = require('../models/CustomPage');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');
 const Attachment = require('../models/Attachment');
+const HttpError = require('../utils/HttpError');
 
 /**
  * 自定义页面服务类
@@ -74,6 +75,7 @@ class CustomPageService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取自定义页面列表失败: ${error.message}`);
     }
   }
@@ -133,7 +135,7 @@ class CustomPageService {
       const customPage = await query.exec();
       
       if (!customPage) {
-        throw new Error('自定义页面不存在');
+        throw new HttpError(404, '自定义页面不存在', 'CUSTOM_PAGE_NOT_FOUND');
       }
       
       // 转换为普通对象以便添加额外字段
@@ -165,6 +167,7 @@ class CustomPageService {
       
       return result;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`获取自定义页面失败: ${error.message}`);
     }
   }
@@ -240,6 +243,7 @@ class CustomPageService {
       
       return savedPage;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`创建自定义页面失败: ${error.message}`);
     }
   }
@@ -256,7 +260,7 @@ class CustomPageService {
       // 获取当前页面数据
       const currentPage = await CustomPage.findById(id);
       if (!currentPage) {
-        throw new Error('自定义页面不存在');
+        throw new HttpError(404, '自定义页面不存在', 'CUSTOM_PAGE_NOT_FOUND');
       }
       
       // 如果更新包含名称，进行重名检查和处理
@@ -341,7 +345,7 @@ class CustomPageService {
       );
 
       if (!customPage) {
-        throw new Error('自定义页面不存在');
+        throw new HttpError(404, '自定义页面不存在', 'CUSTOM_PAGE_NOT_FOUND');
       }
 
       // 如果有查询选项，重新获取完整数据
@@ -351,6 +355,7 @@ class CustomPageService {
 
       return customPage;
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`更新自定义页面失败: ${error.message}`);
     }
   }
@@ -365,7 +370,7 @@ class CustomPageService {
       const customPage = await CustomPage.findById(id);
       
       if (!customPage) {
-        throw new Error('自定义页面不存在');
+        throw new HttpError(404, '自定义页面不存在', 'CUSTOM_PAGE_NOT_FOUND');
       }
 
       // 获取删除前的引用统计
@@ -385,6 +390,7 @@ class CustomPageService {
         counts
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`删除自定义页面失败: ${error.message}`);
     }
   }
@@ -467,6 +473,7 @@ class CustomPageService {
         pagination
       };
     } catch (error) {
+      if (error.statusCode) throw error;
       throw new Error(`搜索自定义页面失败: ${error.message}`);
     }
   }
