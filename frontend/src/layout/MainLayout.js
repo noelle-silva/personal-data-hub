@@ -33,6 +33,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import GlobalSearch from '../components/GlobalSearch';
 import DocumentWindowsContainer from '../components/DocumentWindowsContainer';
 import GlobalActionPortal from '../components/GlobalActionPortal';
+import WindowControls from '../components/WindowControls';
 import ShortcutRuntime from '../shortcuts/ShortcutRuntime';
 import { closeDropdown } from '../store/searchSlice';
 import {
@@ -45,6 +46,8 @@ import {
   selectCustomPagesEnabled,
   selectCustomPagesVisibility,
 } from '../store/settingsSlice';
+import { isTauri } from '../services/tauriBridge';
+import { preloadWindowApi, startDragging, toggleMaximizeWindow } from '../services/tauriWindow';
 
 // 样式化的应用栏
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -134,6 +137,35 @@ const MainLayout = () => {
   const customPages = useSelector(selectAllPages);
   const customPagesEnabled = useSelector(selectCustomPagesEnabled);
   const customPagesVisibility = useSelector(selectCustomPagesVisibility);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    preloadWindowApi();
+  }, []);
+
+  const shouldStartWindowDrag = (target) => {
+    if (!target || typeof target.closest !== 'function') return true;
+    if (target.closest('[data-no-drag]')) return false;
+    if (target.closest('button, a, input, textarea, select')) return false;
+    if (target.closest('[role="button"], [role="menuitem"]')) return false;
+    if (target.closest('.MuiButtonBase-root, .MuiInputBase-root')) return false;
+    return true;
+  };
+
+  const handleTitlebarMouseDown = async (event) => {
+    if (!isTauri()) return;
+    if (event.button !== 0) return;
+    if (!shouldStartWindowDrag(event.target)) return;
+    event.preventDefault();
+    await startDragging();
+  };
+
+  const handleTitlebarDoubleClick = async (event) => {
+    if (!isTauri()) return;
+    if (!shouldStartWindowDrag(event.target)) return;
+    event.preventDefault();
+    await toggleMaximizeWindow();
+  };
 
   // 处理抽屉开关
   const handleDrawerToggle = () => {
@@ -432,9 +464,14 @@ const MainLayout = () => {
   }, [getPageTitle]);
 
   return (
-    <MainContainer>
-      {/* 顶部导航栏 */}
-      <StyledAppBar position="fixed" elevation={2}>
+      <MainContainer>
+        {/* 顶部导航栏 */}
+      <StyledAppBar
+        position="fixed"
+        elevation={2}
+        onMouseDown={handleTitlebarMouseDown}
+        onDoubleClick={handleTitlebarDoubleClick}
+      >
         <StyledToolbar>
           {/* 左侧区域 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -482,6 +519,7 @@ const MainLayout = () => {
           {/* 右侧区域 */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <ThemeToggle />
+            <WindowControls />
           </Box>
         </StyledToolbar>
       </StyledAppBar>
