@@ -1,9 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Fab, Typography, IconButton } from '@mui/material';
+import {
+  Box,
+  Fab,
+  Typography,
+  IconButton,
+  Paper,
+  Tooltip,
+  List,
+  ListItemButton,
+  ListItemText,
+  Divider,
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import NoteIcon from '@mui/icons-material/Note';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import AutoModeIcon from '@mui/icons-material/AutoMode';
 import DocumentWindow from './DocumentWindow';
 import QuoteWindow from './QuoteWindow';
 import AttachmentWindow from './AttachmentWindow';
@@ -12,11 +26,9 @@ import {
   selectAllWindows,
   selectActiveWindowId,
   selectIsLimitPromptOpen,
-  selectMinimizedWindows,
   closeWindow,
   activateWindow,
   minimizeWindow,
-  restoreWindow,
   setWindowPosition,
   setWindowSize,
   closeLimitPrompt,
@@ -49,73 +61,10 @@ const WindowsContainer = styled(Box)(({ theme }) => ({
   zIndex: theme.zIndex.modal,
 }));
 
-// 最小化窗口栏
-const MinimizedWindowsBar = styled(Box)(({ theme }) => ({
-  position: 'fixed',
-  bottom: 0,
-  left: 0,
-  right: 0,
-  height: 60,
-  backgroundColor: theme.palette.background.paper,
-  borderTop: `1px solid ${theme.palette.divider}`,
-  display: 'flex',
-  alignItems: 'center',
-  padding: theme.spacing(1),
-  gap: theme.spacing(1),
-  overflowX: 'auto',
-  zIndex: theme.zIndex.modal + 100,
-  pointerEvents: 'auto',
-  '&::-webkit-scrollbar': {
-    height: 4,
-  },
-  '&::-webkit-scrollbar-track': {
-    background: theme.palette.background.default,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    background: theme.palette.primary.main,
-    borderRadius: 2,
-  },
-}));
-
-// 最小化窗口项
-const MinimizedWindowItem = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isActive'
-})(({ theme, isActive }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  padding: theme.spacing(1),
-  minWidth: 200,
-  maxWidth: 300,
-  backgroundColor: isActive 
-    ? theme.palette.primaryContainer.main 
-    : theme.palette.background.default,
-  borderRadius: 12,
-  border: `1px solid ${theme.palette.divider}`,
-  cursor: 'pointer',
-  transition: 'background-color 0.2s ease, transform 0.1s ease',
-  '&:hover': {
-    backgroundColor: isActive 
-      ? theme.palette.primaryContainer.dark 
-      : theme.palette.action.hover,
-    transform: 'translateY(-2px)',
-  },
-}));
-
-// 最小化窗口标题
-const MinimizedWindowTitle = styled(Typography)(({ theme }) => ({
-  fontSize: '0.875rem',
-  fontWeight: 500,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  flexGrow: 1,
-}));
-
 // 添加新窗口浮动按钮
 const AddWindowFab = styled(Fab)(({ theme }) => ({
   position: 'fixed',
-  bottom: 80, // 留出最小化窗口栏的空间
+  bottom: 20,
   right: 20,
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.primary.contrastText,
@@ -126,12 +75,109 @@ const AddWindowFab = styled(Fab)(({ theme }) => ({
   },
 }));
 
+const APP_DRAWER_WIDTH = 240;
+
+const OpenNotesSidebar = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'sidebarWidth' && prop !== 'collapsed'
+})(({ theme, sidebarWidth, collapsed }) => ({
+  position: 'fixed',
+  top: 76, // 避开顶部 AppBar（desktop）
+  left: 0,
+  right: 'auto',
+  width: collapsed ? 44 : sidebarWidth,
+  height: 'calc(100vh - 88px)',
+  display: 'flex',
+  flexDirection: 'column',
+  borderRadius: '0 20px 20px 0',
+  overflow: 'hidden',
+  borderRight: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.paper,
+  zIndex: theme.zIndex.modal + 102,
+  pointerEvents: 'auto',
+  transition: 'width 0.2s ease',
+  [theme.breakpoints.up('md')]: {
+    left: APP_DRAWER_WIDTH, // 避开左侧导航 Drawer（desktop）
+  },
+  [theme.breakpoints.down('sm')]: {
+    top: 68, // 避开顶部 AppBar（mobile）
+    height: 'calc(100vh - 80px)',
+  },
+}));
+
+const OpenNotesSidebarHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(1, 1),
+  minHeight: 44,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.default,
+}));
+
+const SidebarResizeHandle = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  bottom: 0,
+  right: 0,
+  width: 6,
+  cursor: 'col-resize',
+  touchAction: 'none',
+  backgroundColor: 'transparent',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
+
 const DocumentWindowsContainer = () => {
   const dispatch = useDispatch();
   const windows = useSelector(selectAllWindows);
   const activeWindowId = useSelector(selectActiveWindowId);
   const isLimitPromptOpen = useSelector(selectIsLimitPromptOpen);
-  const minimizedWindows = useSelector(selectMinimizedWindows);
+
+  const OPEN_NOTES_SIDEBAR_MIN_WIDTH = 220;
+  const OPEN_NOTES_SIDEBAR_MAX_WIDTH = 520;
+  const OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH = 280;
+
+  const [openNotesSidebarCollapsed, setOpenNotesSidebarCollapsed] = useState(false);
+  const [openNotesSidebarAuto, setOpenNotesSidebarAuto] = useState(false);
+  const [openNotesSidebarHovering, setOpenNotesSidebarHovering] = useState(false);
+  const [openNotesSidebarWidth, setOpenNotesSidebarWidth] = useState(OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const resizeRef = useRef({ startX: 0, startWidth: OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH });
+
+  const documentWindows = useMemo(() => {
+    return windows
+      .filter(w => !w.contentType || w.contentType === 'document')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [windows]);
+
+  const isSidebarCollapsed = openNotesSidebarAuto ? !openNotesSidebarHovering : openNotesSidebarCollapsed;
+
+  // 侧边栏拖拽调整宽度
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+
+    const handlePointerMove = (e) => {
+      const dx = e.clientX - resizeRef.current.startX;
+      const nextWidth = resizeRef.current.startWidth - dx;
+      const clamped = Math.max(
+        OPEN_NOTES_SIDEBAR_MIN_WIDTH,
+        Math.min(OPEN_NOTES_SIDEBAR_MAX_WIDTH, nextWidth)
+      );
+      setOpenNotesSidebarWidth(clamped);
+    };
+
+    const handlePointerUp = () => {
+      setIsResizingSidebar(false);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isResizingSidebar]);
   
   // 管理背景滚动锁定状态
   useEffect(() => {
@@ -442,27 +488,31 @@ const DocumentWindowsContainer = () => {
   };
   
   // 渲染最小化窗口
-  const renderMinimizedWindows = () => {
-    return minimizedWindows.map((window) => (
-      <MinimizedWindowItem
-        key={window.id}
-        isActive={window.id === activeWindowId}
-        onClick={() => dispatch(restoreWindow(window.id))}
-      >
-        <MinimizedWindowTitle>
-          {window.title}
-        </MinimizedWindowTitle>
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch(closeWindow(window.id));
-          }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </MinimizedWindowItem>
-    ));
+  const handleSidebarResizeStart = (e) => {
+    if (isSidebarCollapsed) return;
+    setIsResizingSidebar(true);
+    setOpenNotesSidebarHovering(true);
+    resizeRef.current = {
+      startX: e.clientX,
+      startWidth: openNotesSidebarWidth
+    };
+    e.preventDefault();
+  };
+
+  const handleToggleSidebarAutoMode = () => {
+    setOpenNotesSidebarAuto((current) => {
+      const next = !current;
+      if (next) {
+        setOpenNotesSidebarHovering(true);
+      } else {
+        setOpenNotesSidebarHovering(false);
+      }
+      return next;
+    });
+  };
+
+  const handleActivateWindowFromSidebar = (windowId) => {
+    dispatch(activateWindow(windowId));
   };
   
   return (
@@ -470,12 +520,150 @@ const DocumentWindowsContainer = () => {
       <WindowsContainer>
         {renderWindows()}
       </WindowsContainer>
-      
-      {minimizedWindows.length > 0 && (
-        <MinimizedWindowsBar>
-          {renderMinimizedWindows()}
-        </MinimizedWindowsBar>
-      )}
+
+      {/* 右侧“已打开笔记”标签栏 */}
+      <OpenNotesSidebar
+        sidebarWidth={openNotesSidebarWidth}
+        collapsed={isSidebarCollapsed}
+        elevation={8}
+        aria-label="已打开笔记"
+        onMouseEnter={() => {
+          if (openNotesSidebarAuto) setOpenNotesSidebarHovering(true);
+        }}
+        onMouseLeave={() => {
+          if (openNotesSidebarAuto && !isResizingSidebar) setOpenNotesSidebarHovering(false);
+        }}
+      >
+        {!isSidebarCollapsed && (
+          <SidebarResizeHandle
+            onPointerDown={handleSidebarResizeStart}
+            aria-label="调整侧边栏宽度"
+          />
+        )}
+
+        <OpenNotesSidebarHeader>
+          {isSidebarCollapsed ? (
+            <Tooltip title={`已打开笔记（${documentWindows.length}）`} placement="right">
+              <IconButton
+                size="small"
+                onClick={() => setOpenNotesSidebarCollapsed(false)}
+                aria-label="展开已打开笔记侧边栏"
+              >
+                <NoteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 0.5, minWidth: 0 }}>
+                <NoteIcon fontSize="small" />
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                >
+                  已打开笔记
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {documentWindows.length}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Tooltip title={openNotesSidebarAuto ? '自动模式：悬停展开/离开收起' : '手动模式'} placement="right">
+                  <IconButton
+                    size="small"
+                    onClick={handleToggleSidebarAutoMode}
+                    aria-label={openNotesSidebarAuto ? '切换到手动模式' : '切换到自动模式'}
+                    sx={{
+                      color: openNotesSidebarAuto ? 'primary.main' : 'inherit',
+                      backgroundColor: openNotesSidebarAuto ? 'action.selected' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: openNotesSidebarAuto ? 'action.selected' : 'action.hover',
+                      },
+                    }}
+                  >
+                    <AutoModeIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip
+                  title={openNotesSidebarAuto ? '自动模式下由悬停控制' : '收起'}
+                  placement="right"
+                >
+                  <span>
+                    <IconButton
+                      size="small"
+                      disabled={openNotesSidebarAuto}
+                      onClick={() => setOpenNotesSidebarCollapsed(true)}
+                      aria-label="收起已打开笔记侧边栏"
+                    >
+                      <ChevronLeftIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            </>
+          )}
+        </OpenNotesSidebarHeader>
+
+        {!isSidebarCollapsed && (
+          <>
+            <Divider />
+            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              {documentWindows.length === 0 ? (
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    暂无打开的笔记
+                  </Typography>
+                </Box>
+              ) : (
+                <List dense disablePadding>
+                  {documentWindows.map((w) => (
+                    <ListItemButton
+                      key={w.id}
+                      selected={w.id === activeWindowId}
+                      onClick={() => handleActivateWindowFromSidebar(w.id)}
+                      sx={{
+                        px: 1.25,
+                        py: 0.75,
+                        gap: 1,
+                        alignItems: 'center',
+                        '&.Mui-selected': {
+                          backgroundColor: 'action.selected',
+                        },
+                      }}
+                      aria-label={`切换到笔记：${w.title}`}
+                    >
+                      <NoteIcon fontSize="small" sx={{ color: 'primary.main' }} />
+                      <ListItemText
+                        primary={w.title}
+                        secondary={w.minimized ? '已最小化' : undefined}
+                        primaryTypographyProps={{
+                          variant: 'body2',
+                          sx: { fontWeight: w.id === activeWindowId ? 700 : 500 },
+                          noWrap: true
+                        }}
+                        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+                      />
+                      <Tooltip title="关闭" placement="right">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dispatch(closeWindow(w.id));
+                          }}
+                          aria-label={`关闭笔记：${w.title}`}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </>
+        )}
+      </OpenNotesSidebar>
       
       <AddWindowFab
         color="primary"
