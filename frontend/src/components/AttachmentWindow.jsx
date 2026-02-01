@@ -245,8 +245,13 @@ const AttachmentWindow = ({
       setIsMaximized(false);
     } else {
       // 最大化窗口
-      onUpdateSize({ width: window.innerWidth - 40, height: window.innerHeight - 40 });
-      onUpdatePosition({ x: 20, y: 20 });
+      const margin = 20;
+      const appBarHeight = window.innerWidth < 600 ? 56 : 64;
+      onUpdatePosition({ x: margin, y: appBarHeight + margin });
+      onUpdateSize({
+        width: window.innerWidth - (margin * 2),
+        height: window.innerHeight - appBarHeight - (margin * 2)
+      });
       setIsMaximized(true);
     }
   }, [isMaximized, onUpdatePosition, onUpdateSize]);

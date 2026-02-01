@@ -40,24 +40,22 @@ jest.mock('../services/attachmentUrlCache', () => ({
 
 test('MarkdownInlineRenderer 在 DOMPurify 前把 attach:// 转换为可访问 URL（img/video）', async () => {
   const id = '68e40bae66039f7f74d20199';
-  const html = `<p>hi</p><img src="attach://${id}" alt="a" /><video src="attach://${id}" controls></video>`;
+  const html = `<p>hi</p><img src="attach://${id}" alt="a" /><video src="attach://${id}" title="v" controls></video>`;
 
   renderMarkdownToHtml.mockReturnValue(html);
   replaceWithAttachmentUrls.mockImplementation(async (content) => {
     return content.replaceAll(`attach://${id}`, `http://gw/attachments/${id}`);
   });
 
-  const { container } = render(<MarkdownInlineRenderer content="x" cacheKey="k" />);
+  render(<MarkdownInlineRenderer content="x" cacheKey="k" />);
 
+  const img = await screen.findByRole('img');
+  expect(img.getAttribute('src')).toBe(`http://gw/attachments/${id}`);
+
+  const video = await screen.findByTitle('v');
   await waitFor(() => {
-    const img = screen.getByRole('img');
-    expect(img.getAttribute('src')).toBe(`http://gw/attachments/${id}`);
-
-    const video = container.querySelector('video');
-    expect(video).not.toBeNull();
     expect(video.getAttribute('src')).toBe(`http://gw/attachments/${id}`);
   });
 
   expect(replaceWithAttachmentUrls).toHaveBeenCalledWith(html);
 });
-

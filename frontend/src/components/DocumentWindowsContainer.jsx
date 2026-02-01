@@ -1,23 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Backdrop,
   Fab,
-  Typography,
-  IconButton,
-  Paper,
-  Tooltip,
-  List,
-  ListItemButton,
-  ListItemText,
-  Divider,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import NoteIcon from '@mui/icons-material/Note';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import DocumentWindow from './DocumentWindow';
 import QuoteWindow from './QuoteWindow';
 import AttachmentWindow from './AttachmentWindow';
@@ -75,87 +64,13 @@ const AddWindowFab = styled(Fab)(({ theme }) => ({
   },
 }));
 
-const APP_DRAWER_WIDTH = 240;
-const OPEN_NOTES_BAR_HEIGHT = 44;
 
-const OpenNotesSidebar = styled(Paper, {
-  shouldForwardProp: (prop) =>
-    prop !== 'sidebarWidth' && prop !== 'expanded' && prop !== 'panelHeight' && prop !== 'dock'
-})(({ theme, sidebarWidth, expanded, panelHeight, dock }) => ({
-  position: 'fixed',
-  top: 64, // 贴合 AppBar 底部（desktop）
-  left: dock === 'left' ? 0 : 'auto',
-  right: dock === 'right' ? 0 : 'auto',
-  width: sidebarWidth,
-  height: expanded ? panelHeight : OPEN_NOTES_BAR_HEIGHT,
-  display: 'flex',
-  flexDirection: 'column',
-  borderRadius: dock === 'left'
-    ? (expanded ? '0 20px 20px 0' : '0 999px 999px 0')
-    : (expanded ? '20px 0 0 20px' : '999px 0 0 999px'),
-  overflow: 'hidden',
-  borderRight: dock === 'left' ? `1px solid ${theme.palette.divider}` : 'none',
-  borderLeft: dock === 'right' ? `1px solid ${theme.palette.divider}` : 'none',
-  backgroundColor: theme.palette.background.paper,
-  // 必须低于浮动窗口（windowsSlice 的窗口 zIndex 从 ~1400 起），避免盖住窗口标题栏/按钮
-  zIndex: theme.zIndex.modal - 10,
-  pointerEvents: 'auto',
-  transition: 'height 0.18s ease, border-radius 0.18s ease',
-  boxShadow: 'none',
-  [theme.breakpoints.up('md')]: {
-    left: dock === 'left' ? APP_DRAWER_WIDTH : 'auto', // 避开左侧导航 Drawer（desktop）
-  },
-  [theme.breakpoints.down('sm')]: {
-    top: 56, // 贴合 AppBar 底部（mobile）
-  },
-}));
-
-const OpenNotesSidebarHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: theme.spacing(1, 1),
-  minHeight: 44,
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  backgroundColor: theme.palette.background.default,
-}));
-
-const SidebarResizeHandle = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'dock',
-})(({ theme, dock }) => ({
-  position: 'absolute',
-  top: 0,
-  bottom: 0,
-  right: dock === 'left' ? 0 : 'auto',
-  left: dock === 'right' ? 0 : 'auto',
-  width: 6,
-  cursor: 'col-resize',
-  touchAction: 'none',
-  backgroundColor: 'transparent',
-  '&:hover': {
-    backgroundColor: theme.palette.action.hover,
-  },
-}));
 
 const DocumentWindowsContainer = () => {
   const dispatch = useDispatch();
   const windows = useSelector(selectAllWindows);
   const activeWindowId = useSelector(selectActiveWindowId);
   const isLimitPromptOpen = useSelector(selectIsLimitPromptOpen);
-
-  const OPEN_NOTES_SIDEBAR_MIN_WIDTH = 220;
-  const OPEN_NOTES_SIDEBAR_MAX_WIDTH = 520;
-  const OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH = 280;
-
-  const [openNotesSidebarHovering, setOpenNotesSidebarHovering] = useState(false);
-  const [openNotesDockSide, setOpenNotesDockSide] = useState('left'); // 'left' | 'right'
-  const [openNotesSidebarWidth, setOpenNotesSidebarWidth] = useState(OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH);
-  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-  const resizeRef = useRef({ startX: 0, startWidth: OPEN_NOTES_SIDEBAR_DEFAULT_WIDTH });
-  const [viewport, setViewport] = useState(() => ({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
-    height: typeof window !== 'undefined' ? window.innerHeight : 800,
-  }));
 
   const documentWindows = useMemo(() => {
     return windows
@@ -198,59 +113,6 @@ const DocumentWindowsContainer = () => {
       dispatch(minimizeWindow(w.id));
     });
   };
-
-  const openNotesExpanded = openNotesSidebarHovering || isResizingSidebar;
-
-  const openNotesPanelHeight = useMemo(() => {
-    const headerHeight = OPEN_NOTES_BAR_HEIGHT;
-    const rowHeight = 40; // ListItemButton(dense) 近似高度
-    const dividerHeight = 1;
-    const emptyHeight = 56;
-    const footerPadding = 8;
-
-    const desired = documentWindows.length === 0
-      ? headerHeight + dividerHeight + emptyHeight + footerPadding
-      : headerHeight + dividerHeight + (documentWindows.length * rowHeight);
-
-    const topOffsetDesktop = viewport.width < 600 ? 56 : 64;
-    const bottomMargin = 12;
-    const maxHeight = Math.max(OPEN_NOTES_BAR_HEIGHT, viewport.height - topOffsetDesktop - bottomMargin);
-    return Math.min(desired, maxHeight);
-  }, [documentWindows.length, viewport.height, viewport.width]);
-
-  useEffect(() => {
-    const handleResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // 侧边栏拖拽调整宽度
-  useEffect(() => {
-    if (!isResizingSidebar) return;
-
-    const handlePointerMove = (e) => {
-      const dx = e.clientX - resizeRef.current.startX;
-      const nextWidth = openNotesDockSide === 'left'
-        ? resizeRef.current.startWidth + dx
-        : resizeRef.current.startWidth - dx;
-      const clamped = Math.max(
-        OPEN_NOTES_SIDEBAR_MIN_WIDTH,
-        Math.min(OPEN_NOTES_SIDEBAR_MAX_WIDTH, nextWidth)
-      );
-      setOpenNotesSidebarWidth(clamped);
-    };
-
-    const handlePointerUp = () => {
-      setIsResizingSidebar(false);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [isResizingSidebar, openNotesDockSide]);
   
   // 管理背景滚动锁定状态
   useEffect(() => {
@@ -570,25 +432,6 @@ const DocumentWindowsContainer = () => {
     });
   };
   
-  // 渲染最小化窗口
-  const handleSidebarResizeStart = (e) => {
-    setIsResizingSidebar(true);
-    setOpenNotesSidebarHovering(true);
-    resizeRef.current = {
-      startX: e.clientX,
-      startWidth: openNotesSidebarWidth
-    };
-    e.preventDefault();
-  };
-
-  const handleToggleDockSide = () => {
-    setOpenNotesDockSide((side) => (side === 'left' ? 'right' : 'left'));
-  };
-
-  const handleActivateWindowFromSidebar = (windowId) => {
-    dispatch(activateWindow(windowId));
-  };
-
   const handleActivatePrevDocumentWindow = () => {
     if (documentWindows.length <= 1) return;
 
@@ -632,15 +475,14 @@ const DocumentWindowsContainer = () => {
 
     dispatch(activateWindow(quoteWindows[targetIndex].id));
   };
-
-  const dockTooltipPlacement = openNotesDockSide === 'left' ? 'right' : 'left';
   
   return (
     <>
       <Backdrop
         open={!!activeDocumentWindowId || !!activeQuoteWindowId}
         sx={(theme) => ({
-          zIndex: theme.zIndex.modal - 1,
+          // Backdrop 只遮内容区，不允许遮挡顶部栏
+          zIndex: theme.zIndex.drawer,
           backgroundColor: 'rgba(0, 0, 0, 0.35)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
@@ -660,125 +502,6 @@ const DocumentWindowsContainer = () => {
       <WindowsContainer>
         {renderWindows()}
       </WindowsContainer>
-
-      {/* 左上角“已打开笔记”横条：悬停展开 */}
-      <OpenNotesSidebar
-        sidebarWidth={openNotesSidebarWidth}
-        expanded={openNotesExpanded}
-        panelHeight={openNotesPanelHeight}
-        dock={openNotesDockSide}
-        elevation={0}
-        aria-label="已打开笔记"
-        onMouseEnter={() => {
-          setOpenNotesSidebarHovering(true);
-        }}
-        onMouseLeave={() => {
-          if (!isResizingSidebar) setOpenNotesSidebarHovering(false);
-        }}
-      >
-        <SidebarResizeHandle
-          dock={openNotesDockSide}
-          onPointerDown={handleSidebarResizeStart}
-          aria-label="调整侧边栏宽度"
-        />
-
-        <OpenNotesSidebarHeader>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 0.75, minWidth: 0 }}>
-            <NoteIcon fontSize="small" />
-            <Typography
-              variant="subtitle2"
-              sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-            >
-              已打开笔记
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {documentWindows.length}
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 0.25 }}>
-            <Tooltip title="悬停展开 / 离开收起" placement={dockTooltipPlacement}>
-              <Box sx={{ px: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">
-                  悬停
-                </Typography>
-              </Box>
-            </Tooltip>
-
-            <Tooltip
-              title={openNotesDockSide === 'left' ? '切到右侧' : '切到左侧'}
-              placement={dockTooltipPlacement}
-            >
-              <IconButton
-                size="small"
-                onClick={handleToggleDockSide}
-                aria-label={openNotesDockSide === 'left' ? '将已打开笔记横条切换到右侧' : '将已打开笔记横条切换到左侧'}
-              >
-                <SwapHorizIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </OpenNotesSidebarHeader>
-
-        {openNotesExpanded && (
-          <>
-            <Divider />
-            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-              {documentWindows.length === 0 ? (
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    暂无打开的笔记
-                  </Typography>
-                </Box>
-              ) : (
-                <List dense disablePadding>
-                  {documentWindows.map((w) => (
-                    <ListItemButton
-                      key={w.id}
-                      selected={w.id === activeWindowId}
-                      onClick={() => handleActivateWindowFromSidebar(w.id)}
-                      sx={{
-                        px: 1.25,
-                        py: 0.75,
-                        gap: 1,
-                        alignItems: 'center',
-                        '&.Mui-selected': {
-                          backgroundColor: 'action.selected',
-                        },
-                      }}
-                      aria-label={`切换到笔记：${w.title}`}
-                    >
-                      <NoteIcon fontSize="small" sx={{ color: 'primary.main' }} />
-                      <ListItemText
-                        primary={w.title}
-                        secondary={w.minimized ? '已最小化' : undefined}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          sx: { fontWeight: w.id === activeWindowId ? 700 : 500 },
-                          noWrap: true
-                        }}
-                        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-                      />
-                      <Tooltip title="关闭" placement={dockTooltipPlacement}>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            dispatch(closeWindow(w.id));
-                          }}
-                          aria-label={`关闭笔记：${w.title}`}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </ListItemButton>
-                  ))}
-                </List>
-              )}
-            </Box>
-          </>
-        )}
-      </OpenNotesSidebar>
       
       {!activeDocumentWindowId && !activeQuoteWindowId && (
         <AddWindowFab

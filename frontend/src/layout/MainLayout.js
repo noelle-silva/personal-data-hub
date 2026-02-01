@@ -34,6 +34,7 @@ import GlobalSearch from '../components/GlobalSearch';
 import DocumentWindowsContainer from '../components/DocumentWindowsContainer';
 import GlobalActionPortal from '../components/GlobalActionPortal';
 import WindowControls from '../components/WindowControls';
+import OpenNotesTopBarMenu from '../components/OpenNotesTopBarMenu';
 import ShortcutRuntime from '../shortcuts/ShortcutRuntime';
 import { closeDropdown } from '../store/searchSlice';
 import {
@@ -53,7 +54,8 @@ import { preloadWindowApi, startDragging, toggleMaximizeWindow } from '../servic
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
   background: theme.palette.primary.main,
   color: theme.palette.primary.contrastText,
-  zIndex: theme.zIndex.drawer + 1,
+  // 顶部栏必须始终在“浮动窗口/Backdrop”之上
+  zIndex: theme.zIndex.modal + 1000,
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -476,7 +478,7 @@ const MainLayout = () => {
       >
         <StyledToolbar>
           {/* 左侧区域 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* 移动端菜单按钮 */}
             {isMobile && (
               <IconButton
@@ -506,10 +508,13 @@ const MainLayout = () => {
             </Typography>
             
             {/* 版本信息 - 在大屏显示 */}
-            <VersionText variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-              v0.1.0
-            </VersionText>
-          </Box>
+             <VersionText variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+               v0.1.0
+             </VersionText>
+
+             {/* 已打开笔记：从悬浮条改为顶部栏菜单 */}
+             <OpenNotesTopBarMenu />
+           </Box>
           
           {/* 中间区域 - 搜索框 */}
           {!isMobile && (
