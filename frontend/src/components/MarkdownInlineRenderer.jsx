@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import parse from 'html-react-parser';
@@ -9,6 +9,7 @@ import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyle
 import { preprocessAIMessageContent } from '../utils/aiChatPreprocessor';
 import AttachmentImage from './AttachmentImage';
 import AttachmentVideo from './AttachmentVideo';
+import { extractAttachmentIds, replaceWithAttachmentUrls } from '../services/attachmentUrlCache';
 
 // 样式化的容器
 const RendererContainer = styled(Box)(({ theme }) => ({
@@ -111,6 +112,43 @@ const MarkdownInlineRenderer = ({
       return '';
     }
   }, [preprocessedContent, cacheKey]);
+
+  // 预处理 HTML：把 attach:// 替换成网关可访问 URL，避免被 DOMPurify 当作不安全协议移除
+  const [processedHtml, setProcessedHtml] = useState(renderedHtml || '');
+  const [processingAttachments, setProcessingAttachments] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const process = async () => {
+      setProcessingAttachments(false);
+      setProcessedHtml(renderedHtml || '');
+      if (!renderedHtml) return;
+
+      const attachmentIds = extractAttachmentIds(renderedHtml);
+      if (attachmentIds.length === 0) return;
+
+      try {
+        setProcessingAttachments(true);
+        const processed = await replaceWithAttachmentUrls(renderedHtml);
+        if (!cancelled) {
+          setProcessedHtml(processed);
+        }
+      } catch (err) {
+        console.error('[MarkdownInlineRenderer] 预处理 attach:// 失败', err);
+      } finally {
+        if (!cancelled) {
+          setProcessingAttachments(false);
+        }
+      }
+    };
+
+    process();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [renderedHtml]);
 
   // 生成作用域样式
   const scopedStyles = useMemo(() => {
@@ -397,11 +435,11 @@ const MarkdownInlineRenderer = ({
 
   // 收敛文档级标签并解析 HTML 为 React 元素
   const parsedContent = useMemo(() => {
-    if (!renderedHtml) return null;
+    if (!processedHtml) return null;
     
     try {
       // 收敛文档级标签
-      const sanitizedHtml = sanitizeDocLevelHtml(renderedHtml);
+      const sanitizedHtml = sanitizeDocLevelHtml(processedHtml);
 
       // DOMPurify：系统内容可能来自用户输入/外部同步，必须做强净化
       // 允许项目内自定义标签 x-tab-action（用于“打开文档/引用体/附件”的交互入口）
@@ -428,7 +466,7 @@ const MarkdownInlineRenderer = ({
       console.error('HTML 解析错误:', err);
       return null;
     }
-  }, [renderedHtml]);
+  }, [processedHtml]);
 
   // 如果没有内容，显示空状态
   if (!content) {
@@ -437,6 +475,19 @@ const MarkdownInlineRenderer = ({
         <LoadingContainer>
           <Typography variant="body2" color="text.secondary">
             暂无内容
+          </Typography>
+        </LoadingContainer>
+      </RendererContainer>
+    );
+  }
+
+  // 预处理中（例如需要把 attach:// 转成可访问 URL），避免短暂显示“渲染失败”误导用户
+  if (processingAttachments) {
+    return (
+      <RendererContainer>
+        <LoadingContainer>
+          <Typography variant="body2" color="text.secondary">
+            渲染中…
           </Typography>
         </LoadingContainer>
       </RendererContainer>
