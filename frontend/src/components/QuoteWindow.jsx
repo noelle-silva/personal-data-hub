@@ -13,7 +13,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
 import FilterNoneIcon from '@mui/icons-material/FilterNone';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
@@ -36,9 +37,7 @@ const WindowContainer = styled(Paper, {
   border: `1px solid ${theme.palette.border}`,
   overflow: 'hidden',
   zIndex: theme.zIndex.modal + 1, // 基础 zIndex，动态调整
-  transition: 'box-shadow 0.2s ease, transform 0.1s ease',
-  transform: minimized ? 'scale(0.95)' : 'scale(1)',
-  opacity: minimized ? 0 : 1,
+  transition: 'box-shadow 0.2s ease',
   pointerEvents: minimized ? 'none' : 'auto',
 }));
 
@@ -56,7 +55,7 @@ const WindowHeader = styled(Box, {
   color: isActive 
     ? theme.palette.primary.contrastText 
     : theme.palette.text.primary,
-  cursor: 'move',
+  cursor: 'default',
   userSelect: 'none',
   borderTopLeftRadius: 20,
   borderTopRightRadius: 20,
@@ -173,6 +172,9 @@ const QuoteWindow = ({
   onActivate,
   onUpdatePosition,
   onUpdateSize,
+  onPrevQuote,
+  onNextQuote,
+  canNavigateQuotes = false,
   onSave,
   onDelete,
   onSaveReferences,
@@ -184,11 +186,6 @@ const QuoteWindow = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [windowStart, setWindowStart] = useState({ x: 0, y: 0 });
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   
   // 标题编辑相关状态
   const [headerIsEditing, setHeaderIsEditing] = useState(false);
@@ -222,8 +219,6 @@ const QuoteWindow = ({
   }, [windowData.quote]);
   
   const windowRef = useRef(null);
-  const headerRef = useRef(null);
-  const resizeHandleRef = useRef(null);
   
   // 处理窗口激活
   const handleWindowClick = useCallback(() => {
@@ -232,102 +227,18 @@ const QuoteWindow = ({
     }
   }, [isActive, onActivate]);
   
-  // 处理拖拽开始
-  const handleDragStart = useCallback((e) => {
-    if (isMaximized) return;
-    
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX,
-      y: e.clientY
-    });
-    setWindowStart({
-      x: windowData.position.x,
-      y: windowData.position.y
-    });
-    
-    e.preventDefault();
-  }, [isMaximized, windowData.position]);
-  
-  // 处理调整大小开始
-  const handleResizeStart = useCallback((e) => {
-    if (isMaximized) return;
-    
-    setIsResizing(true);
-    setResizeStart({
-      x: e.clientX,
-      y: e.clientY,
-      width: windowData.size.width,
-      height: windowData.size.height
-    });
-    
-    e.preventDefault();
-    e.stopPropagation();
-  }, [isMaximized, windowData.size]);
-  
-  // 处理鼠标移动
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isDragging) {
-        const deltaX = e.clientX - dragStart.x;
-        const deltaY = e.clientY - dragStart.y;
-        
-        const newPosition = {
-          x: windowStart.x + deltaX,
-          y: windowStart.y + deltaY
-        };
-        
-        // 确保窗口不会拖出屏幕
-        const maxX = window.innerWidth - 200; // 最小宽度
-        const maxY = window.innerHeight - 100; // 最小高度
-        
-        newPosition.x = Math.max(0, Math.min(newPosition.x, maxX));
-        newPosition.y = Math.max(0, Math.min(newPosition.y, maxY));
-        
-        onUpdatePosition(newPosition);
-      } else if (isResizing) {
-        const deltaX = e.clientX - resizeStart.x;
-        const deltaY = e.clientY - resizeStart.y;
-        
-        const newSize = {
-          width: Math.max(400, resizeStart.width + deltaX),
-          height: Math.max(300, resizeStart.height + deltaY)
-        };
-        
-        onUpdateSize(newSize);
-      }
-    };
-    
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      setIsResizing(false);
-    };
-    
-    if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, isResizing, dragStart, windowStart, resizeStart, onUpdatePosition, onUpdateSize]);
-  
   // 处理最大化/还原
   const handleMaximize = useCallback(() => {
     if (isMaximized) {
-      // 还原窗口 - 与文档窗口保持一致的尺寸
-      onUpdateSize({ width: 1380, height: '90vh' });
-      onUpdatePosition({ x: 100, y: 100 });
+      // 还原窗口
+      onUpdateSize({ width: 1200, height: '80vh' });
       setIsMaximized(false);
     } else {
       // 最大化窗口
       onUpdateSize({ width: window.innerWidth - 40, height: window.innerHeight - 40 });
-      onUpdatePosition({ x: 20, y: 20 });
       setIsMaximized(true);
     }
-  }, [isMaximized, onUpdatePosition, onUpdateSize]);
+  }, [isMaximized, onUpdateSize]);
   
   // 处理键盘事件
   useEffect(() => {
@@ -396,7 +307,7 @@ const QuoteWindow = ({
     }
   }, []);
   
-  // 阻止输入框的鼠标事件冒泡，避免触发拖拽
+  // 阻止输入框的鼠标事件冒泡，避免误触窗口层级逻辑
   const handleInputMouseDown = useCallback((e) => {
     e.stopPropagation();
   }, []);
@@ -498,22 +409,20 @@ const QuoteWindow = ({
       isActive={isActive}
       minimized={windowData.minimized}
       sx={{
-        left: windowData.position.x,
-        top: windowData.position.y,
+        left: isMaximized ? 20 : '50%',
+        top: isMaximized ? 20 : '50%',
         width: windowData.size.width,
         height: windowData.size.height,
         zIndex: windowData.zIndex,
+        transform: isMaximized ? 'none' : 'translate(-50%, -50%)',
       }}
       onClick={handleWindowClick}
     >
       {/* 窗口标题栏 */}
       <WindowHeader
-        ref={headerRef}
         isActive={isActive}
-        onMouseDown={handleDragStart}
       >
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <DragIndicatorIcon sx={{ fontSize: 16, opacity: 0.7 }} />
           {headerIsEditing ? (
             <EditableTitleInput
               value={editableTitle}
@@ -554,6 +463,24 @@ const QuoteWindow = ({
         <WindowControls>
           <WindowControlButton
             size="small"
+            onClick={onPrevQuote}
+            title="上一个引用体"
+            disabled={!canNavigateQuotes}
+            aria-label="切换到上一个已打开引用体"
+          >
+            <NavigateBeforeIcon />
+          </WindowControlButton>
+          <WindowControlButton
+            size="small"
+            onClick={onNextQuote}
+            title="下一个引用体"
+            disabled={!canNavigateQuotes}
+            aria-label="切换到下一个已打开引用体"
+          >
+            <NavigateNextIcon />
+          </WindowControlButton>
+          <WindowControlButton
+            size="small"
             onClick={handleMaximize}
             title={isMaximized ? "还原" : "最大化"}
           >
@@ -580,34 +507,6 @@ const QuoteWindow = ({
       <WindowContent>
         {renderContent()}
       </WindowContent>
-      
-      {/* 调整大小手柄 */}
-      {!isMaximized && (
-        <Box
-          ref={resizeHandleRef}
-          sx={{
-            position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: 16,
-            height: 16,
-            cursor: 'nwse-resize',
-            zIndex: 1,
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              bottom: 2,
-              right: 2,
-              width: 0,
-              height: 0,
-              borderStyle: 'solid',
-              borderWidth: '0 0 8px 8px',
-              borderColor: 'transparent transparent transparent rgba(0, 0, 0, 0.3)',
-            },
-          }}
-          onMouseDown={handleResizeStart}
-        />
-      )}
     </WindowContainer>
   );
 };

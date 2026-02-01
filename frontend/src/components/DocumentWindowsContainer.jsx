@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
+  Backdrop,
   Fab,
   Typography,
   IconButton,
@@ -161,6 +162,42 @@ const DocumentWindowsContainer = () => {
       .filter(w => !w.contentType || w.contentType === 'document')
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [windows]);
+
+  const quoteWindows = useMemo(() => {
+    return windows
+      .filter(w => w.contentType === 'quote')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [windows]);
+
+  const activeDocumentWindowId = useMemo(() => {
+    const active = windows.find((w) => w.id === activeWindowId);
+    if (!active) return null;
+    if (active.contentType && active.contentType !== 'document') return null;
+    if (active.minimized) return null;
+    return active.id;
+  }, [activeWindowId, windows]);
+
+  const activeQuoteWindowId = useMemo(() => {
+    const active = windows.find((w) => w.id === activeWindowId);
+    if (!active) return null;
+    if (active.contentType !== 'quote') return null;
+    if (active.minimized) return null;
+    return active.id;
+  }, [activeWindowId, windows]);
+
+  const minimizeAllDocumentWindows = () => {
+    documentWindows.forEach((w) => {
+      if (w.minimized) return;
+      dispatch(minimizeWindow(w.id));
+    });
+  };
+
+  const minimizeAllQuoteWindows = () => {
+    quoteWindows.forEach((w) => {
+      if (w.minimized) return;
+      dispatch(minimizeWindow(w.id));
+    });
+  };
 
   const openNotesExpanded = openNotesSidebarHovering || isResizingSidebar;
 
@@ -467,16 +504,21 @@ const DocumentWindowsContainer = () => {
       // 根据内容类型渲染不同的窗口
       switch (window.contentType) {
         case 'quote':
+          if (activeDocumentWindowId) return null;
+          if (!activeQuoteWindowId || window.id !== activeQuoteWindowId) return null;
           return (
             <QuoteWindow
               key={window.id}
               windowData={window}
               isActive={window.id === activeWindowId}
               onClose={() => dispatch(closeWindow(window.id))}
-              onMinimize={() => dispatch(minimizeWindow(window.id))}
+              onMinimize={minimizeAllQuoteWindows}
               onActivate={() => dispatch(activateWindow(window.id))}
               onUpdatePosition={(position) => dispatch(setWindowPosition({ windowId: window.id, position }))}
               onUpdateSize={(size) => dispatch(setWindowSize({ windowId: window.id, size }))}
+              onPrevQuote={handleActivatePrevQuoteWindow}
+              onNextQuote={handleActivateNextQuoteWindow}
+              canNavigateQuotes={quoteWindows.length > 1}
               onSave={handleSaveQuote}
               onDelete={handleDeleteQuote}
               onSaveReferences={handleSaveQuoteReferences}
@@ -486,6 +528,7 @@ const DocumentWindowsContainer = () => {
             />
           );
         case 'attachment':
+          if (activeDocumentWindowId || activeQuoteWindowId) return null;
           return (
             <AttachmentWindow
               key={window.id}
@@ -501,16 +544,20 @@ const DocumentWindowsContainer = () => {
           );
         case 'document':
         default:
+          if (!activeDocumentWindowId || window.id !== activeDocumentWindowId) return null;
           return (
             <DocumentWindow
               key={window.id}
               windowData={window}
               isActive={window.id === activeWindowId}
               onClose={() => dispatch(closeWindow(window.id))}
-              onMinimize={() => dispatch(minimizeWindow(window.id))}
+              onMinimize={minimizeAllDocumentWindows}
               onActivate={() => dispatch(activateWindow(window.id))}
               onUpdatePosition={(position) => dispatch(setWindowPosition({ windowId: window.id, position }))}
               onUpdateSize={(size) => dispatch(setWindowSize({ windowId: window.id, size }))}
+              onPrevDocument={handleActivatePrevDocumentWindow}
+              onNextDocument={handleActivateNextDocumentWindow}
+              canNavigateDocuments={documentWindows.length > 1}
               onSave={handleSaveDocument}
               onDelete={handleDeleteDocument}
               onSaveReferences={handleSaveDocumentReferences}
@@ -542,10 +589,74 @@ const DocumentWindowsContainer = () => {
     dispatch(activateWindow(windowId));
   };
 
+  const handleActivatePrevDocumentWindow = () => {
+    if (documentWindows.length <= 1) return;
+
+    const currentIndex = documentWindows.findIndex((w) => w.id === activeDocumentWindowId);
+    const targetIndex = currentIndex === -1
+      ? documentWindows.length - 1
+      : (currentIndex - 1 + documentWindows.length) % documentWindows.length;
+
+    dispatch(activateWindow(documentWindows[targetIndex].id));
+  };
+
+  const handleActivateNextDocumentWindow = () => {
+    if (documentWindows.length <= 1) return;
+
+    const currentIndex = documentWindows.findIndex((w) => w.id === activeDocumentWindowId);
+    const targetIndex = currentIndex === -1
+      ? 0
+      : (currentIndex + 1) % documentWindows.length;
+
+    dispatch(activateWindow(documentWindows[targetIndex].id));
+  };
+
+  const handleActivatePrevQuoteWindow = () => {
+    if (quoteWindows.length <= 1) return;
+
+    const currentIndex = quoteWindows.findIndex((w) => w.id === activeQuoteWindowId);
+    const targetIndex = currentIndex === -1
+      ? quoteWindows.length - 1
+      : (currentIndex - 1 + quoteWindows.length) % quoteWindows.length;
+
+    dispatch(activateWindow(quoteWindows[targetIndex].id));
+  };
+
+  const handleActivateNextQuoteWindow = () => {
+    if (quoteWindows.length <= 1) return;
+
+    const currentIndex = quoteWindows.findIndex((w) => w.id === activeQuoteWindowId);
+    const targetIndex = currentIndex === -1
+      ? 0
+      : (currentIndex + 1) % quoteWindows.length;
+
+    dispatch(activateWindow(quoteWindows[targetIndex].id));
+  };
+
   const dockTooltipPlacement = openNotesDockSide === 'left' ? 'right' : 'left';
   
   return (
     <>
+      <Backdrop
+        open={!!activeDocumentWindowId || !!activeQuoteWindowId}
+        sx={(theme) => ({
+          zIndex: theme.zIndex.modal - 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.35)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+        })}
+        aria-hidden
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (activeQuoteWindowId) {
+            minimizeAllQuoteWindows();
+            return;
+          }
+          minimizeAllDocumentWindows();
+        }}
+      />
+
       <WindowsContainer>
         {renderWindows()}
       </WindowsContainer>
@@ -669,17 +780,19 @@ const DocumentWindowsContainer = () => {
         )}
       </OpenNotesSidebar>
       
-      <AddWindowFab
-        color="primary"
-        aria-label="添加新窗口"
-        onClick={() => {
-          // 这里可以添加打开文档选择器的逻辑
-          // 暂时使用原有的模态框作为示例
-          dispatch(openDocumentModal());
-        }}
-      >
-        <AddIcon />
-      </AddWindowFab>
+      {!activeDocumentWindowId && !activeQuoteWindowId && (
+        <AddWindowFab
+          color="primary"
+          aria-label="添加新窗口"
+          onClick={() => {
+            // 这里可以添加打开文档选择器的逻辑
+            // 暂时使用原有的模态框作为示例
+            dispatch(openDocumentModal());
+          }}
+        >
+          <AddIcon />
+        </AddWindowFab>
+      )}
       
       <WindowsLimitPrompt
         open={isLimitPromptOpen}

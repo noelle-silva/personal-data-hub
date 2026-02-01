@@ -72,7 +72,9 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
 const MainContainer = styled(Box)(({ theme }) => ({
   backgroundColor: 'transparent',
   transition: 'background-color 0.3s ease',
+  height: '100vh',
   minHeight: '100vh',
+  overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
 }));
@@ -528,7 +530,7 @@ const MainLayout = () => {
       <Toolbar />
 
       {/* 侧边导航栏 */}
-      <Box sx={{ display: 'flex', flexGrow: 1 }}>
+      <Box sx={{ display: 'flex', flexGrow: 1, minHeight: 0 }}>
         {/* 移动端临时抽屉 */}
         {isMobile && (
           <Drawer
@@ -584,15 +586,16 @@ const MainLayout = () => {
         )}
 
         {/* 主内容区域 */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            p: 3,
-            width: { md: `calc(100% - ${drawerWidth}px)` },
-            minHeight: '100vh',
-          }}
-        >
+         <Box
+           component="main"
+           sx={{
+             flexGrow: 1,
+             p: 3,
+             width: { md: `calc(100% - ${drawerWidth}px)` },
+             minHeight: 0,
+             overflow: 'auto',
+           }}
+         >
           {/* 移动端搜索框 - 在小屏显示 */}
           {isMobile && <Box sx={{ mb: 2 }}><GlobalSearch /></Box>}
           

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useMemo, useEffect, useCallback } from 'react';
-import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as MuiThemeProvider, createTheme, alpha } from '@mui/material/styles';
 import { GlobalStyles } from '@mui/material';
 import { lightTheme, darkTheme } from '../theme';
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,93 +7,178 @@ import { selectCurrentWallpaper, fetchCurrentWallpaper, resetWallpaperState } fr
 import { selectIsAuthenticated } from '../store/authSlice';
 import themesService from '../services/themes';
 import { mdToMuiPalette } from '../utils/mdToMuiPalette';
-import { createTheme } from '@mui/material/styles';
 import { buildComponentsOverrides, buildCustomColors } from '../themeOverrides';
 
 // 创建主题上下文
 const ThemeContext = createContext();
 
-const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => (
-  <GlobalStyles
-    styles={{
-      '::-webkit-scrollbar': {
-        width: '8px',
-        height: '8px',
-      },
-      '::-webkit-scrollbar-track': {
-        background: theme.palette.background.default,
-      },
-      '::-webkit-scrollbar-thumb': {
-        background: theme.palette.primary.main,
-        borderRadius: '4px',
-      },
-      '::-webkit-scrollbar-thumb:hover': {
-        background: theme.palette.primary.dark,
-      },
-      'body': {
-        scrollbarWidth: 'thin',
-        scrollbarColor: `${theme.palette.primary.main} ${theme.palette.background.default}`,
-        // 设置背景壁纸
-        ...(currentWallpaper && {
-          backgroundImage: `url(${currentWallpaper.url})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundAttachment: 'fixed',
-        }),
-      },
-      // 确保背景壁纸覆盖整个应用
-      '#root': {
-        minHeight: '100vh',
-        ...(currentWallpaper && {
-          backgroundImage: 'inherit',
-          backgroundSize: 'inherit',
-          backgroundPosition: 'inherit',
-          backgroundRepeat: 'inherit',
-          backgroundAttachment: 'inherit',
-        }),
-        // 注入 Material Design 系统颜色 CSS 变量
-        ...(theme.palette.customColors && {
-          '--md-sys-color-primary': theme.palette.primary.main,
-          '--md-sys-color-on-primary': theme.palette.customColors.onPrimary,
-          '--md-sys-color-primary-container': theme.palette.primaryContainer.main,
-          '--md-sys-color-on-primary-container': theme.palette.customColors.onPrimaryContainer,
-          '--md-sys-color-secondary': theme.palette.secondary.main,
-          '--md-sys-color-on-secondary': theme.palette.customColors.onSecondary,
-          '--md-sys-color-secondary-container': theme.palette.secondaryContainer.main,
-          '--md-sys-color-on-secondary-container': theme.palette.customColors.onSecondaryContainer,
-          '--md-sys-color-tertiary': theme.palette.tertiary.main,
-          '--md-sys-color-on-tertiary': theme.palette.customColors.onTertiary,
-          '--md-sys-color-tertiary-container': theme.palette.tertiaryContainer.main,
-          '--md-sys-color-on-tertiary-container': theme.palette.customColors.onTertiaryContainer,
-          '--md-sys-color-error': theme.palette.error.main,
-          '--md-sys-color-on-error': theme.palette.customColors.onError,
-          '--md-sys-color-error-container': theme.palette.errorContainer.main,
-          '--md-sys-color-on-error-container': theme.palette.customColors.onErrorContainer,
-          '--md-sys-color-background': theme.palette.background.default,
-          '--md-sys-color-on-background': theme.palette.customColors.onBackground,
-          '--md-sys-color-surface': theme.palette.surface.main,
-          '--md-sys-color-on-surface': theme.palette.customColors.onSurface,
-          '--md-sys-color-surface-variant': theme.palette.surfaceVariant.main,
-          '--md-sys-color-on-surface-variant': theme.palette.customColors.onSurfaceVariant,
-          '--md-sys-color-outline': theme.palette.divider,
-          '--md-sys-color-outline-variant': theme.palette.border,
-          '--md-sys-color-shadow': theme.palette.customColors.shadow || '#000000',
-          '--md-sys-color-scrim': theme.palette.customColors.scrim || '#000000',
-          '--md-sys-color-inverse-surface': theme.palette.customColors.inverseSurface || '#ffffff',
-          '--md-sys-color-inverse-on-surface': theme.palette.customColors.inverseOnSurface || '#000000',
-          '--md-sys-color-inverse-primary': theme.palette.customColors.inversePrimary || '#000000',
-        }),
-      },
-    }}
-  />
-);
+const SCROLLBARS_VISIBLE_CLASS = 'pdh-scrollbars-visible';
+
+const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => {
+  const thumbColor = alpha(theme.palette.primary.main, 0.55);
+  const thumbHoverColor = alpha(theme.palette.primary.dark, 0.75);
+
+  return (
+    <GlobalStyles
+      styles={{
+        '::-webkit-scrollbar': {
+          width: '8px',
+          height: '8px',
+        },
+        '::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '::-webkit-scrollbar-thumb': {
+          background: 'transparent',
+          borderRadius: '4px',
+        },
+        '::-webkit-scrollbar-thumb:hover': {
+          background: 'transparent',
+        },
+        '::-webkit-scrollbar-corner': {
+          background: 'transparent',
+        },
+
+        // hover / focus-within 显示滚动条（所有可滚动容器）
+        '*:hover::-webkit-scrollbar-thumb': {
+          background: thumbColor,
+        },
+        '*:hover::-webkit-scrollbar-thumb:hover': {
+          background: thumbHoverColor,
+        },
+        '*:focus-within::-webkit-scrollbar-thumb': {
+          background: thumbColor,
+        },
+        '*:focus-within::-webkit-scrollbar-thumb:hover': {
+          background: thumbHoverColor,
+        },
+
+        // 滚动时显示滚动条（通过 JS 给 html 加 class）
+        [`html.${SCROLLBARS_VISIBLE_CLASS} *::-webkit-scrollbar-thumb`]: {
+          background: thumbColor,
+        },
+        [`html.${SCROLLBARS_VISIBLE_CLASS} *::-webkit-scrollbar-thumb:hover`]: {
+          background: thumbHoverColor,
+        },
+
+        // Firefox：默认隐藏（透明），hover / 滚动时显示（所有可滚动容器）
+        '*': {
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'transparent transparent',
+        },
+        '*:hover': {
+          scrollbarColor: `${thumbColor} transparent`,
+        },
+        '*:focus-within': {
+          scrollbarColor: `${thumbColor} transparent`,
+        },
+        [`html.${SCROLLBARS_VISIBLE_CLASS} *`]: {
+          scrollbarColor: `${thumbColor} transparent`,
+        },
+
+        'body': {
+          // 设置背景壁纸
+          ...(currentWallpaper && {
+            backgroundImage: `url(${currentWallpaper.url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundAttachment: 'fixed',
+          }),
+        },
+        // 确保背景壁纸覆盖整个应用
+        '#root': {
+          minHeight: '100vh',
+          ...(currentWallpaper && {
+            backgroundImage: 'inherit',
+            backgroundSize: 'inherit',
+            backgroundPosition: 'inherit',
+            backgroundRepeat: 'inherit',
+            backgroundAttachment: 'inherit',
+          }),
+          // 注入 Material Design 系统颜色 CSS 变量
+          ...(theme.palette.customColors && {
+            '--md-sys-color-primary': theme.palette.primary.main,
+            '--md-sys-color-on-primary': theme.palette.customColors.onPrimary,
+            '--md-sys-color-primary-container': theme.palette.primaryContainer.main,
+            '--md-sys-color-on-primary-container': theme.palette.customColors.onPrimaryContainer,
+            '--md-sys-color-secondary': theme.palette.secondary.main,
+            '--md-sys-color-on-secondary': theme.palette.customColors.onSecondary,
+            '--md-sys-color-secondary-container': theme.palette.secondaryContainer.main,
+            '--md-sys-color-on-secondary-container': theme.palette.customColors.onSecondaryContainer,
+            '--md-sys-color-tertiary': theme.palette.tertiary.main,
+            '--md-sys-color-on-tertiary': theme.palette.customColors.onTertiary,
+            '--md-sys-color-tertiary-container': theme.palette.tertiaryContainer.main,
+            '--md-sys-color-on-tertiary-container': theme.palette.customColors.onTertiaryContainer,
+            '--md-sys-color-error': theme.palette.error.main,
+            '--md-sys-color-on-error': theme.palette.customColors.onError,
+            '--md-sys-color-error-container': theme.palette.errorContainer.main,
+            '--md-sys-color-on-error-container': theme.palette.customColors.onErrorContainer,
+            '--md-sys-color-background': theme.palette.background.default,
+            '--md-sys-color-on-background': theme.palette.customColors.onBackground,
+            '--md-sys-color-surface': theme.palette.surface.main,
+            '--md-sys-color-on-surface': theme.palette.customColors.onSurface,
+            '--md-sys-color-surface-variant': theme.palette.surfaceVariant.main,
+            '--md-sys-color-on-surface-variant': theme.palette.customColors.onSurfaceVariant,
+            '--md-sys-color-outline': theme.palette.divider,
+            '--md-sys-color-outline-variant': theme.palette.border,
+            '--md-sys-color-shadow': theme.palette.customColors.shadow || '#000000',
+            '--md-sys-color-scrim': theme.palette.customColors.scrim || '#000000',
+            '--md-sys-color-inverse-surface': theme.palette.customColors.inverseSurface || '#ffffff',
+            '--md-sys-color-inverse-on-surface': theme.palette.customColors.inverseOnSurface || '#000000',
+            '--md-sys-color-inverse-primary': theme.palette.customColors.inversePrimary || '#000000',
+          }),
+        },
+      }}
+    />
+  );
+};
 
 // 自定义主题提供者组件
 export const ThemeProvider = ({ children }) => {
   const dispatch = useDispatch();
   const currentWallpaper = useSelector(selectCurrentWallpaper);
   const isAuthenticated = useSelector(selectIsAuthenticated);
+
+  // 仅做 UI 表现：滚动时短暂显示滚动条（全局所有可滚动容器）
+  useEffect(() => {
+    let timeoutId = null;
+    let rafId = null;
+
+    const showScrollbarsTemporarily = () => {
+      const root = document.documentElement;
+      root.classList.add(SCROLLBARS_VISIBLE_CLASS);
+
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+
+      timeoutId = window.setTimeout(() => {
+        root.classList.remove(SCROLLBARS_VISIBLE_CLASS);
+        timeoutId = null;
+      }, 700);
+    };
+
+    const handleScroll = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        showScrollbarsTemporarily();
+      });
+    };
+
+    document.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+
+    return () => {
+      document.removeEventListener('scroll', handleScroll, true);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      if (rafId) cancelAnimationFrame(rafId);
+      document.documentElement.classList.remove(SCROLLBARS_VISIBLE_CLASS);
+    };
+  }, []);
   
   // 从localStorage获取保存的主题模式，默认为light
   const [mode, setMode] = useState(() => {
