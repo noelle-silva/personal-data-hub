@@ -1,6 +1,11 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/apiClient';
 import { deleteAttachment, getAttachmentMetadata } from '../services/attachments';
+import {
+  clampWindowPositionToViewport,
+  getDefaultWindowSizeForViewport,
+  getViewportSnapshot,
+} from '../utils/windowSizing';
 
 // 异步thunk：获取窗口文档内容
 export const fetchWindowDocument = createAsyncThunk(
@@ -92,10 +97,27 @@ const generateWindowId = () => {
 // 异步thunk：打开窗口并获取文档内容
 export const openWindowAndFetch = createAsyncThunk(
   'windows/openWindowAndFetch',
-  async ({ docId, label, source, variant }, { dispatch, rejectWithValue }) => {
+  async ({ docId, label, source, variant }, { dispatch, getState, rejectWithValue }) => {
     try {
+      const existingWindow = getState().windows?.windows?.find((w) => {
+        const isDoc = !w.contentType || w.contentType === 'document';
+        if (!isDoc) return false;
+        if (w.resourceId === docId || w.docId === docId) return true;
+        return w.document && w.document._id === docId;
+      });
+
+      if (existingWindow) {
+        dispatch(activateWindow(existingWindow.id));
+        if (!existingWindow.document || existingWindow.status !== 'loaded') {
+          const result = await dispatch(fetchWindowDocument({ windowId: existingWindow.id, docId })).unwrap();
+          return { windowId: existingWindow.id, document: result.document };
+        }
+        return { windowId: existingWindow.id, document: existingWindow.document };
+      }
+
       // 生成窗口ID
       const windowId = generateWindowId();
+      const viewport = getViewportSnapshot();
       
       // 打开窗口
       dispatch(openWindow({
@@ -103,7 +125,8 @@ export const openWindowAndFetch = createAsyncThunk(
         docId,
         label,
         source,
-        variant
+        variant,
+        viewport,
       }));
       
       // 获取文档内容
@@ -122,10 +145,26 @@ export const openWindowAndFetch = createAsyncThunk(
 // 异步thunk：打开引用体窗口并获取引用体内容
 export const openQuoteWindowAndFetch = createAsyncThunk(
   'windows/openQuoteWindowAndFetch',
-  async ({ quoteId, label, source, variant }, { dispatch, rejectWithValue }) => {
+  async ({ quoteId, label, source, variant }, { dispatch, getState, rejectWithValue }) => {
     try {
+      const existingWindow = getState().windows?.windows?.find((w) => {
+        if (w.contentType !== 'quote') return false;
+        if (w.resourceId === quoteId || w.docId === quoteId) return true;
+        return w.quote && w.quote._id === quoteId;
+      });
+
+      if (existingWindow) {
+        dispatch(activateWindow(existingWindow.id));
+        if (!existingWindow.quote || existingWindow.status !== 'loaded') {
+          const result = await dispatch(fetchWindowQuote({ windowId: existingWindow.id, quoteId })).unwrap();
+          return { windowId: existingWindow.id, quote: result.quote };
+        }
+        return { windowId: existingWindow.id, quote: existingWindow.quote };
+      }
+
       // 生成窗口ID
       const windowId = generateWindowId();
+      const viewport = getViewportSnapshot();
       
       // 打开窗口
       dispatch(openWindow({
@@ -134,7 +173,8 @@ export const openQuoteWindowAndFetch = createAsyncThunk(
         contentType: 'quote',
         label,
         source,
-        variant
+        variant,
+        viewport,
       }));
       
       // 获取引用体内容
@@ -153,10 +193,29 @@ export const openQuoteWindowAndFetch = createAsyncThunk(
 // 异步thunk：打开附件窗口并获取附件内容
 export const openAttachmentWindowAndFetch = createAsyncThunk(
   'windows/openAttachmentWindowAndFetch',
-  async ({ attachmentId, label, source, variant, initialData }, { dispatch, rejectWithValue }) => {
+  async ({ attachmentId, label, source, variant, initialData }, { dispatch, getState, rejectWithValue }) => {
     try {
+      const existingWindow = getState().windows?.windows?.find((w) => {
+        if (w.contentType !== 'attachment') return false;
+        if (w.resourceId === attachmentId || w.docId === attachmentId) return true;
+        return w.attachment && w.attachment._id === attachmentId;
+      });
+
+      if (existingWindow) {
+        dispatch(activateWindow(existingWindow.id));
+        if (initialData && !existingWindow.attachment) {
+          dispatch(updateWindowData({ windowId: existingWindow.id, data: { attachment: initialData, title: initialData.originalName || existingWindow.title } }));
+        }
+        if (!existingWindow.attachment || existingWindow.status !== 'loaded') {
+          const result = await dispatch(fetchWindowAttachment({ windowId: existingWindow.id, attachmentId })).unwrap();
+          return { windowId: existingWindow.id, attachment: result.attachment };
+        }
+        return { windowId: existingWindow.id, attachment: existingWindow.attachment };
+      }
+
       // 生成窗口ID
       const windowId = generateWindowId();
+      const viewport = getViewportSnapshot();
       
       // 打开窗口
       dispatch(openWindow({
@@ -165,7 +224,8 @@ export const openAttachmentWindowAndFetch = createAsyncThunk(
         contentType: 'attachment',
         label: label || initialData?.originalName || '加载中...',
         source,
-        variant
+        variant,
+        viewport,
       }));
       
       // 如果有初始数据，先设置它，然后再获取完整数据
@@ -513,19 +573,6 @@ const initialState = {
   saving: false
 };
 
-// 根据内容类型获取默认窗口尺寸
-const getDefaultWindowSize = (contentType) => {
-  switch (contentType) {
-    case 'quote':
-      return { width: 1200, height: '80vh' };
-    case 'attachment':
-      return { width: 1200, height: '80vh' };
-    case 'document':
-    default:
-      return { width: 1380, height: '90vh' }; // 增加宽度15%
-  }
-};
-
 const windowsSlice = createSlice({
   name: 'windows',
   initialState,
@@ -538,7 +585,9 @@ const windowsSlice = createSlice({
         label,
         source,
         variant,
-        windowId: providedWindowId
+        windowId: providedWindowId,
+        size: providedSize,
+        viewport,
       } = action.payload;
       
       // 检查窗口数量限制
@@ -548,9 +597,12 @@ const windowsSlice = createSlice({
       }
       
       const windowId = providedWindowId || generateWindowId();
-      const position = getCascadedPosition(state.windows);
       const zIndex = getNextZIndex(state.windows);
-      const defaultSize = getDefaultWindowSize(contentType);
+      const defaultSize = providedSize || getDefaultWindowSizeForViewport(contentType, viewport);
+      const cascadedPosition = getCascadedPosition(state.windows);
+      const position = viewport
+        ? clampWindowPositionToViewport({ position: cascadedPosition, size: defaultSize, viewport })
+        : cascadedPosition;
       
       // 创建新窗口
       const newWindow = {

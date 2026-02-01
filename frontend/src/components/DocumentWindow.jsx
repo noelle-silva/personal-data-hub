@@ -21,6 +21,7 @@ import SmartToyIcon from '@mui/icons-material/SmartToy';
 import DocumentDetailContent from './DocumentDetailContent';
 import AIChatSidebar from './AIChatSidebar';
 import { saveDocumentReferences, saveAttachmentReferences, saveDocumentQuoteReferences } from '../store/windowsSlice';
+import { getMaximizedWindowRect, getViewportSnapshot } from '../utils/windowSizing';
 
 // 窗口容器
 const WindowContainer = styled(Paper, {
@@ -186,6 +187,7 @@ const DocumentWindow = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [restoreRect, setRestoreRect] = useState(null);
   
   // 注入源状态
   const [injectionSource, setInjectionSource] = useState({
@@ -211,21 +213,19 @@ const DocumentWindow = ({
   // 处理最大化/还原
   const handleMaximize = useCallback(() => {
     if (isMaximized) {
-      // 还原窗口
-      onUpdateSize({ width: 1380, height: '90vh' });
+      if (restoreRect) {
+        onUpdatePosition(restoreRect.position);
+        onUpdateSize(restoreRect.size);
+      }
       setIsMaximized(false);
     } else {
-      // 最大化窗口
-      const margin = 20;
-      const appBarHeight = window.innerWidth < 600 ? 56 : 64;
-      onUpdatePosition({ x: margin, y: appBarHeight + margin });
-      onUpdateSize({
-        width: window.innerWidth - (margin * 2),
-        height: window.innerHeight - appBarHeight - (margin * 2)
-      });
+      setRestoreRect({ position: windowData.position, size: windowData.size });
+      const rect = getMaximizedWindowRect(getViewportSnapshot());
+      onUpdatePosition(rect.position);
+      onUpdateSize(rect.size);
       setIsMaximized(true);
     }
-  }, [isMaximized, onUpdatePosition, onUpdateSize]);
+  }, [isMaximized, onUpdatePosition, onUpdateSize, restoreRect, windowData.position, windowData.size]);
   
   // 处理键盘事件
   useEffect(() => {
@@ -407,8 +407,8 @@ const DocumentWindow = ({
       isActive={isActive}
       minimized={windowData.minimized}
       sx={{
-        left: isMaximized ? 20 : '50%',
-        top: isMaximized ? 20 : '50%',
+        left: isMaximized ? (windowData.position?.x ?? 20) : '50%',
+        top: isMaximized ? (windowData.position?.y ?? 20) : '50%',
         width: windowData.size.width,
         height: windowData.size.height,
         zIndex: windowData.zIndex,

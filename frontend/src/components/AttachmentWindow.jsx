@@ -15,6 +15,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import AttachmentDetailContent from './AttachmentDetailContent';
 import { useSelector } from 'react-redux';
 import { selectAttachmentById } from '../store/attachmentsSlice';
+import { getMaximizedWindowRect, getViewportSnapshot } from '../utils/windowSizing';
 
 // 窗口容器
 const WindowContainer = styled(Paper, {
@@ -137,6 +138,7 @@ const AttachmentWindow = ({
     attachmentId ? selectAttachmentById(attachmentId)(state) : null
   );
   const [isMaximized, setIsMaximized] = useState(false);
+  const [restoreRect, setRestoreRect] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -201,10 +203,12 @@ const AttachmentWindow = ({
         
         // 确保窗口不会拖出屏幕
         const maxX = window.innerWidth - 200; // 最小宽度
+        const viewport = getViewportSnapshot();
+        const minY = viewport.appBarHeight; // 顶部栏区域不允许被窗口覆盖
         const maxY = window.innerHeight - 100; // 最小高度
         
         newPosition.x = Math.max(0, Math.min(newPosition.x, maxX));
-        newPosition.y = Math.max(0, Math.min(newPosition.y, maxY));
+        newPosition.y = Math.max(minY, Math.min(newPosition.y, maxY));
         
         onUpdatePosition(newPosition);
       } else if (isResizing) {
@@ -239,22 +243,20 @@ const AttachmentWindow = ({
   // 处理最大化/还原
   const handleMaximize = useCallback(() => {
     if (isMaximized) {
-      // 还原窗口
-      onUpdateSize({ width: 1200, height: '80vh' });
-      onUpdatePosition({ x: 100, y: 100 });
+      if (restoreRect) {
+        onUpdatePosition(restoreRect.position);
+        onUpdateSize(restoreRect.size);
+      }
       setIsMaximized(false);
     } else {
       // 最大化窗口
-      const margin = 20;
-      const appBarHeight = window.innerWidth < 600 ? 56 : 64;
-      onUpdatePosition({ x: margin, y: appBarHeight + margin });
-      onUpdateSize({
-        width: window.innerWidth - (margin * 2),
-        height: window.innerHeight - appBarHeight - (margin * 2)
-      });
+      setRestoreRect({ position: windowData.position, size: windowData.size });
+      const rect = getMaximizedWindowRect(getViewportSnapshot());
+      onUpdatePosition(rect.position);
+      onUpdateSize(rect.size);
       setIsMaximized(true);
     }
-  }, [isMaximized, onUpdatePosition, onUpdateSize]);
+  }, [isMaximized, onUpdatePosition, onUpdateSize, restoreRect, windowData.position, windowData.size]);
   
   // 处理键盘事件
   useEffect(() => {
