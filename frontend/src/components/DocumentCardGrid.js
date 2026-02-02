@@ -250,15 +250,11 @@ const DocumentCardGrid = () => {
     return (
       <CardsWrapper>
         {documents.map((document) => (
-          <Box
+          <DocumentCard
             key={document._id}
-            sx={{
-              display: 'flex',
-              width: '100%',
-            }}
-          >
-            <DocumentCard document={document} onViewDetail={handleViewDetail} />
-          </Box>
+            document={document}
+            onViewDetail={handleViewDetail}
+          />
         ))}
       </CardsWrapper>
     );

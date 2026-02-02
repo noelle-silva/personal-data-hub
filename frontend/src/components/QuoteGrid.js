@@ -311,24 +311,20 @@ const QuoteGrid = ({
     }
 
     return (
-      <>
-        <CardsWrapper>
-          {items.map((quote) => (
-            <Box
-              key={quote._id}
-              sx={{
-                display: 'flex',
-                width: '100%',
-              }}
-            >
-              <QuoteCard quote={quote} onViewDetail={handleViewDetail} />
-            </Box>
-          ))}
-        </CardsWrapper>
-        
-        {showLoadMore && hasMore && (
-          <LoadMoreContainer>
-            <Button
+        <>
+          <CardsWrapper>
+            {items.map((quote) => (
+              <QuoteCard
+                key={quote._id}
+                quote={quote}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </CardsWrapper>
+          
+          {showLoadMore && hasMore && (
+            <LoadMoreContainer>
+              <Button
               variant="outlined"
               onClick={() => onLoadMore && onLoadMore()}
               sx={{

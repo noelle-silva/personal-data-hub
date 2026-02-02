@@ -239,24 +239,20 @@ const DocumentGrid = ({
     }
 
     return (
-      <>
-        <CardsWrapper>
-          {items.map((document) => (
-            <Box
-              key={document._id}
-              sx={{
-                display: 'flex',
-                width: '100%',
-              }}
-            >
-              <DocumentCard document={document} onViewDetail={handleViewDetail} />
-            </Box>
-          ))}
-        </CardsWrapper>
-        
-        {showLoadMore && hasMore && (
-          <LoadMoreContainer>
-            <Button
+        <>
+          <CardsWrapper>
+            {items.map((document) => (
+              <DocumentCard
+                key={document._id}
+                document={document}
+                onViewDetail={handleViewDetail}
+              />
+            ))}
+          </CardsWrapper>
+          
+          {showLoadMore && hasMore && (
+            <LoadMoreContainer>
+              <Button
               variant="outlined"
               onClick={() => onLoadMore && onLoadMore()}
               sx={{
