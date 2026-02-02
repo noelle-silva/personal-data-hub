@@ -104,11 +104,11 @@ class KeybindingManager {
       case 'modal':
         return '.MuiModal-root, [role="dialog"]'; // 仅在模态框内
       case 'editor-safe':
-        return ':not(.monaco-editor):not(.ace_editor):not([contenteditable])'; // 排除编辑器
+        return ':not([contenteditable])'; // 排除编辑器
       case 'input-safe':
         return ':not(input):not(textarea):not(select):not([contenteditable])'; // 排除输入元素
       default:
-        return 'input, select, textarea, [contenteditable], .monaco-editor, .ace_editor, [data-hotkeys-skip]';
+        return 'input, select, textarea, [contenteditable], [data-hotkeys-skip]';
     }
   }
 

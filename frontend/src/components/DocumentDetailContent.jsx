@@ -42,7 +42,6 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import EditNoteIcon from '@mui/icons-material/EditNote';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
 import QuoteCopyButton from './QuoteCopyButton';
 import DocumentCopyButton from './DocumentCopyButton';
@@ -75,7 +74,6 @@ import { openAttachmentWindowAndFetch, openQuoteWindowAndFetch } from '../store/
 import { getAttachmentMetadata } from '../services/attachments';
 import QuoteFormModal from './QuoteFormModal';
 import { createQuote } from '../store/quotesSlice';
-import CodeEditor from './CodeEditor';
 import DocumentFormModal from './DocumentFormModal';
 import { createDocument as createDocumentService } from '../services/documents';
 import {
@@ -599,7 +597,7 @@ const SortableReferencedQuoteItem = ({ quote, index, onRemove, isEditing, onView
   );
 };
 
-// 自适应 textarea 高度的 hook - 已废弃，改用 CodeEditor
+// 自适应 textarea 高度的 hook - 已废弃（当前统一使用 TextField multiline）
 // const useAutoResizeTextarea = () => {
 //   const textareaRef = useRef(null);
 //
@@ -635,12 +633,10 @@ const DocumentDetailContent = ({
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   const [isEditing, setIsEditing] = useState(false);
-  // const { textareaRef, resizeTextarea } = useAutoResizeTextarea(); // 已废弃，改用 CodeEditor
   const [isReferencesEditing, setIsReferencesEditing] = useState(false);
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   const [contentType, setContentType] = useState('html'); // 'html' 或 'text'
   const [editorType, setEditorType] = useState('markdown'); // 'markdown' 或 'html'
-  const [editorUIMode, setEditorUIMode] = useState('code'); // 'code' 或 'text'
   const [showPreview, setShowPreview] = useState(isLargeScreen);
   const [previewContent, setPreviewContent] = useState('');
   const previewTimeoutRef = useRef(null);
@@ -873,7 +869,7 @@ const DocumentDetailContent = ({
     };
   }, []);
 
-  // 监听容器大小变化和进入编辑模式时调整 textarea 高度 - 已废弃，CodeEditor 自动处理
+  // 监听容器大小变化和进入编辑模式时调整 textarea 高度 - 已废弃（当前使用 TextField multiline）
   // useEffect(() => {
   //   if (isEditing && textareaRef.current) {
   //     // 初始调整
@@ -968,7 +964,7 @@ const DocumentDetailContent = ({
         setPreviewContent(formData.htmlContent);
       }
       
-      // 进入编辑模式时调整 textarea 高度 - 已废弃，CodeEditor 自动处理
+      // 进入编辑模式时调整 textarea 高度 - 已废弃（当前使用 TextField multiline）
       // if (!isEditing) {
       //   setTimeout(resizeTextarea, 0);
       // }
@@ -2006,26 +2002,6 @@ const DocumentDetailContent = ({
                 </IconButton>
               )}
               
-              {/* 编辑模式下的UI模式切换按钮 */}
-              {isEditing && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={editorUIMode === 'code' ? <EditNoteIcon /> : <CodeIcon />}
-                  onClick={() => setEditorUIMode(editorUIMode === 'code' ? 'text' : 'code')}
-                  sx={{
-                    borderRadius: 16,
-                    fontSize: '0.8rem',
-                    px: 2,
-                    py: 0.5,
-                    minWidth: 'auto',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  {editorUIMode === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
-                </Button>
-              )}
-              
               {/* 非编辑模式下的内容类型切换按钮 */}
               {!isEditing && document.content && document.htmlContent && (
                 <ToggleButtonGroup
@@ -2197,34 +2173,30 @@ const DocumentDetailContent = ({
                 
                 {/* 左侧编辑器 */}
                 <EditorMiddleColumn>
-                  {editorUIMode === 'code' ? (
-                    <CodeEditor
-                      value={editorType === 'markdown' ? formData.content : formData.htmlContent}
-                      onChange={(value) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', value)}
-                      language={editorType === 'markdown' ? 'markdown' : 'html'}
-                      mode="fillContainer"
-                      minHeight={200}
-                      debounceMs={300}
-                    />
-                  ) : (
-                    <TextField
-                      value={editorType === 'markdown' ? formData.content : formData.htmlContent}
-                      onChange={(e) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', e.target.value)}
-                      fullWidth
-                      variant="outlined"
-                      multiline
-                      minRows={6}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 16,
-                          fontFamily: 'monospace',
-                          fontSize: '14px',
-                          lineHeight: 1.5,
-                        },
-                      }}
-                      placeholder={editorType === 'markdown' ? '请输入 Markdown 内容...' : '请输入 HTML 内容...'}
-                    />
-                  )}
+                  <TextField
+                    value={editorType === 'markdown' ? formData.content : formData.htmlContent}
+                    onChange={(e) => handleContentChange(editorType === 'markdown' ? 'content' : 'htmlContent', e.target.value)}
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    minRows={6}
+                    sx={{
+                      flexGrow: 1,
+                      minHeight: 0,
+                      '& .MuiOutlinedInput-root': {
+                        height: '100%',
+                        alignItems: 'flex-start',
+                        borderRadius: 16,
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                      },
+                      '& .MuiOutlinedInput-multiline': {
+                        height: '100%',
+                      },
+                    }}
+                    placeholder={editorType === 'markdown' ? '请输入 Markdown 内容...' : '请输入 HTML 内容...'}
+                  />
                 </EditorMiddleColumn>
                 
                 {/* 右侧预览 */}

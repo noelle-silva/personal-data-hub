@@ -9,7 +9,7 @@ import { generateAIChatEnhancedStylesScoped } from '../utils/aiChatEnhancedStyle
 import { preprocessAIMessageContent } from '../utils/aiChatPreprocessor';
 import AttachmentImage from './AttachmentImage';
 import AttachmentVideo from './AttachmentVideo';
-import { extractAttachmentIds, replaceWithAttachmentUrls } from '../services/attachmentUrlCache';
+import { replaceWithAttachmentUrls } from '../services/attachmentUrlCache';
 
 // 样式化的容器
 const RendererContainer = styled(Box)(({ theme }) => ({
@@ -124,9 +124,7 @@ const MarkdownInlineRenderer = ({
       setProcessingAttachments(false);
       setProcessedHtml(renderedHtml || '');
       if (!renderedHtml) return;
-
-      const attachmentIds = extractAttachmentIds(renderedHtml);
-      if (attachmentIds.length === 0) return;
+      if (!renderedHtml.includes('attach://')) return;
 
       try {
         setProcessingAttachments(true);

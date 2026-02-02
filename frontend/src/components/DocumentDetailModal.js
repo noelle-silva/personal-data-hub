@@ -63,7 +63,6 @@ import DocumentPickerDialog from './DocumentPickerDialog';
 import QuoteDetailModal from './legacy/QuoteDetailModal';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
-import CodeEditor from './CodeEditor';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -1255,14 +1254,24 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                       <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                         文本内容（可选）
                       </Typography>
-                      <CodeEditor
+                      <TextField
+                        name="content"
                         value={formData.content}
-                        onChange={(value) => handleChange({ target: { name: 'content', value } })}
-                        language="markdown"
-                        mode="autoSize"
-                        minHeight={160}
-                        maxHeight="40vh"
-                        debounceMs={300}
+                        onChange={handleChange}
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        minRows={8}
+                        maxRows={20}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 16,
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            lineHeight: 1.5,
+                          },
+                        }}
+                        placeholder="请输入 Markdown 内容..."
                       />
                     </Box>
                     
@@ -1271,14 +1280,24 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                       <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                         HTML内容（可选）
                       </Typography>
-                      <CodeEditor
+                      <TextField
+                        name="htmlContent"
                         value={formData.htmlContent}
-                        onChange={(value) => handleChange({ target: { name: 'htmlContent', value } })}
-                        language="html"
-                        mode="autoSize"
-                        minHeight={160}
-                        maxHeight="40vh"
-                        debounceMs={300}
+                        onChange={handleChange}
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        minRows={8}
+                        maxRows={20}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 16,
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            lineHeight: 1.5,
+                          },
+                        }}
+                        placeholder="请输入 HTML 内容..."
                       />
                     </Box>
                     

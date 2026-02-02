@@ -28,8 +28,6 @@ import {
   AttachFile as AttachFileIcon,
   ContentCopy as ContentCopyIcon,
   FormatQuote as FormatQuoteIcon,
-  Code as CodeIcon,
-  EditNote as EditNoteIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import CollapsibleRelationModule from './CollapsibleRelationModule';
@@ -46,7 +44,6 @@ import DocumentPickerDialog from './DocumentPickerDialog';
 import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import CodeEditor from './CodeEditor';
 import DocumentFormModal from './DocumentFormModal';
 import QuoteFormModal from './QuoteFormModal';
 import { createDocument as createDocumentService } from '../services/documents';
@@ -622,7 +619,6 @@ const QuoteDetailContent = ({
   const [error, setError] = useState('');
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState(null);
   const isActionsMenuOpen = Boolean(actionsMenuAnchorEl);
-  const [editorType, setEditorType] = useState('code'); // 'code' 或 'text'
   const [documentFormModalOpen, setDocumentFormModalOpen] = useState(false);
   const [quoteFormModalOpen, setQuoteFormModalOpen] = useState(false);
   
@@ -1686,30 +1682,8 @@ const QuoteDetailContent = ({
                   <MoreVertIcon />
                 </IconButton>
               )}
-              
-              {/* 编辑模式下的UI模式切换按钮 */}
-              {isEditing && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={editorType === 'code' ? <EditNoteIcon /> : <CodeIcon />}
-                  onClick={() => setEditorType(editorType === 'code' ? 'text' : 'code')}
-                  sx={{
-                    borderRadius: 16,
-                    fontSize: '0.8rem',
-                    px: 2,
-                    py: 0.5,
-                    minWidth: 'auto',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  {editorType === 'code' ? '切换到文本编辑器' : '切换到代码编辑器'}
-                </Button>
-              )}
             </Box>
           </Box>
-          
-          {/* 移除了重复的切换编辑器按钮，现在只在顶部固定条上有切换按钮 */}
           
           {/* 标签 */}
           <Box>
@@ -1814,40 +1788,28 @@ const QuoteDetailContent = ({
                     {/* 移除了内容区域的切换按钮，现在只在顶部有切换按钮 */}
                   </Box>
                   <Box sx={{ flexGrow: 1, minHeight: 0 }}>
-                    {editorType === 'code' ? (
-                      <CodeEditor
-                        value={editForm.content}
-                        onChange={(value) => handleFieldChange('content', value)}
-                        language="markdown"
-                        mode="fillContainer"
-                        minHeight={160}
-                        maxHeight="none"
-                        debounceMs={300}
-                      />
-                    ) : (
-                      <TextField
-                        value={editForm.content}
-                        onChange={(e) => handleFieldChange('content', e.target.value)}
-                        fullWidth
-                        variant="outlined"
-                        multiline
-                        minRows={6}
-                        sx={{
+                    <TextField
+                      value={editForm.content}
+                      onChange={(e) => handleFieldChange('content', e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      multiline
+                      minRows={6}
+                      sx={{
+                        height: '100%',
+                        '& .MuiOutlinedInput-root': {
                           height: '100%',
-                          '& .MuiOutlinedInput-root': {
-                            height: '100%',
-                            alignItems: 'flex-start', // 确保文本从顶部开始
-                            fontFamily: 'monospace',
-                            fontSize: '14px',
-                            lineHeight: 1.5,
-                          },
-                          '& .MuiOutlinedInput-multiline': {
-                            alignItems: 'flex-start', // 确保多行文本从顶部开始
-                          },
-                        }}
-                        placeholder="请输入内容..."
-                      />
-                    )}
+                          alignItems: 'flex-start',
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          lineHeight: 1.5,
+                        },
+                        '& .MuiOutlinedInput-multiline': {
+                          alignItems: 'flex-start',
+                        },
+                      }}
+                      placeholder="请输入内容..."
+                    />
                   </Box>
                 </Box>
               </EditorLeftColumn>

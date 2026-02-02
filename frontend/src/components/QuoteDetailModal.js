@@ -63,7 +63,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import DocumentPickerDialog from './DocumentPickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import CodeEditor from './CodeEditor';
 
 // 样式化的对话框
 const StyledDialog = styled(Dialog)(({ theme }) => ({
@@ -938,14 +937,23 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
                       <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                         内容 *
                       </Typography>
-                      <CodeEditor
+                      <TextField
                         value={editForm.content}
-                        onChange={(value) => handleFieldChange('content', value)}
-                        language="markdown"
-                        mode="autoSize"
-                        minHeight={200}
-                        maxHeight="50vh"
-                        debounceMs={300}
+                        onChange={(e) => handleFieldChange('content', e.target.value)}
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        minRows={10}
+                        maxRows={25}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 16,
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            lineHeight: 1.5,
+                          },
+                        }}
+                        placeholder="请输入内容..."
                       />
                       {!editForm.content.trim() && (
                         <Typography variant="caption" color="error" sx={{ mt: 1 }}>

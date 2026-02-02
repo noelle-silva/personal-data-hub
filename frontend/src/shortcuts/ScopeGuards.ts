@@ -8,9 +8,7 @@ const isInputElement = (element: Element): boolean => {
   const inputTypes = ['input', 'textarea', 'select'];
   
   return inputTypes.includes(tagName) || 
-         element.getAttribute('contenteditable') === 'true' ||
-         element.classList.contains('monaco-editor') ||
-         element.classList.contains('ace_editor');
+         element.getAttribute('contenteditable') === 'true';
 };
 
 /**
@@ -42,11 +40,7 @@ const isInModal = (): boolean => {
  * 检查是否在编辑器内
  */
 const isInEditor = (element: Element): boolean => {
-  return element.closest('.monaco-editor') !== null ||
-         element.closest('.ace_editor') !== null ||
-         element.closest('[contenteditable="true"]') !== null ||
-         element.classList.contains('monaco-editor') ||
-         element.classList.contains('ace_editor');
+  return element.closest('[contenteditable="true"]') !== null;
 };
 
 /**

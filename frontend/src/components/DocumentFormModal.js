@@ -24,7 +24,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
-import CodeEditor from './CodeEditor';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -536,14 +535,23 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                   <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                     Markdown 内容
                   </Typography>
-                  <CodeEditor
+                  <TextField
                     value={formData.content}
-                    onChange={(value) => handleContentChange('content', value)}
-                    language="markdown"
-                    mode="autoSize"
-                    minHeight={200}
-                    maxHeight="60vh"
-                    debounceMs={300}
+                    onChange={(e) => handleContentChange('content', e.target.value)}
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    minRows={10}
+                    maxRows={30}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 16,
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                      },
+                    }}
+                    placeholder="请输入 Markdown 内容..."
                   />
                   {errors.content && (
                     <Typography variant="caption" color="error" sx={{ mt: 1 }}>
@@ -558,14 +566,23 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                   <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
                     HTML 内容
                   </Typography>
-                  <CodeEditor
+                  <TextField
                     value={formData.htmlContent}
-                    onChange={(value) => handleContentChange('htmlContent', value)}
-                    language="html"
-                    mode="autoSize"
-                    minHeight={200}
-                    maxHeight="60vh"
-                    debounceMs={300}
+                    onChange={(e) => handleContentChange('htmlContent', e.target.value)}
+                    fullWidth
+                    variant="outlined"
+                    multiline
+                    minRows={10}
+                    maxRows={30}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 16,
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        lineHeight: 1.5,
+                      },
+                    }}
+                    placeholder="请输入 HTML 内容..."
                   />
                   {errors.content && (
                     <Typography variant="caption" color="error" sx={{ mt: 1 }}>
