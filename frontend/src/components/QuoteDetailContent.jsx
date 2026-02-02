@@ -81,12 +81,44 @@ import {
   VerticalListContainer,
 } from './detail/DetailLayoutParts';
 
-const ReferencedDocsContainer = VerticalListContainer;
-const ReferencedDocItem = ClickableListItem;
-const ReferencedAttachmentsContainer = VerticalListContainer;
-const ReferencedAttachmentItem = ClickableListItem;
-const ReferencedQuotesContainer = VerticalListContainer;
-const ReferencedQuoteItem = ClickableListItem;
+const ReferencedCardsContainer = styled(VerticalListContainer, {
+  shouldForwardProp: (prop) => prop !== 'layout',
+})(({ theme, layout }) => ({
+  gap: theme.spacing(1.5),
+  ...(layout === 'grid' ? {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    alignItems: 'stretch',
+  } : null),
+}));
+
+const ReferencedDocsContainer = ReferencedCardsContainer;
+const ReferencedAttachmentsContainer = ReferencedCardsContainer;
+const ReferencedQuotesContainer = ReferencedCardsContainer;
+
+// 引用区：从“条目”升级为“卡片”观感（仍保持一列，兼容拖拽排序）
+const ReferencedCardItem = styled(ClickableListItem)(({ theme }) => ({
+  height: '100%',
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.palette.divider}`,
+  borderRadius: 16,
+  padding: theme.spacing(1.5),
+  boxShadow: theme.palette.mode === 'light'
+    ? '0 1px 3px rgba(0,0,0,0.08)'
+    : '0 1px 3px rgba(0,0,0,0.35)',
+  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+  '&:hover': {
+    backgroundColor: theme.palette.background.paper,
+    borderColor: theme.palette.primary.main,
+    boxShadow: theme.palette.mode === 'light'
+      ? '0 4px 12px rgba(0,0,0,0.10)'
+      : '0 6px 18px rgba(0,0,0,0.45)',
+  },
+}));
+
+const ReferencedDocItem = ReferencedCardItem;
+const ReferencedAttachmentItem = ReferencedCardItem;
+const ReferencedQuoteItem = ReferencedCardItem;
 
 // 元信息容器
 const MetaInfoContainer = styled(Box)(({ theme }) => ({
@@ -1193,8 +1225,20 @@ const QuoteDetailContent = ({
 
   return (
     <ContentBox>
-      {/* 左侧关系区域 */}
-      <RelationsBox isCollapsed={isSidebarCollapsed} borderColor={theme.palette.border}>
+      {/* 右侧引用区域（视觉对调） */}
+      <RelationsBox
+        isCollapsed={isSidebarCollapsed}
+        borderColor={theme.palette.border}
+        sx={{
+          // 视觉对调：引用区右侧 + 更宽（沿用原内容区的占比）
+          order: 2,
+          width: isSidebarCollapsed ? 0 : '60%',
+          minWidth: isSidebarCollapsed ? 0 : 360,
+          padding: isSidebarCollapsed ? 0 : 3,
+          borderRight: 'none',
+          borderLeft: isSidebarCollapsed ? 'none' : `1px solid ${theme.palette.border}`,
+        }}
+      >
         {/* 引用的笔记模块 */}
         <CollapsibleRelationModule
           title="引用的笔记"
@@ -1296,7 +1340,7 @@ const QuoteDetailContent = ({
                 items={referencedDocuments.map(doc => doc._id || doc)}
                 strategy={verticalListSortingStrategy}
               >
-                <ReferencedDocsContainer>
+                <ReferencedDocsContainer layout={isReferencesEditing ? 'list' : 'grid'}>
                   {referencedDocuments.map((doc, index) => (
                     <SortableReferencedDocItem
                       key={doc._id || doc}
@@ -1407,7 +1451,7 @@ const QuoteDetailContent = ({
                 items={referencedAttachments.map(att => att._id)}
                 strategy={verticalListSortingStrategy}
               >
-                <ReferencedAttachmentsContainer>
+                <ReferencedAttachmentsContainer layout={isAttachmentReferencesEditing ? 'list' : 'grid'}>
                   {referencedAttachments.map((attachment, index) => (
                     <SortableReferencedAttachmentItem
                       key={attachment._id}
@@ -1533,7 +1577,7 @@ const QuoteDetailContent = ({
                 items={referencedQuotes.map(quote => quote._id)}
                 strategy={verticalListSortingStrategy}
               >
-                <ReferencedQuotesContainer>
+                <ReferencedQuotesContainer layout={isQuoteReferencesEditing ? 'list' : 'grid'}>
                   {referencedQuotes.map((quote, index) => (
                     <SortableReferencedQuoteItem
                       key={quote._id}
@@ -1558,8 +1602,16 @@ const QuoteDetailContent = ({
         </CollapsibleRelationModule>
       </RelationsBox>
 
-      {/* 右侧内容区域 */}
-      <RightContentBox>
+      {/* 左侧内容区域（视觉对调） */}
+      <RightContentBox
+        sx={{
+          // 视觉对调：内容区左侧 + 更窄
+          order: 1,
+          flex: isSidebarCollapsed ? '1 1 100%' : '0 0 40%',
+          maxWidth: isSidebarCollapsed ? '100%' : '40%',
+          minWidth: 360,
+        }}
+      >
           {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
           <Box sx={{
             position: 'sticky',
