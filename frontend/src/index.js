@@ -47,6 +47,11 @@ const Router = HashRouter;
 
 const mount = async () => {
   if (tauri) {
+    try {
+      window.localStorage.removeItem('pdh_refresh_token');
+    } catch {
+      // ignore
+    }
     installDesktopGatewaySync();
     await ensureDesktopGatewayReady({ timeoutMs: 15000 }).catch(() => {});
   }

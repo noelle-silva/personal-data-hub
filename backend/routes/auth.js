@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { login, me, logout, createLoginRateLimit } = require('../controllers/authController');
+const { login, me, refresh, logout, createLoginRateLimit } = require('../controllers/authController');
 const requireAuth = require('../middlewares/requireAuth');
 
 /**
@@ -16,6 +16,13 @@ const requireAuth = require('../middlewares/requireAuth');
  * @body    password - 密码 (必填)
  */
 router.post('/login', createLoginRateLimit(), login);
+
+/**
+ * @route   POST /api/auth/refresh
+ * @desc    使用 refresh token 换取新的 access token（无感续期）
+ * @access  Public（基于 refresh token 校验）
+ */
+router.post('/refresh', refresh);
 
 /**
  * @route   GET /api/auth/me

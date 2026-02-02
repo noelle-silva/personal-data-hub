@@ -33,6 +33,22 @@ function toCsvList(value, defaultValue = '') {
     .filter(Boolean);
 }
 
+function normalizeJwtExpiresIn(value) {
+  if (value === undefined || value === null) return '24h';
+  const raw = String(value).trim();
+  if (!raw) return '24h';
+
+  const lower = raw.toLowerCase();
+  // 允许明确关闭过期：令牌永不过期（不推荐用于公网/多用户场景）
+  if (lower === 'never' || lower === 'none' || lower === 'off' || lower === 'disabled') {
+    return null;
+  }
+
+  return raw;
+}
+
+const jwtExpiresIn = normalizeJwtExpiresIn(process.env.JWT_EXPIRES_IN);
+
 const config = Object.freeze({
   nodeEnv: process.env.NODE_ENV || 'development',
 
@@ -58,7 +74,11 @@ const config = Object.freeze({
     loginUsername: process.env.LOGIN_USERNAME,
     loginPasswordHash: process.env.LOGIN_PASSWORD_HASH,
     jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    jwtExpiresIn,
+    // 滑动刷新窗口：当 token 剩余有效期 <= 该值时，在响应头中下发新 token（秒）
+    jwtRefreshWindowSeconds: jwtExpiresIn ? toInt(process.env.JWT_REFRESH_WINDOW_SECONDS, 3600) : 0,
+    // refresh token TTL：用于 access token 过期后无感续期（秒）
+    refreshTokenTtlSeconds: toInt(process.env.REFRESH_TOKEN_TTL_SECONDS, 30 * 24 * 60 * 60),
     adminUserId: process.env.ADMIN_USER_ID || null,
     loginRateLimitEnabled: toBool(process.env.LOGIN_RATE_LIMIT_ENABLED, false),
   }),

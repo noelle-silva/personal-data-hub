@@ -41,3 +41,8 @@ export const invoke = async (command, args) => {
 export const getGatewayUrl = async () => invoke('pdh_gateway_url');
 export const setGatewayBackendUrl = async (url) => invoke('pdh_gateway_set_backend_url', { url });
 export const setGatewayToken = async (token) => invoke('pdh_gateway_set_token', { token });
+
+// 认证：refresh token 存在 Tauri 侧（OS 凭据库），前端不持有明文
+export const authLogin = async (username, password) => invoke('pdh_auth_login', { username, password });
+export const authRefresh = async () => invoke('pdh_auth_refresh');
+export const clearRefreshToken = async () => invoke('pdh_auth_clear_refresh_token');

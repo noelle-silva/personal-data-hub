@@ -5,6 +5,8 @@
 
 import axios from 'axios';
 import { ensureDesktopGatewayReady } from './desktopGateway';
+import { setAuthToken } from './authToken';
+import { authRefresh, isTauri } from './tauriBridge';
 
 // 创建 axios 实例
 const apiClient = axios.create({
@@ -17,6 +19,8 @@ const apiClient = axios.create({
 
 // 防止重复跳转登录页的标志
 let redirectingToLogin = false;
+// 防止并发 401 时重复刷新
+let refreshInFlight = null;
 
 // 请求拦截器 - 添加认证头
 apiClient.interceptors.request.use(
@@ -39,34 +43,74 @@ apiClient.interceptors.request.use(
 // 响应拦截器 - 处理错误
 apiClient.interceptors.response.use(
   (response) => {
+    const refreshedToken = response?.headers?.['x-pdh-auth-token'];
+    if (refreshedToken && typeof refreshedToken === 'string') {
+      setAuthToken(refreshedToken);
+    }
     return response;
   },
-  (error) => {
+  async (error) => {
     // 处理 401 未授权错误
     if (error.response?.status === 401) {
-      // 触发自定义事件，通知应用需要重新登录
-      window.dispatchEvent(new CustomEvent('auth-required', {
-        detail: { message: '需要重新登录' }
-      }));
-      
       const currentHash = window.location.hash || '';
       const isOnLogin = currentHash.startsWith('#/登录') || currentHash.startsWith('#/%E7%99%BB%E5%BD%95');
-      const isAuthRequest = error.config.url?.includes('/auth/');
-      
-      // 如果不是登录请求且当前不在登录页，且没有正在重定向中，则重定向到登录页面
-      if (!isAuthRequest && !isOnLogin && !redirectingToLogin) {
-        // 设置重定向标志，防止重复跳转
-        redirectingToLogin = true;
-        
-        // 延迟重定向，让组件有时间处理错误
-        setTimeout(() => {
-          window.location.hash = '#/登录';
-          
-          // 1.5秒后重置重定向标志，允许后续的401可以再次触发重定向
+      const url = String(error.config?.url || '');
+      const isLoginRequest = url.includes('/auth/login');
+      const isRefreshRequest = url.includes('/auth/refresh');
+      const alreadyRetried = !!error.config?.__pdhRetried;
+
+      // 优先尝试“无感刷新并重放请求”（跳过 login/refresh 自身，避免循环）
+      if (!isLoginRequest && !isRefreshRequest && !alreadyRetried) {
+        try {
+          if (isTauri()) {
+            if (!refreshInFlight) {
+              refreshInFlight = authRefresh();
+            }
+
+            const refreshResponse = await refreshInFlight;
+            refreshInFlight = null;
+
+            const nextToken = refreshResponse?.data?.token;
+            if (refreshResponse?.success && nextToken) {
+              setAuthToken(nextToken);
+
+              // 确保网关拿到新 token，再重放原请求
+              await ensureDesktopGatewayReady().catch(() => {});
+
+              const nextConfig = { ...error.config, __pdhRetried: true };
+              return apiClient(nextConfig);
+            }
+          }
+        } catch (_) {
+          refreshInFlight = null;
+          setAuthToken('');
+        }
+      }
+
+      // 刷新失败或无刷新令牌：需要重新登录
+      if (!isLoginRequest && !isRefreshRequest) {
+        // 触发自定义事件，通知应用需要重新登录（刷新失败或无刷新令牌）
+        window.dispatchEvent(
+          new CustomEvent('auth-required', {
+            detail: { message: '需要重新登录' },
+          })
+        );
+
+        // 如果当前不在登录页，且没有正在重定向中，则重定向到登录页面
+        if (!isOnLogin && !redirectingToLogin) {
+          // 设置重定向标志，防止重复跳转
+          redirectingToLogin = true;
+
+          // 延迟重定向，让组件有时间处理错误
           setTimeout(() => {
-            redirectingToLogin = false;
-          }, 1500);
-        }, 100);
+            window.location.hash = '#/登录';
+
+            // 1.5秒后重置重定向标志，允许后续的401可以再次触发重定向
+            setTimeout(() => {
+              redirectingToLogin = false;
+            }, 1500);
+          }, 100);
+        }
       }
     }
     

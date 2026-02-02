@@ -42,6 +42,28 @@ const requireAuth = (req, res, next) => {
 
     // 验证并解码 Token
     const decoded = jwt.verify(token, jwtSecret);
+
+    // 可选：滑动刷新（避免“用着用着刚好过期就被迫重登”）
+    // 机制：当 token 剩余有效期进入刷新窗口时，在响应头下发新 token
+    const refreshWindowSeconds = config.auth.jwtRefreshWindowSeconds;
+    const expSeconds = typeof decoded?.exp === 'number' ? decoded.exp : null;
+    if (expSeconds && refreshWindowSeconds > 0) {
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const remainingSeconds = expSeconds - nowSeconds;
+
+      if (remainingSeconds > 0 && remainingSeconds <= refreshWindowSeconds) {
+        const payload = {
+          id: decoded.id,
+          username: decoded.username,
+          loginTime: decoded.loginTime,
+        };
+        const signOptions = config.auth.jwtExpiresIn ? { expiresIn: config.auth.jwtExpiresIn } : undefined;
+        const refreshedToken = signOptions
+          ? jwt.sign(payload, jwtSecret, signOptions)
+          : jwt.sign(payload, jwtSecret);
+        res.setHeader('x-pdh-auth-token', refreshedToken);
+      }
+    }
     
     // 将用户信息添加到请求对象
     req.user = {

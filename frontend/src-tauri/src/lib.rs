@@ -3,11 +3,56 @@ mod gateway;
 use std::sync::{Arc, RwLock};
 use tauri::Manager;
 use tauri::State;
+use serde_json::json;
 
 #[derive(Default)]
 struct GatewayState {
   config: Arc<RwLock<gateway::GatewayConfig>>,
   addr: Arc<RwLock<Option<std::net::SocketAddr>>>,
+}
+
+const KEYRING_SERVICE: &str = "personal-data-hub";
+const KEYRING_ACCOUNT_REFRESH: &str = "refresh-token";
+
+fn refresh_token_entry() -> Result<keyring::Entry, String> {
+  keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT_REFRESH).map_err(|e| e.to_string())
+}
+
+fn load_refresh_token() -> Result<Option<String>, String> {
+  let entry = refresh_token_entry()?;
+  match entry.get_password() {
+    Ok(token) => {
+      let t = token.trim().to_string();
+      Ok(if t.is_empty() { None } else { Some(t) })
+    }
+    Err(err) => {
+      // keyring::Error::NoEntry 兼容处理：当作没有 token
+      let msg = err.to_string().to_ascii_lowercase();
+      if msg.contains("no entry") || msg.contains("not found") {
+        Ok(None)
+      } else {
+        Err(err.to_string())
+      }
+    }
+  }
+}
+
+fn store_refresh_token(token: Option<String>) -> Result<(), String> {
+  let entry = refresh_token_entry()?;
+  match token {
+    Some(raw) => {
+      let t = raw.trim().to_string();
+      if t.is_empty() {
+        let _ = entry.delete_password();
+        return Ok(());
+      }
+      entry.set_password(&t).map_err(|e| e.to_string())
+    }
+    None => {
+      let _ = entry.delete_password();
+      Ok(())
+    }
+  }
 }
 
 #[tauri::command]
@@ -59,6 +104,156 @@ fn pdh_gateway_set_token(state: State<GatewayState>, token: Option<String>) -> R
   Ok(())
 }
 
+#[tauri::command]
+fn pdh_auth_clear_refresh_token() -> Result<(), String> {
+  store_refresh_token(None)
+}
+
+fn backend_base_url_from_state(state: &State<GatewayState>) -> Result<String, String> {
+  let cfg = state
+    .config
+    .read()
+    .map_err(|_| "gateway state poisoned".to_string())?;
+  cfg
+    .backend_base_url
+    .clone()
+    .ok_or_else(|| "backend url not set".to_string())
+}
+
+#[tauri::command]
+async fn pdh_auth_login(
+  state: State<'_, GatewayState>,
+  username: String,
+  password: String,
+) -> Result<serde_json::Value, String> {
+  let backend = backend_base_url_from_state(&state)?;
+  let url = format!("{}/api/auth/login", backend);
+
+  let client = reqwest::Client::new();
+  let resp = client
+    .post(url)
+    .json(&json!({ "username": username, "password": password }))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+  let status = resp.status();
+  let body = resp
+    .json::<serde_json::Value>()
+    .await
+    .map_err(|e| e.to_string())?;
+
+  if !status.is_success() {
+    let msg = body
+      .get("message")
+      .and_then(|v| v.as_str())
+      .unwrap_or("login failed");
+    return Err(msg.to_string());
+  }
+
+  let token = body
+    .get("data")
+    .and_then(|d| d.get("token"))
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .trim()
+    .to_string();
+  let refresh_token = body
+    .get("data")
+    .and_then(|d| d.get("refreshToken"))
+    .and_then(|v| v.as_str())
+    .map(|s| s.to_string());
+
+  // 保存 refresh token 到系统凭据库；前端永不持有
+  store_refresh_token(refresh_token)?;
+
+  // 同步更新网关当前 bearer token（尽快生效）
+  if !token.is_empty() {
+    if let Ok(mut cfg) = state.config.write() {
+      cfg.bearer_token = Some(token.clone());
+    }
+  }
+
+  let sanitized = json!({
+    "success": body.get("success").and_then(|v| v.as_bool()).unwrap_or(true),
+    "data": {
+      "user": body.get("data").and_then(|d| d.get("user")).cloned().unwrap_or(json!(null)),
+      "expiresIn": body.get("data").and_then(|d| d.get("expiresIn")).cloned().unwrap_or(json!("")),
+      "token": token,
+    },
+    "message": body.get("message").and_then(|v| v.as_str()).unwrap_or("登录成功"),
+  });
+
+  Ok(sanitized)
+}
+
+#[tauri::command]
+async fn pdh_auth_refresh(state: State<'_, GatewayState>) -> Result<serde_json::Value, String> {
+  let backend = backend_base_url_from_state(&state)?;
+  let refresh_token = load_refresh_token()?.ok_or_else(|| "no refresh token".to_string())?;
+  let url = format!("{}/api/auth/refresh", backend);
+
+  let client = reqwest::Client::new();
+  let resp = client
+    .post(url)
+    .json(&json!({ "refreshToken": refresh_token }))
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+  let status = resp.status();
+  let body = resp
+    .json::<serde_json::Value>()
+    .await
+    .map_err(|e| e.to_string())?;
+
+  if !status.is_success() {
+    // 401/403：refresh 无效，清理本地 refresh token
+    if status.as_u16() == 401 || status.as_u16() == 403 {
+      let _ = store_refresh_token(None);
+    }
+    let msg = body
+      .get("message")
+      .and_then(|v| v.as_str())
+      .unwrap_or("refresh failed");
+    return Err(msg.to_string());
+  }
+
+  let token = body
+    .get("data")
+    .and_then(|d| d.get("token"))
+    .and_then(|v| v.as_str())
+    .unwrap_or("")
+    .trim()
+    .to_string();
+  let next_refresh = body
+    .get("data")
+    .and_then(|d| d.get("refreshToken"))
+    .and_then(|v| v.as_str())
+    .map(|s| s.to_string());
+
+  if let Some(rt) = next_refresh {
+    store_refresh_token(Some(rt))?;
+  }
+
+  if !token.is_empty() {
+    if let Ok(mut cfg) = state.config.write() {
+      cfg.bearer_token = Some(token.clone());
+    }
+  }
+
+  let sanitized = json!({
+    "success": body.get("success").and_then(|v| v.as_bool()).unwrap_or(true),
+    "data": {
+      "expiresIn": body.get("data").and_then(|d| d.get("expiresIn")).cloned().unwrap_or(json!("")),
+      "token": token,
+    },
+    "message": body.get("message").and_then(|v| v.as_str()).unwrap_or("刷新成功"),
+  });
+
+  Ok(sanitized)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -95,7 +290,10 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       pdh_gateway_url,
       pdh_gateway_set_backend_url,
-      pdh_gateway_set_token
+      pdh_gateway_set_token,
+      pdh_auth_login,
+      pdh_auth_refresh,
+      pdh_auth_clear_refresh_token
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

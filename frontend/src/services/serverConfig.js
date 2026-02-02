@@ -1,5 +1,5 @@
 import { clearAuthToken } from './authToken';
-import { isTauri } from './tauriBridge';
+import { clearRefreshToken, isTauri } from './tauriBridge';
 
 const STORAGE_KEY = 'pdh_server_url';
 
@@ -59,6 +59,9 @@ export const setServerUrl = (raw) => {
   }
 
   clearAuthToken();
+  if (isTauri()) {
+    clearRefreshToken().catch(() => {});
+  }
 
   try {
     window.dispatchEvent(new CustomEvent('pdh-server-changed', { detail: { serverUrl: normalized } }));

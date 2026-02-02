@@ -8,6 +8,14 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const config = require('../config/config');
+const AuthSession = require('../models/AuthSession');
+
+const hashRefreshToken = (token, jwtSecret) => {
+  const secret = jwtSecret || '';
+  return crypto.createHash('sha256').update(String(token) + secret).digest('hex');
+};
+
+const generateRefreshToken = () => crypto.randomBytes(32).toString('hex');
 
 /**
  * 创建登录限流中间件
@@ -53,6 +61,7 @@ const login = async (req, res, next) => {
     const envPasswordHash = config.auth.loginPasswordHash;
     const jwtSecret = config.auth.jwtSecret;
     const jwtExpiresIn = config.auth.jwtExpiresIn;
+    const refreshTokenTtlSeconds = config.auth.refreshTokenTtlSeconds;
 
     // 检查必要的环境变量是否配置
     if (!envUsername || !envPasswordHash || !jwtSecret) {
@@ -132,7 +141,33 @@ const login = async (req, res, next) => {
       loginTime: now
     };
 
-    const token = jwt.sign(payload, jwtSecret, { expiresIn: jwtExpiresIn });
+    const signOptions = jwtExpiresIn ? { expiresIn: jwtExpiresIn } : undefined;
+    const token = signOptions
+      ? jwt.sign(payload, jwtSecret, signOptions)
+      : jwt.sign(payload, jwtSecret);
+
+    // 生成 refresh token（用于 access token 过期后无感续期）
+    let refreshToken = null;
+    let refreshTokenExpiresInSeconds = 0;
+    if (refreshTokenTtlSeconds > 0) {
+      refreshToken = generateRefreshToken();
+      refreshTokenExpiresInSeconds = refreshTokenTtlSeconds;
+      const expiresAt = new Date(Date.now() + refreshTokenTtlSeconds * 1000);
+      const refreshTokenHash = hashRefreshToken(refreshToken, jwtSecret);
+
+      await AuthSession.findOneAndUpdate(
+        { userId: adminUserId },
+        {
+          userId: adminUserId,
+          refreshTokenHash,
+          loginTimeMs: now,
+          expiresAt,
+          lastUsedAt: new Date(),
+          revokedAt: null,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    }
 
     // 返回登录成功响应
     res.status(200).json({
@@ -142,13 +177,95 @@ const login = async (req, res, next) => {
           id: payload.id,
           username: payload.username
         },
-        expiresIn: jwtExpiresIn,
-        token
+        expiresIn: jwtExpiresIn || 'never',
+        token,
+        ...(refreshToken ? { refreshToken, refreshTokenExpiresInSeconds } : {})
       },
       message: '登录成功'
     });
   } catch (error) {
     console.error('登录处理错误:', error);
+    next(error);
+  }
+};
+
+/**
+ * refresh：使用 refresh token 换取新的 access token（并轮换 refresh token）
+ * @route   POST /api/auth/refresh
+ * @access  Public（基于 refresh token 校验）
+ */
+const refresh = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken || !String(refreshToken).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'refreshToken 不能为空',
+      });
+    }
+
+    const jwtSecret = config.auth.jwtSecret;
+    const jwtExpiresIn = config.auth.jwtExpiresIn;
+    const refreshTokenTtlSeconds = config.auth.refreshTokenTtlSeconds;
+
+    if (!jwtSecret) {
+      return res.status(500).json({ success: false, message: '服务器配置错误' });
+    }
+    if (refreshTokenTtlSeconds <= 0) {
+      return res.status(403).json({ success: false, message: '刷新令牌功能未启用' });
+    }
+
+    const tokenHash = hashRefreshToken(refreshToken, jwtSecret);
+    const session = await AuthSession.findOne({
+      refreshTokenHash: tokenHash,
+      revokedAt: null,
+      expiresAt: { $gt: new Date() },
+    }).lean();
+
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: '刷新令牌无效或已过期',
+      });
+    }
+
+    // 轮换 refresh token（减少泄露窗口）
+    const nextRefreshToken = generateRefreshToken();
+    const nextRefreshTokenHash = hashRefreshToken(nextRefreshToken, jwtSecret);
+    const nextExpiresAt = new Date(Date.now() + refreshTokenTtlSeconds * 1000);
+
+    await AuthSession.updateOne(
+      { userId: session.userId, refreshTokenHash: tokenHash, revokedAt: null },
+      {
+        refreshTokenHash: nextRefreshTokenHash,
+        expiresAt: nextExpiresAt,
+        lastUsedAt: new Date(),
+      }
+    );
+
+    const accessPayload = {
+      id: session.userId,
+      username: config.auth.loginUsername || 'admin',
+      loginTime: session.loginTimeMs || Date.now(),
+    };
+
+    const signOptions = jwtExpiresIn ? { expiresIn: jwtExpiresIn } : undefined;
+    const token = signOptions
+      ? jwt.sign(accessPayload, jwtSecret, signOptions)
+      : jwt.sign(accessPayload, jwtSecret);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        token,
+        expiresIn: jwtExpiresIn || 'never',
+        refreshToken: nextRefreshToken,
+        refreshTokenExpiresInSeconds: refreshTokenTtlSeconds,
+      },
+      message: '刷新成功',
+    });
+  } catch (error) {
+    console.error('刷新令牌错误:', error);
     next(error);
   }
 };
@@ -190,6 +307,14 @@ const me = (req, res) => {
  */
 const logout = (req, res) => {
   try {
+    // 尽力撤销 refresh session（单用户场景：直接按 userId 撤销）
+    const userId = req.user?.id;
+    if (userId) {
+      AuthSession.updateOne(
+        { userId, revokedAt: null },
+        { revokedAt: new Date(), lastUsedAt: new Date() }
+      ).catch(() => {});
+    }
     res.status(200).json({
       success: true,
       message: '登出成功'
@@ -206,6 +331,7 @@ const logout = (req, res) => {
 module.exports = {
   login,
   me,
+  refresh,
   logout,
   createLoginRateLimit
 };

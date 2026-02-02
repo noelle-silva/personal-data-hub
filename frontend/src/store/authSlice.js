@@ -6,6 +6,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../services/auth';
 import { clearAuthToken, setAuthToken } from '../services/authToken';
+import { clearRefreshToken as clearTauriRefreshToken, isTauri } from '../services/tauriBridge';
 
 // 异步 thunk：用户登录
 export const login = createAsyncThunk(
@@ -66,6 +67,9 @@ export const logout = createAsyncThunk(
         await authService.logout();
       } finally {
         clearAuthToken();
+        if (isTauri()) {
+          clearTauriRefreshToken().catch(() => {});
+        }
       }
       return { isAuthenticated: false };
     } catch (error) {

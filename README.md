@@ -202,6 +202,19 @@ LOGIN_PASSWORD_HASH=生成的哈希值
 JWT_SECRET=your-jwt-secret-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 
+# 可选：关闭 JWT 过期（不推荐用于公网/多用户场景）
+# 设为 never/none/off/disabled 时，后端签发的 token 将不包含 exp，理论上永不过期（除非你更换 JWT_SECRET）。
+# JWT_EXPIRES_IN=never
+
+# 可选：滑动刷新窗口（秒）
+# 当 token 剩余有效期 <= 该值时，后端会在响应头 `x-pdh-auth-token` 下发新 token（桌面端会自动接收并续期）
+JWT_REFRESH_WINDOW_SECONDS=3600
+
+# 可选：refresh token TTL（秒）
+# 用于“access token 已过期时”的无感续期（桌面端会自动刷新并重放原请求；refresh token 存在系统凭据库，前端不持有明文）
+# 默认 30 天：2592000
+REFRESH_TOKEN_TTL_SECONDS=2592000
+
 # 可选：登录限流（默认关闭；公网暴露后端建议开启）
 # LOGIN_RATE_LIMIT_ENABLED=true
 ```

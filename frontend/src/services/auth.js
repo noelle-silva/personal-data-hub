@@ -4,6 +4,7 @@
  */
 
 import apiClient from './apiClient';
+import { authLogin, clearRefreshToken, isTauri } from './tauriBridge';
 
 /**
  * 用户登录
@@ -13,10 +14,11 @@ import apiClient from './apiClient';
  */
 export const login = async (username, password) => {
   try {
-    const response = await apiClient.post('/auth/login', {
-      username,
-      password
-    });
+    if (isTauri()) {
+      return await authLogin(username, password);
+    }
+
+    const response = await apiClient.post('/auth/login', { username, password });
     return response.data;
   } catch (error) {
     throw handleApiError(error);
@@ -42,8 +44,14 @@ export const getCurrentUser = async () => {
  */
 export const logout = async () => {
   try {
-    const response = await apiClient.post('/auth/logout');
-    return response.data;
+    try {
+      const response = await apiClient.post('/auth/logout');
+      return response.data;
+    } finally {
+      if (isTauri()) {
+        await clearRefreshToken().catch(() => {});
+      }
+    }
   } catch (error) {
     throw handleApiError(error);
   }
