@@ -3,8 +3,8 @@ const path = require('path');
 const { exec } = require('child_process');
 
 /**
- * 解析 .env 文件
- * @param {string} filePath - .env 文件路径
+ * 解析 env 文件（backend/.env）
+ * @param {string} filePath - env 文件路径
  * @returns {object} - 解析后的键值对对象
  */
 function parseEnvFile(filePath) {
@@ -34,12 +34,19 @@ function parseEnvFile(filePath) {
   }
 }
 
-// 1. 读取端口配置
-const portEnv = parseEnvFile('./port.env');
+// 1. 读取端口配置（只允许 backend/.env）
+const envPath = path.join(__dirname, 'backend', '.env');
+if (!fs.existsSync(envPath)) {
+  console.error('缺少必需的配置文件：backend/.env');
+  console.error('请从 backend/.env.example 复制一份并按需修改。');
+  process.exit(1);
+}
+
+const portEnv = parseEnvFile(envPath);
 const backendPort = portEnv.BACKEND_PORT || '5000';
 const nodeEnv = portEnv.NODE_ENV || 'development';
 
-console.log(`读取端口配置: 后端=${backendPort}, 环境=${nodeEnv}`);
+console.log(`读取端口配置(${path.join('backend', path.basename(envPath))}): 后端=${backendPort}, 环境=${nodeEnv}`);
 
 // 2. 动态生成 ecosystem.config.js 的内容
 const ecosystemConfig = {
@@ -86,7 +93,7 @@ const ecosystemConfig = {
 const configPath = path.join(__dirname, 'ecosystem.config.js');
 fs.writeFileSync(configPath, `module.exports = ${JSON.stringify(ecosystemConfig, null, 2)};`);
 
-console.log('已根据 port.env 生成 ecosystem.config.js 文件。');
+console.log(`已根据 ${path.basename(envPath)} 生成 ecosystem.config.js 文件。`);
 
 // 4. 启动 PM2（仅后端）
 console.log('正在使用 PM2 启动后端...');

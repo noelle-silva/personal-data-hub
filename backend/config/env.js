@@ -5,6 +5,10 @@
  * - 避免 dotenv.config 分散在各个模块（尤其是 models）产生隐性副作用
  * - 使用绝对路径，避免依赖启动时的 cwd
  *
+ * 约定（破坏性变更）：
+ * - 后端只读取：backend/.env
+ * - 不再兼容：仓库根目录 .env / backend/db.env / port.env / file.env / login.env
+ *
  * 说明：
  * - 本模块只负责“把 env 文件内容注入 process.env”
  * - 业务代码应通过 config 模块（backend/config/config.js）读取配置
@@ -29,21 +33,21 @@ function tryLoadEnvFile(filePath) {
 }
 
 function loadAllEnvFiles() {
-  const repoRoot = path.resolve(__dirname, '..', '..');
+  const backendRoot = path.resolve(__dirname, '..');
+  const envFiles = [path.join(backendRoot, '.env')];
 
-  // 优先支持收敛后的单文件配置：仓库根目录的 .env（可选）
-  // 兼容现有仓库布局：db.env 在 backend/ 下，其余在仓库根目录
-  const envFiles = [
-    path.join(repoRoot, '.env'),
-    path.join(repoRoot, 'backend', 'db.env'),
-    path.join(repoRoot, 'port.env'),
-    path.join(repoRoot, 'file.env'),
-    path.join(repoRoot, 'login.env'),
-  ];
+  // 只允许 backend/.env：缺失直接报错，避免“看似启动了但读不到配置”。
+  if (!fs.existsSync(envFiles[0])) {
+    // eslint-disable-next-line no-console
+    console.error('[env] 缺少必需的配置文件：backend/.env');
+    // eslint-disable-next-line no-console
+    console.error('[env] 请从 backend/.env.example 复制一份并按需修改。');
+    throw new Error('Missing backend/.env');
+  }
 
   envFiles.forEach(tryLoadEnvFile);
 
-  return { repoRoot, envFiles };
+  return { backendRoot, envFiles };
 }
 
 if (!global[LOADED_FLAG]) {

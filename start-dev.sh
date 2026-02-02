@@ -16,7 +16,14 @@ if ! command -v npm &> /dev/null; then
 fi
 
 # 读取端口配置
-source port.env
+ENV_FILE="backend/.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "错误: 未找到 backend/.env（请从 backend/.env.example 复制并修改）"
+    exit 1
+fi
+
+# 只解析需要的键，避免直接 source 导致 .env 中的 '$' 等字符被 shell 展开
+BACKEND_PORT=$(grep -E '^[[:space:]]*BACKEND_PORT[[:space:]]*=' "$ENV_FILE" | tail -n 1 | sed -E 's/^[[:space:]]*BACKEND_PORT[[:space:]]*=//')
 BACKEND_PORT=${BACKEND_PORT:-5000}
 
 echo "正在启动后端服务器..."

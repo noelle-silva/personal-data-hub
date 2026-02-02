@@ -104,119 +104,35 @@ npm install
 
 ### 3. 配置环境变量
 
-#### 推荐：使用单一 `.env`（更简单）
-
-项目已支持在仓库根目录使用一个统一的 `.env` 文件（后端启动时优先读取）。
+#### 后端（必需）：`backend/.env`
 
 ```bash
 # 在项目根目录执行
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-然后编辑 `.env`，按需修改 MongoDB、端口、附件、登录认证配置即可。
+编辑 `backend/.env`，按需修改 MongoDB、端口、附件、登录认证配置即可。
 
-> 兼容说明：旧的 `backend/db.env`、`port.env`、`file.env`、`login.env` 仍然可用；如果同时存在 `.env`，会以 `.env` 为优先。
+> 破坏性变更：后端**只读取** `backend/.env`；不再读取仓库根目录 `.env`、`backend/db.env`、`port.env`、`file.env`、`login.env`。
 
-#### 3.1 数据库配置
+#### 前端（可选）：`frontend/.env`
 
-复制并配置数据库连接文件：
+前端基于 Create React App（react-scripts），环境变量文件位于 `frontend` 目录：
 
 ```bash
 # 在项目根目录执行
-cp backend/db.env.example backend/db.env
+cp frontend/.env.example frontend/.env
 ```
 
-编辑 `backend/db.env` 文件，配置MongoDB连接：
+说明：只有以 `REACT_APP_` 开头的变量会注入到前端构建产物中。
 
-```
-# MongoDB数据库连接字符串
-MONGODB_URI=mongodb://username:password@localhost:27017/personal-data-hub?authSource=admin
+#### 生成登录密码哈希（写入 `backend/.env`）
 
-# 集合名称配置（可选）
-DOCUMENT_COLLECTION=documents
-QUOTE_COLLECTION=quotes
-ATTACHMENT_COLLECTION=attachments
-CUSTOM_PAGE_COLLECTION=custom-pages
-AI_PROMPTS_COLLECTION=AI-prompts
-```
-
-#### 3.2 端口配置
-
-```bash
-# 在项目根目录执行
-cp port.env.example port.env
-```
-
-编辑 `port.env` 文件：
-
-```
-# 后端服务端口
-BACKEND_PORT=5000
-
-# 运行环境
-NODE_ENV=development
-```
-
-#### 3.3 附件系统配置
-
-```bash
-# 在项目根目录执行
-cp file.env.example file.env
-```
-
-编辑 `file.env` 文件，配置附件存储路径和安全设置：
-
-```
-# 附件存储路径
-ATTACHMENTS_IMAGE_DIR=backend/attachments/images
-ATTACHMENTS_VIDEO_DIR=backend/attachments/videos
-ATTACHMENTS_FILE_DIR=backend/attachments/document-file
-ATTACHMENTS_SCRIPT_DIR=backend/attachments/scripts
-```
-
-#### 3.4 登录认证配置
-
-首先，生成密码哈希值（在backend目录运行）：
+生成密码哈希值（在 backend 目录运行）：
 ```bash
 cd backend
 node -e "const bcrypt = require('bcrypt'); bcrypt.hash('你的密码', 10).then(console.log)"
 cd ..
-```
-
-复制并配置登录认证文件：
-```bash
-# 在项目根目录执行
-cp login.env.example login.env
-```
-
-编辑 `login.env` 文件：
-
-```
-# 登录用户名
-LOGIN_USERNAME=你的用户名
-
-# 登录密码（bcrypt散列值）- 使用上一步生成的哈希值
-LOGIN_PASSWORD_HASH=生成的哈希值
-
-# JWT配置
-JWT_SECRET=your-jwt-secret-key-change-this-in-production
-JWT_EXPIRES_IN=24h
-
-# 可选：关闭 JWT 过期（不推荐用于公网/多用户场景）
-# 设为 never/none/off/disabled 时，后端签发的 token 将不包含 exp，理论上永不过期（除非你更换 JWT_SECRET）。
-# JWT_EXPIRES_IN=never
-
-# 可选：滑动刷新窗口（秒）
-# 当 token 剩余有效期 <= 该值时，后端会在响应头 `x-pdh-auth-token` 下发新 token（桌面端会自动接收并续期）
-JWT_REFRESH_WINDOW_SECONDS=3600
-
-# 可选：refresh token TTL（秒）
-# 用于“access token 已过期时”的无感续期（桌面端会自动刷新并重放原请求；refresh token 存在系统凭据库，前端不持有明文）
-# 默认 30 天：2592000
-REFRESH_TOKEN_TTL_SECONDS=2592000
-
-# 可选：登录限流（默认关闭；公网暴露后端建议开启）
-# LOGIN_RATE_LIMIT_ENABLED=true
 ```
 
 #### 3.5 AI服务配置
@@ -261,7 +177,7 @@ npm install
 npm run desktop:dev
 ```
 
-首次启动在登录页填写服务器地址，例如：`http://127.0.0.1:8444`。
+首次启动在登录页填写服务器地址，例如：`http://127.0.0.1:5000`（以 `backend/.env` 的 `BACKEND_PORT` 为准）。
 
 构建桌面端安装包：在 `frontend` 目录运行 `npm run desktop:build`。
 
@@ -394,7 +310,7 @@ AI配置已迁移到前端设置页面管理，不再使用环境变量。
 
 ### 附件上传限制
 
-在 `file.env` 中可以配置各类文件的上传限制：
+在 `backend/.env` 中可以配置各类文件的上传限制：
 
 ```
 # 图片最大10MB
@@ -414,7 +330,7 @@ ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
 
 生产环境部署时，请务必修改以下安全配置：
 
-1. `login.env` 中的 `JWT_SECRET`、`LOGIN_PASSWORD_HASH`
+1. `backend/.env` 中的 `JWT_SECRET`、`LOGIN_PASSWORD_HASH`
 2. 如公网暴露后端：建议开启 `LOGIN_RATE_LIMIT_ENABLED=true`
 3. 使用强密码并定期更换
 
@@ -429,19 +345,19 @@ ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
 ### 常见问题
 
 1. **端口冲突**
-   - 检查 `port.env` 中的端口配置
+   - 检查 `backend/.env` 中的端口配置（`BACKEND_PORT`）
    - 确保端口未被其他程序占用
 
 2. **数据库连接失败**
-   - 检查 `backend/db.env` 中的MongoDB连接字符串
+   - 检查 `backend/.env` 中的 MongoDB 连接字符串（`MONGODB_URI`）
    - 确认MongoDB服务正在运行
 
 3. **附件上传失败**
    - 检查附件存储目录权限
-   - 确认 `file.env` 中的路径配置正确
+   - 确认 `backend/.env` 中的路径配置正确
 
 4. **登录失败**
-   - 检查 `login.env` 中的用户名和密码哈希
+   - 检查 `backend/.env` 中的用户名和密码哈希
    - 确认JWT密钥配置正确
 
 ### 日志查看
