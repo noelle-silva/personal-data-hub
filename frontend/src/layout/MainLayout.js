@@ -19,7 +19,6 @@ import { styled } from '@mui/material/styles';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  Note as NoteIcon,
   LocalOffer as LocalOfferIcon,
   FormatQuote as FormatQuoteIcon,
   AttachFile as AttachFileIcon,
@@ -96,11 +95,6 @@ const fixedNavigationItems = [
     text: '首页',
     path: '/',
     icon: <DashboardIcon />,
-  },
-  {
-    text: '笔记管理',
-    path: '/笔记',
-    icon: <NoteIcon />,
   },
   {
     text: '标签筛选',

@@ -398,7 +398,7 @@ const Home = () => {
                 fullWidth
                 size="large"
                 endIcon={<ArrowForwardIcon />}
-                onClick={() => navigate('/笔记')}
+                onClick={() => navigate('/标签筛选')}
                 sx={{
                   height: '100%',
                   borderRadius: 16,
@@ -585,7 +585,7 @@ const Home = () => {
                           variant="outlined"
                           size="small"
                           clickable
-                          onClick={() => navigate('/笔记')}
+                          onClick={() => navigate('/标签筛选', { state: { tags: [tag] } })}
                           sx={{
                             borderRadius: 12,
                           }}

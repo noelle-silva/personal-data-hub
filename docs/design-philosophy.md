@@ -5,7 +5,7 @@
 关联源码入口：
 - 后端数据模型与接口： [backend/models/Document.js](backend/models/Document.js) · [backend/models/Quote.js](backend/models/Quote.js) · [backend/models/Attachment.js](backend/models/Attachment.js) · [backend/models/CustomPage.js](backend/models/CustomPage.js) · [backend/services/documentService.js](backend/services/documentService.js) · [backend/routes/documents.js](backend/routes/documents.js)
 - 前端内容渲染与窗口系统： [frontend/src/components/MarkdownSandboxRenderer.jsx](frontend/src/components/MarkdownSandboxRenderer.jsx) · [frontend/src/components/HtmlSandboxRenderer.jsx](frontend/src/components/HtmlSandboxRenderer.jsx) · [frontend/src/components/DocumentWindow.jsx](frontend/src/components/DocumentWindow.jsx) · [frontend/src/components/QuoteWindow.jsx](frontend/src/components/QuoteWindow.jsx) · [frontend/src/components/AttachmentWindow.jsx](frontend/src/components/AttachmentWindow.jsx)
-- 标签筛选与全局交互： [frontend/src/components/TagMultiSelect.js](frontend/src/components/TagMultiSelect.js) · [frontend/src/pages/CustomPage.jsx](frontend/src/pages/CustomPage.jsx) · [frontend/src/pages/Notes.js](frontend/src/pages/Notes.js)
+- 标签筛选与全局交互： [frontend/src/components/TagMultiSelect.js](frontend/src/components/TagMultiSelect.js) · [frontend/src/pages/CustomPage.jsx](frontend/src/pages/CustomPage.jsx) · [frontend/src/pages/TagFilter.js](frontend/src/pages/TagFilter.js)
 
 1. 核心设计哲学
 

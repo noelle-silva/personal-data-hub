@@ -14,6 +14,7 @@ import {
   Snackbar,
   Fab
 } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import { Add as AddIcon } from '@mui/icons-material';
@@ -95,6 +96,7 @@ const InfoAlert = styled(Alert)(({ theme }) => ({
 
 const TagFilter = () => {
   const dispatch = useDispatch();
+  const location = useLocation();
   const selectedTags = useSelector(selectSelectedTags);
   const items = useSelector(selectTagFilterItems);
   const status = useSelector(selectTagFilterStatus);
@@ -107,6 +109,13 @@ const TagFilter = () => {
   const [showError, setShowError] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const debounceTimerRef = useRef(null);
+
+  // 支持从其他页面跳转时带入标签（例如：首页“热门标签”点击）
+  useEffect(() => {
+    const tagsFromNavigation = location.state?.tags;
+    if (!Array.isArray(tagsFromNavigation) || tagsFromNavigation.length === 0) return;
+    dispatch(setSelectedTags(tagsFromNavigation));
+  }, [location.state, dispatch]);
   
   
   // 监听错误状态变化

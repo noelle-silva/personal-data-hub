@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import MainLayout from './layout/MainLayout';
 import Home from './pages/Home';
-import Notes from './pages/Notes';
 import TagFilter from './pages/TagFilter';
 import Quotes from './pages/Quotes';
 import Attachments from './pages/Attachments';
@@ -50,7 +49,8 @@ function App() {
         </ProtectedRoute>
       }>
         <Route index element={<Home />} />
-        <Route path="/笔记" element={<Notes />} />
+        {/* 兼容旧链接：/笔记 -> /标签筛选 */}
+        <Route path="/笔记" element={<Navigate to="/标签筛选" replace />} />
         <Route path="/标签筛选" element={<TagFilter />} />
         {/* 兼容旧链接：/引用体 -> /收藏夹 */}
         <Route path="/引用体" element={<Navigate to="/收藏夹" replace />} />
