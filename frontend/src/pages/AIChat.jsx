@@ -67,14 +67,13 @@ const InputContainer = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.spacing(2),
+  gap: theme.spacing(1),
   borderRadius: theme.spacing(2),
   boxShadow: theme.shadows[2],
 }));
 
 // 样式化的控制面板
 const ControlPanel = styled(Card)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
   borderRadius: theme.spacing(2),
 }));
 
@@ -555,231 +554,7 @@ const AIChat = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 2 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center">
-        AI Chat
-      </Typography>
-
-      {/* 控制面板 */}
-      <ControlPanel>
-        <CardContent>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>模型</InputLabel>
-              <Select
-                value={selectedModel}
-                label="模型"
-                onChange={(e) => {
-                  setSelectedModel(e.target.value);
-                  setIsModelManuallySet(true);
-                }}
-                disabled={isLoading}
-              >
-                {models.map((model) => (
-                  <MenuItem key={model.id} value={model.id}>
-                    {model.id}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel id="roleSelectLabel">角色</InputLabel>
-                <Select
-                  value={selectedRoleId}
-                  label="角色"
-                  labelId="roleSelectLabel"
-                  id="roleSelect"
-                  onChange={(e) => {
-                    console.log('角色选择器 onChange:', e.target.value, '当前值:', selectedRoleId);
-                    setSelectedRoleId(e.target.value);
-                  }}
-                  disabled={isLoading || rolesLoading || roles.length === 0}
-                >
-                  {roles.length === 0 ? (
-                    <MenuItem value="" disabled>
-                      暂无可用角色
-                    </MenuItem>
-                  ) : (
-                    [
-                      <MenuItem key="none" value="none">无系统提示词</MenuItem>,
-                      ...roles.map((role) => (
-                        <MenuItem key={role._id} value={String(role._id)}>
-                          {role.name}
-                        </MenuItem>
-                      ))
-                    ]
-                  )}
-                </Select>
-              </FormControl>
-              <Tooltip title="刷新角色列表">
-                <IconButton
-                  onClick={loadRoles}
-                  disabled={rolesLoading}
-                  size="small"
-                  sx={{ mt: 1 }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel id="historySelectLabel">会话</InputLabel>
-                <Select
-                  value={selectedHistoryId}
-                  label="会话"
-                  labelId="historySelectLabel"
-                  id="historySelect"
-                  onChange={(e) => {
-                    handleHistorySelect(e.target.value);
-                  }}
-                  disabled={isLoading || historiesLoading}
-                >
-                  <MenuItem value="">
-                    <em>新建会话</em>
-                  </MenuItem>
-                  {chatHistories.map((history) => (
-                    <MenuItem key={history._id} value={history._id}>
-                      {history.title}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <Tooltip title="新建会话">
-                <IconButton
-                  onClick={handleNewChat}
-                  disabled={isLoading}
-                  size="small"
-                  sx={{ mt: 1 }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="刷新会话列表">
-                <IconButton
-                  onClick={loadChatHistories}
-                  disabled={historiesLoading}
-                  size="small"
-                  sx={{ mt: 1 }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            
-            <Box sx={{ minWidth: 200 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                温度: {temperature.toFixed(1)}
-              </Typography>
-              <Slider
-                value={temperature}
-                onChange={(e, newValue) => {
-                  setTemperature(newValue);
-                  setIsTempManuallySet(true);
-                }}
-                min={0}
-                max={2}
-                step={0.1}
-                disabled={isLoading}
-                marks={[
-                  { value: 0, label: '0' },
-                  { value: 0.7, label: '0.7' },
-                  { value: 1.5, label: '1.5' },
-                  { value: 2, label: '2' }
-                ]}
-                valueLabelDisplay="auto"
-              />
-            </Box>
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isStreaming}
-                  onChange={(e) => setIsStreaming(e.target.checked)}
-                  disabled={isLoading}
-                />
-              }
-              label="流式响应"
-            />
-            
-            <Tooltip title="管理提示词设置">
-              <IconButton
-                color="primary"
-                onClick={() => navigate('/设置')}
-                disabled={isLoading}
-              >
-                <TuneIcon />
-              </IconButton>
-            </Tooltip>
-            
-            {selectedModel && (
-              <Chip
-                label={`当前模型: ${selectedModel}`}
-                variant="outlined"
-                size="small"
-              />
-            )}
-            
-            {roles.length === 0 && (
-              <Chip
-                label="暂无角色，请在设置中创建"
-                variant="outlined"
-                size="small"
-                color="warning"
-              />
-            )}
-            
-            {selectedRoleId !== 'default' && selectedRoleId !== 'none' && roles.length > 0 && (
-              <Chip
-                label={`角色: ${roles.find(r => r._id === selectedRoleId)?.name || '未知'}`}
-                variant="outlined"
-                size="small"
-                color="secondary"
-              />
-            )}
-            
-            {selectedRoleId === 'none' && (
-              <Chip
-                label="无系统提示词"
-                variant="outlined"
-                size="small"
-                color="warning"
-              />
-            )}
-            
-            {isTempManuallySet && (
-              <Chip
-                label={`温度: ${temperature.toFixed(1)} (手动)`}
-                variant="outlined"
-                size="small"
-                color="info"
-              />
-            )}
-            
-            {isModelManuallySet && (
-              <Chip
-                label={`模型: ${selectedModel} (手动)`}
-                variant="outlined"
-                size="small"
-                color="info"
-              />
-            )}
-            
-            {/* 临时调试Chip，显示当前 selectedRoleId */}
-            <Chip
-              label={`DEBUG: selectedRoleId=${selectedRoleId}`}
-              variant="outlined"
-              size="small"
-              color="info"
-              sx={{ ml: 1 }}
-            />
-          </Box>
-        </CardContent>
-      </ControlPanel>
-
+    <Container maxWidth="xl" sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 2 }}>
       {/* 错误提示 */}
       {error && (
         <Alert 
@@ -791,123 +566,330 @@ const AIChat = () => {
         </Alert>
       )}
 
-      {/* 消息容器 */}
-      <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', mb: 2, overflow: 'hidden' }}>
-        <MessageContainer>
-          {messages.length === 0 && !isLoading && (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <BotIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">
-                开始与AI对话
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                输入消息并按Enter键发送
-              </Typography>
-            </Box>
-          )}
-          
-          {messages.map((message) => (
-            <MessageCard key={message.id} isUser={message.role === 'user'}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Avatar sx={{ bgcolor: message.role === 'user' ? 'primary.main' : 'secondary.main' }}>
-                  {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
-                </Avatar>
-                <Box sx={{ flexGrow: 1 }}>
-                  {message.role === 'user' ? (
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {message.content}
-                    </Typography>
-                  ) : (
-                    <MarkdownInlineRenderer
-                      content={message.content}
-                      scopeClass="ai-chat-enhanced"
-                      enableAIChatEnhancements={true}
-                    />
-                  )}
-                  {message.incomplete && (
-                    <Typography variant="caption" sx={{ fontStyle: 'italic', mt: 1, display: 'block', color: 'warning.main' }}>
-                      (响应因长度限制被截断)
-                    </Typography>
-                  )}
-                  <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>
-                    {message.timestamp.toLocaleTimeString()}
-                    {message.model && ` • ${message.model}`}
+      <Box
+        sx={{
+          flexGrow: 1,
+          minHeight: 0,
+          display: 'flex',
+          gap: 2,
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: 'stretch',
+        }}
+      >
+        {/* 左侧：聊天详情 */}
+        <Box sx={{ flexGrow: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Card sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <MessageContainer>
+              {messages.length === 0 && !isLoading && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <BotIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary">
+                    开始与AI对话
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    输入消息并按Enter键发送
                   </Typography>
                 </Box>
+              )}
+
+              {messages.map((message) => (
+                <MessageCard key={message.id} isUser={message.role === 'user'}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Avatar sx={{ bgcolor: message.role === 'user' ? 'primary.main' : 'secondary.main' }}>
+                      {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      {message.role === 'user' ? (
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {message.content}
+                        </Typography>
+                      ) : (
+                        <MarkdownInlineRenderer
+                          content={message.content}
+                          scopeClass="ai-chat-enhanced"
+                          enableAIChatEnhancements={true}
+                        />
+                      )}
+                      {message.incomplete && (
+                        <Typography
+                          variant="caption"
+                          sx={{ fontStyle: 'italic', mt: 1, display: 'block', color: 'warning.main' }}
+                        >
+                          (响应因长度限制被截断)
+                        </Typography>
+                      )}
+                      <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.7 }}>
+                        {message.timestamp.toLocaleTimeString()}
+                        {message.model && ` • ${message.model}`}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </MessageCard>
+              ))}
+
+              {/* 当前流式响应 */}
+              {currentResponse && (
+                <MessageCard isUser={false}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                      <BotIcon />
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1, position: 'relative' }}>
+                      <MarkdownInlineRenderer
+                        content={currentResponse}
+                        scopeClass="ai-chat-enhanced"
+                        enableAIChatEnhancements={true}
+                      />
+                      <CircularProgress
+                        size={16}
+                        sx={{
+                          position: 'absolute',
+                          bottom: 4,
+                          right: 4,
+                          ml: 1
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </MessageCard>
+              )}
+
+              <div ref={messagesEndRef} />
+            </MessageContainer>
+          </Card>
+
+          {/* 输入区域 */}
+          <InputContainer>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+              <TextField
+                multiline
+                maxRows={4}
+                fullWidth
+                placeholder="输入消息..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
+                inputRef={inputRef}
+              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
+                {isLoading && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<StopIcon />}
+                    onClick={handleStopGeneration}
+                    color="error"
+                  >
+                    停止
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  endIcon={<SendIcon />}
+                  onClick={handleSendMessage}
+                  disabled={!inputText.trim() || isLoading}
+                >
+                  发送
+                </Button>
               </Box>
-            </MessageCard>
-          ))}
-          
-          {/* 当前流式响应 */}
-          {currentResponse && (
-            <MessageCard isUser={false}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                  <BotIcon />
-                </Avatar>
-                <Box sx={{ flexGrow: 1, position: 'relative' }}>
-                  <MarkdownInlineRenderer
-                    content={currentResponse}
-                    scopeClass="ai-chat-enhanced"
-                    enableAIChatEnhancements={true}
-                  />
-                  <CircularProgress
-                    size={16}
-                    sx={{
-                      position: 'absolute',
-                      bottom: 4,
-                      right: 4,
-                      ml: 1
+            </Box>
+          </InputContainer>
+        </Box>
+
+        {/* 右侧：设置侧边栏 */}
+        <Box sx={{ width: { xs: '100%', md: 360 }, flexShrink: 0, minHeight: 0 }}>
+          <ControlPanel>
+            <CardContent>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>模型</InputLabel>
+                  <Select
+                    value={selectedModel}
+                    label="模型"
+                    onChange={(e) => {
+                      setSelectedModel(e.target.value);
+                      setIsModelManuallySet(true);
                     }}
+                    disabled={isLoading}
+                  >
+                    {models.map((model) => (
+                      <MenuItem key={model.id} value={model.id}>
+                        {model.id}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel id="roleSelectLabel">角色</InputLabel>
+                    <Select
+                      value={selectedRoleId}
+                      label="角色"
+                      labelId="roleSelectLabel"
+                      id="roleSelect"
+                      onChange={(e) => {
+                        console.log('角色选择器 onChange:', e.target.value, '当前值:', selectedRoleId);
+                        setSelectedRoleId(e.target.value);
+                      }}
+                      disabled={isLoading || rolesLoading || roles.length === 0}
+                    >
+                      {roles.length === 0 ? (
+                        <MenuItem value="" disabled>
+                          暂无可用角色
+                        </MenuItem>
+                      ) : (
+                        [
+                          <MenuItem key="none" value="none">无系统提示词</MenuItem>,
+                          ...roles.map((role) => (
+                            <MenuItem key={role._id} value={String(role._id)}>
+                              {role.name}
+                            </MenuItem>
+                          ))
+                        ]
+                      )}
+                    </Select>
+                  </FormControl>
+                  <Tooltip title="刷新角色列表">
+                    <IconButton
+                      onClick={loadRoles}
+                      disabled={rolesLoading}
+                      size="small"
+                      sx={{ mb: 0.25 }}
+                    >
+                      <RefreshIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel id="historySelectLabel">会话</InputLabel>
+                    <Select
+                      value={selectedHistoryId}
+                      label="会话"
+                      labelId="historySelectLabel"
+                      id="historySelect"
+                      onChange={(e) => {
+                        handleHistorySelect(e.target.value);
+                      }}
+                      disabled={isLoading || historiesLoading}
+                    >
+                      <MenuItem value="">
+                        <em>新建会话</em>
+                      </MenuItem>
+                      {chatHistories.map((history) => (
+                        <MenuItem key={history._id} value={history._id}>
+                          {history.title}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Tooltip title="新建会话">
+                    <IconButton onClick={handleNewChat} disabled={isLoading} size="small" sx={{ mb: 0.25 }}>
+                      <AddIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="刷新会话列表">
+                    <IconButton
+                      onClick={loadChatHistories}
+                      disabled={historiesLoading}
+                      size="small"
+                      sx={{ mb: 0.25 }}
+                    >
+                      <RefreshIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    温度: {temperature.toFixed(1)}
+                  </Typography>
+                  <Slider
+                    value={temperature}
+                    onChange={(e, newValue) => {
+                      setTemperature(newValue);
+                      setIsTempManuallySet(true);
+                    }}
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    disabled={isLoading}
+                    marks={[
+                      { value: 0, label: '0' },
+                      { value: 0.7, label: '0.7' },
+                      { value: 1.5, label: '1.5' },
+                      { value: 2, label: '2' }
+                    ]}
+                    valueLabelDisplay="auto"
                   />
                 </Box>
-              </Box>
-            </MessageCard>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </MessageContainer>
-      </Card>
 
-      {/* 输入区域 */}
-      <InputContainer>
-        <TextField
-          multiline
-          maxRows={4}
-          fullWidth
-          placeholder="输入消息..."
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={isLoading}
-          inputRef={inputRef}
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
-            按 Enter 发送，Shift+Enter 换行
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {isLoading && (
-              <Button
-                variant="outlined"
-                startIcon={<StopIcon />}
-                onClick={handleStopGeneration}
-                color="error"
-              >
-                停止
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              endIcon={<SendIcon />}
-              onClick={handleSendMessage}
-              disabled={!inputText.trim() || isLoading}
-            >
-              发送
-            </Button>
-          </Box>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isStreaming}
+                      onChange={(e) => setIsStreaming(e.target.checked)}
+                      disabled={isLoading}
+                    />
+                  }
+                  label="流式响应"
+                />
+
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, minWidth: 0 }}>
+                    {selectedModel && (
+                      <Chip label={`当前模型: ${selectedModel}`} variant="outlined" size="small" />
+                    )}
+                    {roles.length === 0 && (
+                      <Chip
+                        label="暂无角色，请在设置中创建"
+                        variant="outlined"
+                        size="small"
+                        color="warning"
+                      />
+                    )}
+                    {selectedRoleId !== 'default' && selectedRoleId !== 'none' && roles.length > 0 && (
+                      <Chip
+                        label={`角色: ${roles.find(r => r._id === selectedRoleId)?.name || '未知'}`}
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                      />
+                    )}
+                    {selectedRoleId === 'none' && (
+                      <Chip label="无系统提示词" variant="outlined" size="small" color="warning" />
+                    )}
+                    {isTempManuallySet && (
+                      <Chip
+                        label={`温度: ${temperature.toFixed(1)} (手动)`}
+                        variant="outlined"
+                        size="small"
+                        color="info"
+                      />
+                    )}
+                    {isModelManuallySet && (
+                      <Chip
+                        label={`模型: ${selectedModel} (手动)`}
+                        variant="outlined"
+                        size="small"
+                        color="info"
+                      />
+                    )}
+                  </Box>
+
+                  <Tooltip title="管理提示词设置">
+                    <IconButton color="primary" onClick={() => navigate('/设置')} disabled={isLoading} size="small">
+                      <TuneIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+            </CardContent>
+          </ControlPanel>
         </Box>
-      </InputContainer>
+      </Box>
     </Container>
   );
 };

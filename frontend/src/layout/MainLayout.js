@@ -489,17 +489,19 @@ const MainLayout = () => {
               </IconButton>
             )}
             
-            {/* 页面标题 */}
-            <Typography
-              variant="h5"
-              component="div"
-              sx={{
-                fontWeight: 'bold',
-                letterSpacing: '0.5px',
-              }}
-            >
-              {getPageTitle()}
-            </Typography>
+            {/* 页面标题（AI Chat 页面不显示顶部标题，避免重复） */}
+            {location.pathname !== '/AI-Chat' && (
+              <Typography
+                variant="h5"
+                component="div"
+                sx={{
+                  fontWeight: 'bold',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {getPageTitle()}
+              </Typography>
+            )}
             
             {/* 版本信息 - 在大屏显示 */}
              <VersionText variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
