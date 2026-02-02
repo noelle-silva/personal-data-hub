@@ -945,6 +945,12 @@ class AttachmentService {
         allowedTypes: config.attachments.allowedTypes.document,
         acceptString: config.attachments.allowedTypes.document.join(','),
         maxFiles: config.attachments.maxFiles.document
+      },
+      script: {
+        maxSize: this.getMaxFileSize('script'),
+        allowedTypes: config.attachments.allowedTypes.script,
+        acceptString: config.attachments.allowedTypes.script.join(','),
+        maxFiles: config.attachments.maxFiles.script
       }
     };
   }

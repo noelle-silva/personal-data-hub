@@ -7,6 +7,7 @@
  */
 
 require('./env');
+const serverSettingsService = require('./runtime/serverSettingsService');
 
 function toInt(value, defaultValue) {
   if (value === undefined || value === null || value === '') return defaultValue;
@@ -48,6 +49,7 @@ function normalizeJwtExpiresIn(value) {
 }
 
 const jwtExpiresIn = normalizeJwtExpiresIn(process.env.JWT_EXPIRES_IN);
+const runtime = serverSettingsService.getConfig();
 
 const config = Object.freeze({
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -93,35 +95,26 @@ const config = Object.freeze({
       script: process.env.ATTACHMENTS_SCRIPT_DIR || 'backend/attachments/scripts',
     }),
     allowedTypes: Object.freeze({
-      image: toCsvList(process.env.ATTACHMENTS_ALLOWED_IMAGE_TYPES, 'image/png,image/jpeg,image/webp,image/gif'),
-      video: toCsvList(
-        process.env.ATTACHMENTS_ALLOWED_VIDEO_TYPES,
-        'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska,video/x-flv'
-      ),
-      document: toCsvList(
-        process.env.ATTACHMENTS_ALLOWED_DOCUMENT_TYPES,
-        'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      ),
-      script: toCsvList(
-        process.env.ATTACHMENTS_ALLOWED_SCRIPT_TYPES,
-        'text/x-python,application/x-msdos-program,text/x-shellscript,application/javascript,text/x-c++src,application/x-msdownload'
-      ),
+      image: runtime.attachments.allowedTypes.image,
+      video: runtime.attachments.allowedTypes.video,
+      document: runtime.attachments.allowedTypes.document,
+      script: runtime.attachments.allowedTypes.script,
     }),
     maxSizeBytes: Object.freeze({
-      image: toInt(process.env.ATTACHMENTS_MAX_IMAGE_SIZE, 10485760),
-      video: toInt(process.env.ATTACHMENTS_MAX_VIDEO_SIZE, 1073741824),
-      document: toInt(process.env.ATTACHMENTS_MAX_DOCUMENT_SIZE, 52428800),
-      script: toInt(process.env.ATTACHMENTS_MAX_SCRIPT_SIZE, 10485760),
+      image: runtime.attachments.maxSizeBytes.image,
+      video: runtime.attachments.maxSizeBytes.video,
+      document: runtime.attachments.maxSizeBytes.document,
+      script: runtime.attachments.maxSizeBytes.script,
     }),
     maxFiles: Object.freeze({
-      image: toInt(process.env.ATTACHMENTS_MAX_IMAGE_FILES, 10),
-      video: toInt(process.env.ATTACHMENTS_MAX_VIDEO_FILES, 3),
-      document: toInt(process.env.ATTACHMENTS_MAX_DOCUMENT_FILES, 10),
-      script: toInt(process.env.ATTACHMENTS_MAX_SCRIPT_FILES, 10),
+      image: runtime.attachments.maxFiles.image,
+      video: runtime.attachments.maxFiles.video,
+      document: runtime.attachments.maxFiles.document,
+      script: runtime.attachments.maxFiles.script,
     }),
-    enableDeduplication: toBool(process.env.ATTACHMENTS_ENABLE_DEDUPLICATION, false),
-    enableRange: toBool(process.env.ATTACHMENTS_ENABLE_RANGE, false),
-    cacheTtl: process.env.ATTACHMENTS_CACHE_TTL,
+    enableDeduplication: runtime.attachments.enableDeduplication,
+    enableRange: runtime.attachments.enableRange,
+    cacheTtl: runtime.attachments.cacheTtlSeconds,
     secret: process.env.ATTACHMENTS_SECRET || null,
     bearerToken: process.env.ATTACHMENTS_BEARER_TOKEN || null,
     signedUrlTtlSeconds: toInt(process.env.ATTACHMENTS_SIGNED_URL_TTL, 3600),

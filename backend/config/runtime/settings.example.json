@@ -1,0 +1,52 @@
+{
+  "attachments": {
+    "enableDeduplication": false,
+    "enableRange": true,
+    "cacheTtlSeconds": 3600,
+    "allowedTypes": {
+      "image": ["image/png", "image/jpeg", "image/webp", "image/gif"],
+      "video": [
+        "video/mp4",
+        "video/webm",
+        "video/ogg",
+        "video/quicktime",
+        "video/x-msvideo",
+        "video/x-matroska",
+        "video/x-flv"
+      ],
+      "document": [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/epub+zip",
+        "application/epub"
+      ],
+      "script": [
+        "text/x-python",
+        "application/x-msdos-program",
+        "text/x-shellscript",
+        "application/javascript",
+        "text/x-c++src",
+        "application/x-msdownload",
+        "text/javascript"
+      ]
+    },
+    "maxSizeBytes": {
+      "image": 10485760,
+      "video": 1073741824,
+      "document": 52428800,
+      "script": 10485760
+    },
+    "maxFiles": {
+      "image": 10,
+      "video": 3,
+      "document": 10,
+      "script": 10
+    }
+  }
+}

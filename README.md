@@ -310,21 +310,12 @@ AI配置已迁移到前端设置页面管理，不再使用环境变量。
 
 ### 附件上传限制
 
-在 `backend/.env` 中可以配置各类文件的上传限制：
+附件上传限制（大小/数量/允许类型/Range/去重/缓存）已迁移为“运行时设置”：
 
-```
-# 图片最大10MB
-ATTACHMENTS_MAX_IMAGE_SIZE=10485760
+- 文件：`backend/config/runtime/settings.json`（首次启动自动生成）
+- 客户端入口：设置 -> 服务器（附件上传限制）
 
-# 视频最大1GB
-ATTACHMENTS_MAX_VIDEO_SIZE=1073741824
-
-# 文档最大50MB
-ATTACHMENTS_MAX_DOCUMENT_SIZE=52428800
-
-# 脚本最大10MB
-ATTACHMENTS_MAX_SCRIPT_SIZE=10485760
-```
+说明：保存后通常需要重启后端进程才会完全生效（PM2 下可 `pm2 restart tab-backend`）。
 
 ### 安全配置
 

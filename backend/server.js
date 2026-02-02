@@ -16,6 +16,7 @@ const customPageRoutes = require('./routes/customPages');
 const aiRoutes = require('./routes/ai');
 const themeRoutes = require('./routes/themes');
 const transparencyRoutes = require('./routes/transparency');
+const serverSettingsRoutes = require('./routes/serverSettings');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
 const helmet = require('helmet');
@@ -181,6 +182,9 @@ app.use('/api/themes', themeRoutes);
 
 // 透明度配置相关路由（需要JWT认证）
 app.use('/api/transparency', transparencyRoutes);
+
+// 服务器运行时设置（需要JWT认证）
+app.use('/api/server-settings', serverSettingsRoutes);
 
 /**
  * 404错误处理

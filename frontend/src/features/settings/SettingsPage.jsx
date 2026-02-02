@@ -3,6 +3,7 @@ import { Container } from '@mui/material';
 import ShortcutSettingsPanel from '../../components/ShortcutSettingsPanel';
 import { PageTitle } from './components/SettingsShell';
 import BackendServerSettingsCard from './sections/BackendServerSettingsCard';
+import AttachmentServerSettingsCard from './sections/AttachmentServerSettingsCard';
 import CustomPagesSettingsCard from './sections/CustomPagesSettingsCard';
 import AppearanceSettingsCard from './sections/AppearanceSettingsCard';
 import ThemePreviewCard from './sections/ThemePreviewCard';
@@ -22,6 +23,7 @@ const SettingsPage = () => {
       </PageTitle>
 
       <BackendServerSettingsCard />
+      <AttachmentServerSettingsCard />
       <CustomPagesSettingsCard />
       <AppearanceSettingsCard />
       <ThemePreviewCard />
@@ -38,4 +40,3 @@ const SettingsPage = () => {
 };
 
 export default SettingsPage;
-
