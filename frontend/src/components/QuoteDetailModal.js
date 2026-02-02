@@ -406,7 +406,7 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
     })
   );
 
-  // 当引用体数据变化时，更新表单和引用列表
+  // 当收藏夹数据变化时，更新表单和引用列表
   useEffect(() => {
     if (quote) {
       setEditForm({
@@ -493,7 +493,7 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
 
   // 处理删除
   const handleDelete = async () => {
-    if (window.confirm('确定要删除这个引用体吗？此操作不可撤销。')) {
+    if (window.confirm('确定要删除这个收藏夹吗？此操作不可撤销。')) {
       setLoading(true);
       try {
         await onDelete(quote._id);
@@ -648,7 +648,7 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
       <StyledDialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
           <Typography variant="h6" component="h2" sx={{ mr: 2 }}>
-            {isEditing ? '编辑引用体' : '引用体详情'}
+            {isEditing ? '编辑收藏夹' : '收藏夹详情'}
           </Typography>
           {!isEditing && (
             <Typography variant="caption" color="text.secondary">
@@ -727,7 +727,7 @@ const QuoteDetailModal = ({ open, handleClose, quote, onSave, onDelete, onSaveRe
             <DeleteIcon color="error" fontSize="small" />
           </ListItemIcon>
           <ListItemText
-            primary="删除引用体"
+            primary="删除收藏夹"
             primaryTypographyProps={{
               color: 'error.main',
               fontWeight: 600,

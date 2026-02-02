@@ -141,9 +141,9 @@ const AIChatPanel = ({ onClose, injectionSource }) => {
 ${content}
 —————当前笔记如上————`;
     } else if (type === 'quote') {
-      return `—————当前引用体————
+      return `—————当前收藏夹————
 ${content}
-—————当前引用体如上————`;
+—————当前收藏夹如上————`;
     }
     
     return '';
@@ -617,7 +617,7 @@ ${content}
                 size="small"
               />
             }
-            label={`注入当前${injectionSource.type === 'document' ? '笔记' : '引用体'}`}
+            label={`注入当前${injectionSource.type === 'document' ? '笔记' : '收藏夹'}`}
             sx={{ mb: 2 }}
           />
         )}

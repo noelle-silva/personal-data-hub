@@ -357,7 +357,7 @@ const DocumentWindow = ({
           return result.document;
         };
 
-        // 实现保存引用体引用的回调
+        // 实现保存收藏夹引用的回调
         const handleSaveQuoteReferences = async (documentId, referencedIds) => {
           const result = await dispatch(saveDocumentQuoteReferences({
             documentId,

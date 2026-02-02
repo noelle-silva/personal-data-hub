@@ -100,8 +100,8 @@ class AIController {
     
     // 匹配笔记注入标记
     const notePattern = /—————当前笔记————[\s\S]*?—————当前笔记如上————/g;
-    // 匹配引用体注入标记
-    const quotePattern = /—————当前引用体————[\s\S]*?—————当前引用体如上————/g;
+    // 匹配收藏夹注入标记（兼容旧版“引用体”）
+    const quotePattern = /—————当前(?:引用体|收藏夹)————[\s\S]*?—————当前(?:引用体|收藏夹)如上————/g;
     
     let cleaned = content.replace(notePattern, '').replace(quotePattern, '');
     

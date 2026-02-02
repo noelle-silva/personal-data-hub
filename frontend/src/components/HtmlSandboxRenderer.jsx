@@ -269,7 +269,7 @@ const HtmlSandboxRenderer = ({
           /* 项目特有动作按钮样式 */
           ${generateTabActionFancyCssUnscoped()}
           
-          /* 引用体专用动作按钮样式 */
+          /* 收藏夹专用动作按钮样式 */
           ${generateQuoteActionFancyCssUnscoped()}
           
           /* 附件专用动作按钮样式 */
@@ -407,12 +407,12 @@ const HtmlSandboxRenderer = ({
                 
                 // 处理 open-quote 动作
                 if (action === 'open-quote' && quoteId) {
-                  // 创建按钮元素，使用引用体专用样式
+                  // 创建按钮元素，使用收藏夹专用样式
                   const button = document.createElement('button');
                   button.className = 'quote-action-button';
                   button.setAttribute('data-variant', variant);
                   button.textContent = text;
-                  button.setAttribute('title', '打开引用体: ' + quoteId);
+                  button.setAttribute('title', '打开收藏夹: ' + quoteId);
                   
                   // 添加点击事件
                   button.addEventListener('click', () => {

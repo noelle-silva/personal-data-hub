@@ -1,60 +1,60 @@
 /**
- * 引用体数据模型
- * 定义引用体在MongoDB中的数据结构和验证规则
+ * 收藏夹数据模型
+ * 定义收藏夹在MongoDB中的数据结构和验证规则
  */
 
 const mongoose = require('mongoose');
 const config = require('../config/config');
 
 /**
- * 引用体Schema定义
+ * 收藏夹Schema定义
  * 包含标题、描述、内容、标签、引用的笔记ID等字段
  */
 const quoteSchema = new mongoose.Schema(
   {
-    // 引用体标题，必填字段
+    // 收藏夹标题，必填字段
     title: {
       type: String,
-      required: [true, '引用体标题是必填项'],
+      required: [true, '收藏夹标题是必填项'],
       trim: true,
       maxlength: [100, '标题不能超过100个字符']
     },
     
-    // 引用体描述，可选字段
+    // 收藏夹描述，可选字段
     description: {
       type: String,
       trim: true,
       maxlength: [300, '描述不能超过300个字符']
     },
     
-    // 引用体内容，必填字段
+    // 收藏夹内容，必填字段
     content: {
       type: String,
-      required: [true, '引用体内容是必填项'],
+      required: [true, '收藏夹内容是必填项'],
       trim: true
     },
     
-    // 引用体标签数组，可选字段
+    // 收藏夹标签数组，可选字段
     tags: [{
       type: String,
       trim: true,
       maxlength: [50, '标签不能超过50个字符']
     }],
     
-    // 引用的笔记ID数组，可选字段（允许为空，支持笔记删除后引用体保留）
+    // 引用的笔记ID数组，可选字段（允许为空，支持笔记删除后收藏夹保留）
     referencedDocumentIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Document'
     }],
     
-    // 引用的附件ID数组，可选字段（允许为空，支持附件删除后引用体保留）
+    // 引用的附件ID数组，可选字段（允许为空，支持附件删除后收藏夹保留）
     referencedAttachmentIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Attachment',
       default: []
     }],
     
-    // 引用的引用体ID数组，可选字段（允许为空，支持引用体删除后引用体保留）
+    // 引用的收藏夹ID数组，可选字段（允许为空，支持收藏夹删除后收藏夹保留）
     referencedQuoteIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Quote',
@@ -79,12 +79,12 @@ quoteSchema.index({ title: 'text', description: 'text', content: 'text' }); // �
 quoteSchema.index({ tags: 1 }); // 标签索引
 quoteSchema.index({ referencedDocumentIds: 1 }); // 引用文档ID索引
 quoteSchema.index({ referencedAttachmentIds: 1 }); // 引用附件ID索引
-quoteSchema.index({ referencedQuoteIds: 1 }); // 引用引用体ID索引
+quoteSchema.index({ referencedQuoteIds: 1 }); // 引用收藏夹ID索引
 quoteSchema.index({ createdAt: -1 }); // 按创建时间降序索引
 quoteSchema.index({ updatedAt: -1 }); // 按更新时间降序索引（用于搜索排序）
 
 /**
- * 虚拟字段：引用体摘要
+ * 虚拟字段：收藏夹摘要
  * 返回内容的前100个字符作为摘要
  */
 quoteSchema.virtual('summary').get(function() {
@@ -95,8 +95,8 @@ quoteSchema.virtual('summary').get(function() {
 });
 
 /**
- * 虚拟字段：引用此引用体的引用体
- * 通过查询引用体模型获取所有引用此引用体的引用体
+ * 虚拟字段：引用此收藏夹的收藏夹
+ * 通过查询收藏夹模型获取所有引用此收藏夹的收藏夹
  */
 quoteSchema.virtual('referencingQuotes', {
   ref: 'Quote',
@@ -105,9 +105,9 @@ quoteSchema.virtual('referencingQuotes', {
 });
 
 /**
- * 实例方法：更新引用体
+ * 实例方法：更新收藏夹
  * @param {Object} updateData - 要更新的数据
- * @returns {Promise} 更新后的引用体
+ * @returns {Promise} 更新后的收藏夹
  */
 quoteSchema.methods.updateQuote = function(updateData) {
   Object.assign(this, updateData);
@@ -115,9 +115,9 @@ quoteSchema.methods.updateQuote = function(updateData) {
 };
 
 /**
- * 静态方法：按标签查找引用体
+ * 静态方法：按标签查找收藏夹
  * @param {Array} tags - 标签数组
- * @returns {Promise} 匹配的引用体数组
+ * @returns {Promise} 匹配的收藏夹数组
  */
 quoteSchema.statics.findByTags = function(tags) {
   return this.find({ 
@@ -128,13 +128,13 @@ quoteSchema.statics.findByTags = function(tags) {
 };
 
 /**
- * 静态方法：搜索引用体
+ * 静态方法：搜索收藏夹
  * @param {String} searchTerm - 搜索关键词
  * @param {Object} options - 查询选项
  * @param {Number} options.page - 页码（默认1）
  * @param {Number} options.limit - 每页数量（默认20）
  * @param {String} options.sort - 排序字段（默认'-updatedAt'）
- * @returns {Promise} 匹配的引用体数组和分页信息
+ * @returns {Promise} 匹配的收藏夹数组和分页信息
  */
 quoteSchema.statics.searchQuotes = function(searchTerm, options = {}) {
   const {
@@ -143,7 +143,7 @@ quoteSchema.statics.searchQuotes = function(searchTerm, options = {}) {
     sort = '-updatedAt'
   } = options;
   
-  // 计算跳过的引用体数量
+  // 计算跳过的收藏夹数量
   const skip = (page - 1) * limit;
   
   // 构建搜索条件，匹配标题、描述、内容和标签
@@ -166,9 +166,9 @@ quoteSchema.statics.searchQuotes = function(searchTerm, options = {}) {
 };
 
 /**
- * 静态方法：按引用的文档ID查找引用体
+ * 静态方法：按引用的文档ID查找收藏夹
  * @param {String} documentId - 文档ID
- * @returns {Promise} 匹配的引用体数组
+ * @returns {Promise} 匹配的收藏夹数组
  */
 quoteSchema.statics.findByReferencedDocument = function(documentId) {
   return this.find({
@@ -177,7 +177,7 @@ quoteSchema.statics.findByReferencedDocument = function(documentId) {
 };
 
 /**
- * 导出引用体模型
+ * 导出收藏夹模型
  */
 const Quote = mongoose.model('Quote', quoteSchema);
 

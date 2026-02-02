@@ -196,7 +196,7 @@ const DocumentWindowsContainer = () => {
     }
   };
 
-  // 处理引用体窗口保存
+  // 处理收藏夹窗口保存
   const handleSaveQuote = async (id, quoteData) => {
     try {
       const result = await dispatch(updateQuoteById({
@@ -204,27 +204,27 @@ const DocumentWindowsContainer = () => {
         quoteData
       })).unwrap();
 
-      console.log('引用体更新成功:', result);
+      console.log('收藏夹更新成功:', result);
     } catch (error) {
-      console.error('更新引用体失败:', error);
-      const errorMessage = error.error || error.message || '更新引用体失败，请重试';
+      console.error('更新收藏夹失败:', error);
+      const errorMessage = error.error || error.message || '更新收藏夹失败，请重试';
       alert(errorMessage);
     }
   };
 
-  // 处理引用体窗口删除
+  // 处理收藏夹窗口删除
   const handleDeleteQuote = async (id) => {
     try {
       const result = await dispatch(deleteQuoteById({ quoteId: id })).unwrap();
-      console.log('引用体删除成功:', result);
+      console.log('收藏夹删除成功:', result);
     } catch (error) {
-      console.error('删除引用体失败:', error);
-      const errorMessage = error.error || error.message || '删除引用体失败，请重试';
+      console.error('删除收藏夹失败:', error);
+      const errorMessage = error.error || error.message || '删除收藏夹失败，请重试';
       alert(errorMessage);
     }
   };
 
-  // 处理引用体引用关系保存
+  // 处理收藏夹引用关系保存
   const handleSaveQuoteReferences = async (id, referencedDocumentIds) => {
     try {
       const result = await dispatch(saveQuoteDocumentReferences({
@@ -232,17 +232,17 @@ const DocumentWindowsContainer = () => {
         referencedDocumentIds
       })).unwrap();
 
-      console.log('引用体引用关系更新成功:', result);
+      console.log('收藏夹引用关系更新成功:', result);
       return result.quote;
     } catch (error) {
-      console.error('更新引用体引用关系失败:', error);
-      const errorMessage = error.error || error.message || '更新引用体引用关系失败，请重试';
+      console.error('更新收藏夹引用关系失败:', error);
+      const errorMessage = error.error || error.message || '更新收藏夹引用关系失败，请重试';
       alert(errorMessage);
       throw error;
     }
   };
   
-  // 处理引用引用体关系保存
+  // 处理引用收藏夹关系保存
   const handleSaveQuoteQuoteReferences = async (id, referencedQuoteIds) => {
     try {
       const result = await dispatch(saveQuoteReferences({
@@ -250,17 +250,17 @@ const DocumentWindowsContainer = () => {
         referencedQuoteIds
       })).unwrap();
 
-      console.log('引用引用体关系更新成功:', result);
+      console.log('引用收藏夹关系更新成功:', result);
       return result.quote;
     } catch (error) {
-      console.error('更新引用引用体关系失败:', error);
-      const errorMessage = error.error || error.message || '更新引用引用体关系失败，请重试';
+      console.error('更新引用收藏夹关系失败:', error);
+      const errorMessage = error.error || error.message || '更新引用收藏夹关系失败，请重试';
       alert(errorMessage);
       throw error;
     }
   };
   
-  // 处理引用体附件引用保存
+  // 处理收藏夹附件引用保存
   const handleSaveQuoteAttachmentReferences = async (id, referencedAttachmentIds) => {
     try {
       const result = await dispatch(saveQuoteAttachmentReferences({
@@ -268,17 +268,17 @@ const DocumentWindowsContainer = () => {
         referencedAttachmentIds
       })).unwrap();
 
-      console.log('引用体附件引用关系更新成功:', result);
+      console.log('收藏夹附件引用关系更新成功:', result);
       return result.quote;
     } catch (error) {
-      console.error('更新引用体附件引用关系失败:', error);
-      const errorMessage = error.error || error.message || '更新引用体附件引用关系失败，请重试';
+      console.error('更新收藏夹附件引用关系失败:', error);
+      const errorMessage = error.error || error.message || '更新收藏夹附件引用关系失败，请重试';
       alert(errorMessage);
       throw error;
     }
   };
 
-  // 处理文档引用体引用保存
+  // 处理文档收藏夹引用保存
   const handleSaveDocumentQuoteReferences = async (id, referencedQuoteIds) => {
     try {
       const result = await dispatch(saveDocumentQuoteReferences({
@@ -286,12 +286,12 @@ const DocumentWindowsContainer = () => {
         referencedQuoteIds
       })).unwrap();
       
-      console.log('文档引用体引用关系更新成功:', result);
+      console.log('文档收藏夹引用关系更新成功:', result);
 
       return result.document;
     } catch (error) {
-      console.error('更新文档引用体引用关系失败:', error);
-      const errorMessage = error.error || error.message || '更新文档引用体引用关系失败，请重试';
+      console.error('更新文档收藏夹引用关系失败:', error);
+      const errorMessage = error.error || error.message || '更新文档收藏夹引用关系失败，请重试';
       alert(errorMessage);
       throw error;
     }

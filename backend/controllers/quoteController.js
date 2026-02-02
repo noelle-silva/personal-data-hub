@@ -1,16 +1,16 @@
 /**
- * 引用体控制器层
+ * 收藏夹控制器层
  * 处理HTTP请求和响应，调用服务层方法处理业务逻辑
  */
 
 const quoteService = require('../services/quoteService');
 
 /**
- * 引用体控制器类
+ * 收藏夹控制器类
  */
 class QuoteController {
   /**
-   * 获取所有引用体
+   * 获取所有收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -44,7 +44,7 @@ class QuoteController {
         success: true,
         data: result.quotes,
         pagination: result.pagination,
-        message: '获取引用体列表成功'
+        message: '获取收藏夹列表成功'
       });
     } catch (error) {
       next(error);
@@ -52,7 +52,7 @@ class QuoteController {
   }
 
   /**
-   * 根据ID获取单个引用体
+   * 根据ID获取单个收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -65,7 +65,7 @@ class QuoteController {
       if (!require('mongoose').Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
-          message: '无效的引用体ID'
+          message: '无效的收藏夹ID'
         });
       }
       
@@ -80,7 +80,7 @@ class QuoteController {
       res.status(200).json({
         success: true,
         data: quote,
-        message: '获取引用体成功'
+        message: '获取收藏夹成功'
       });
     } catch (error) {
       next(error);
@@ -88,14 +88,14 @@ class QuoteController {
   }
 
   /**
-   * 创建新引用体
+   * 创建新收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
    */
   async createQuote(req, res, next) {
     try {
-      // 从请求体获取引用体数据
+      // 从请求体获取收藏夹数据
       const quoteData = {
         title: req.body.title,
         description: req.body.description,
@@ -162,12 +162,12 @@ class QuoteController {
         }
       }
 
-      // 验证引用的引用体ID数组
+      // 验证引用的收藏夹ID数组
       if (quoteData.referencedQuoteIds) {
         if (!Array.isArray(quoteData.referencedQuoteIds)) {
           return res.status(400).json({
             success: false,
-            message: '引用的引用体ID必须是数组'
+            message: '引用的收藏夹ID必须是数组'
           });
         }
 
@@ -176,7 +176,7 @@ class QuoteController {
           if (!require('mongoose').Types.ObjectId.isValid(id)) {
             return res.status(400).json({
               success: false,
-              message: `无效的引用体ID: ${id}`
+              message: `无效的收藏夹ID: ${id}`
             });
           }
         }
@@ -188,7 +188,7 @@ class QuoteController {
       res.status(201).json({
         success: true,
         data: quote,
-        message: '引用体创建成功'
+        message: '收藏夹创建成功'
       });
     } catch (error) {
       next(error);
@@ -196,7 +196,7 @@ class QuoteController {
   }
 
   /**
-   * 更新引用体
+   * 更新收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -209,7 +209,7 @@ class QuoteController {
       if (!require('mongoose').Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
-          message: '无效的引用体ID'
+          message: '无效的收藏夹ID'
         });
       }
       
@@ -271,12 +271,12 @@ class QuoteController {
         }
       }
 
-      // 验证引用的引用体ID数组
+      // 验证引用的收藏夹ID数组
       if (updateData.referencedQuoteIds) {
         if (!Array.isArray(updateData.referencedQuoteIds)) {
           return res.status(400).json({
             success: false,
-            message: '引用的引用体ID必须是数组'
+            message: '引用的收藏夹ID必须是数组'
           });
         }
 
@@ -285,7 +285,7 @@ class QuoteController {
           if (!require('mongoose').Types.ObjectId.isValid(quoteId)) {
             return res.status(400).json({
               success: false,
-              message: `无效的引用体ID: ${quoteId}`
+              message: `无效的收藏夹ID: ${quoteId}`
             });
           }
           
@@ -305,7 +305,7 @@ class QuoteController {
       res.status(200).json({
         success: true,
         data: quote,
-        message: '引用体更新成功'
+        message: '收藏夹更新成功'
       });
     } catch (error) {
       next(error);
@@ -313,7 +313,7 @@ class QuoteController {
   }
 
   /**
-   * 删除引用体
+   * 删除收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -326,7 +326,7 @@ class QuoteController {
       if (!require('mongoose').Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
-          message: '无效的引用体ID'
+          message: '无效的收藏夹ID'
         });
       }
       
@@ -336,7 +336,7 @@ class QuoteController {
       res.status(200).json({
         success: true,
         data: result,
-        message: '引用体删除成功'
+        message: '收藏夹删除成功'
       });
     } catch (error) {
       next(error);
@@ -344,7 +344,7 @@ class QuoteController {
   }
 
   /**
-   * 按标签搜索引用体
+   * 按标签搜索收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -397,7 +397,7 @@ class QuoteController {
         success: true,
         data: result.quotes,
         pagination: result.pagination,
-        message: '按标签搜索引用体成功'
+        message: '按标签搜索收藏夹成功'
       });
     } catch (error) {
       next(error);
@@ -405,7 +405,7 @@ class QuoteController {
   }
 
   /**
-   * 全文搜索引用体
+   * 全文搜索收藏夹
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -458,7 +458,7 @@ class QuoteController {
           limit: result.limit,
           hasMore: result.hasMore
         },
-        message: '搜索引用体成功'
+        message: '搜索收藏夹成功'
       });
     } catch (error) {
       next(error);
@@ -466,7 +466,7 @@ class QuoteController {
   }
 
   /**
-   * 复合搜索引用体（支持关键词和标签）
+   * 复合搜索收藏夹（支持关键词和标签）
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -527,7 +527,7 @@ class QuoteController {
           limit: result.limit,
           hasMore: result.hasMore
         },
-        message: '复合搜索引用体成功'
+        message: '复合搜索收藏夹成功'
       });
     } catch (error) {
       next(error);
@@ -535,7 +535,7 @@ class QuoteController {
   }
 
   /**
-   * 获取引用体统计信息
+   * 获取收藏夹统计信息
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数

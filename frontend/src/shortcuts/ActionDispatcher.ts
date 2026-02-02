@@ -37,10 +37,10 @@ class ActionDispatcher {
   }
 
   /**
-   * 派发创建新引用体动作
+   * 派发创建新收藏夹动作
    */
   public dispatchCreateQuote(): void {
-    console.debug('派发动作: 创建新引用体');
+    console.debug('派发动作: 创建新收藏夹');
     store.dispatch(openQuoteCreateModal());
   }
 
@@ -184,7 +184,7 @@ class ActionDispatcher {
         this.dispatchCreateNote();
         break;
       case 'create-quote':
-        console.debug('ActionDispatcher: 执行创建引用体动作');
+        console.debug('ActionDispatcher: 执行创建收藏夹动作');
         this.dispatchCreateQuote();
         break;
       case 'upload-image':
@@ -215,7 +215,7 @@ class ActionDispatcher {
   public getActionDescription(actionId: ShortcutActionId): string {
     const descriptions: Record<ShortcutActionId, string> = {
       'create-note': '创建新笔记',
-      'create-quote': '创建新引用体',
+      'create-quote': '创建新收藏夹',
       'upload-image': '上传新图片',
       'upload-video': '上传新视频',
       'upload-document': '上传新文档',

@@ -1,6 +1,6 @@
 /**
- * 引用体数据初始化脚本
- * 基于现有文档随机创建示例引用体数据
+ * 收藏夹数据初始化脚本
+ * 基于现有文档随机创建示例收藏夹数据
  */
 
 const config = require('../config/config');
@@ -9,7 +9,7 @@ const Document = require('../models/Document');
 const Quote = require('../models/Quote');
 
 /**
- * 示例引用体标题模板
+ * 示例收藏夹标题模板
  */
 const quoteTitleTemplates = [
   '关于{topic}的核心观点',
@@ -25,7 +25,7 @@ const quoteTitleTemplates = [
 ];
 
 /**
- * 示例引用体描述模板
+ * 示例收藏夹描述模板
  */
 const quoteDescriptionTemplates = [
   '这是从多个学习资料中提取的关于{topic}的核心观点总结',
@@ -41,7 +41,7 @@ const quoteDescriptionTemplates = [
 ];
 
 /**
- * 示例引用体内容模板
+ * 示例收藏夹内容模板
  */
 const quoteContentTemplates = [
   `通过深入研究和实践，我发现{topic}的核心在于理解其基本原理和适用场景。在实际应用中，我们需要根据具体情况灵活运用，同时注意避免常见的误区和陷阱。`,
@@ -92,10 +92,10 @@ function randomChoice(array, count = 1) {
 }
 
 /**
- * 生成随机引用体数据
+ * 生成随机收藏夹数据
  * @param {Array} documents - 文档数组
- * @param {Number} count - 要生成的引用体数量
- * @returns {Array} 引用体数据数组
+ * @param {Number} count - 要生成的收藏夹数量
+ * @returns {Array} 收藏夹数据数组
  */
 function generateQuoteData(documents, count = 10) {
   if (documents.length === 0) {
@@ -142,11 +142,11 @@ function generateQuoteData(documents, count = 10) {
 }
 
 /**
- * 初始化引用体数据
+ * 初始化收藏夹数据
  */
 async function initQuotes() {
   try {
-    console.log('开始初始化引用体数据...');
+    console.log('开始初始化收藏夹数据...');
     
     // 连接数据库
     await mongoose.connect(config.mongo.uri);
@@ -157,7 +157,7 @@ async function initQuotes() {
     const quoteCollection = config.mongo.collections.quotes;
     
     console.log(`使用文档集合: ${documentCollection}`);
-    console.log(`使用引用体集合: ${quoteCollection}`);
+    console.log(`使用收藏夹集合: ${quoteCollection}`);
     
     // 检查现有文档数据
     const documentCount = await Document.countDocuments();
@@ -171,34 +171,34 @@ async function initQuotes() {
     // 获取所有文档（用于随机选择）
     const documents = await Document.find().select('_id tags').limit(50);
     
-    // 清空现有引用体数据
+    // 清空现有收藏夹数据
     const deleteResult = await Quote.deleteMany({});
-    console.log(`已清空 ${deleteResult.deletedCount} 个现有引用体`);
+    console.log(`已清空 ${deleteResult.deletedCount} 个现有收藏夹`);
     
-    // 生成引用体数据
+    // 生成收藏夹数据
     const quotesData = generateQuoteData(documents, 15);
     
     if (quotesData.length === 0) {
-      console.error('未能生成引用体数据');
+      console.error('未能生成收藏夹数据');
       process.exit(1);
     }
     
-    // 插入引用体数据
+    // 插入收藏夹数据
     const insertResult = await Quote.insertMany(quotesData);
-    console.log(`成功创建 ${insertResult.length} 个引用体`);
+    console.log(`成功创建 ${insertResult.length} 个收藏夹`);
     
-    // 显示创建的引用体信息
-    console.log('\n创建的引用体列表:');
+    // 显示创建的收藏夹信息
+    console.log('\n创建的收藏夹列表:');
     insertResult.forEach((quote, index) => {
       console.log(`${index + 1}. ${quote.title}`);
       console.log(`   标签: ${quote.tags.join(', ')}`);
       console.log(`   引用文档数: ${quote.referencedDocumentIds.length}`);
     });
     
-    console.log('\n引用体数据初始化完成！');
+    console.log('\n收藏夹数据初始化完成！');
     
   } catch (error) {
-    console.error('初始化引用体数据失败:', error);
+    console.error('初始化收藏夹数据失败:', error);
     process.exit(1);
   } finally {
     // 关闭数据库连接

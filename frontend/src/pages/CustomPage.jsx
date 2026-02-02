@@ -164,7 +164,7 @@ const CustomPage = () => {
           })).unwrap();
           break;
         case 'Quote':
-          // 使用窗口系统打开引用体
+          // 使用窗口系统打开收藏夹
           await dispatch(openQuoteWindowAndFetch({
             quoteId: data._id,
             label: data.title || '加载中...',
@@ -499,7 +499,7 @@ const CustomPage = () => {
     }
   };
   
-  // 添加引用体
+  // 添加收藏夹
   const handleAddQuotes = (selectedIds) => {
     if (currentPage) {
       const currentIds = currentPage.referencedQuoteIds.map(item => item._id);
@@ -559,7 +559,7 @@ const CustomPage = () => {
     }
   };
   
-  // 移除引用体
+  // 移除收藏夹
   const handleRemoveQuote = (quoteId) => {
     if (currentPage) {
       // 从引用数组中移除
@@ -699,7 +699,7 @@ const CustomPage = () => {
           setQuotePickerOpen(true);
         }}>
           <QuoteIcon sx={{ mr: 1 }} />
-          添加引用体
+          添加收藏夹
         </MenuItem>
       </Menu>
       
@@ -719,7 +719,7 @@ const CustomPage = () => {
         excludeIds={currentPage?.referencedDocumentIds?.map(item => item._id) || []}
       />
       
-      {/* 引用体选择对话框 */}
+      {/* 收藏夹选择对话框 */}
       <QuotePickerDialog
         open={quotePickerOpen}
         handleClose={() => setQuotePickerOpen(false)}

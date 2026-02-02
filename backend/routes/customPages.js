@@ -44,7 +44,7 @@ router.get('/by-name/:name', customPageController.getCustomPageByName);
  * @access  Private - 需要登录
  * @body    name - 页面名称 (必填)
  * @body    referencedDocumentIds - 引用的笔记ID数组 (可选)
- * @body    referencedQuoteIds - 引用的引用体ID数组 (可选)
+ * @body    referencedQuoteIds - 引用的收藏夹ID数组 (可选)
  * @body    referencedAttachmentIds - 引用的附件ID数组 (可选)
  */
 router.post('/', customPageController.createCustomPage);
@@ -56,7 +56,7 @@ router.post('/', customPageController.createCustomPage);
  * @param   id - 页面ID
  * @body    name - 页面名称 (可选)
  * @body    referencedDocumentIds - 引用的笔记ID数组 (可选)
- * @body    referencedQuoteIds - 引用的引用体ID数组 (可选)
+ * @body    referencedQuoteIds - 引用的收藏夹ID数组 (可选)
  * @body    referencedAttachmentIds - 引用的附件ID数组 (可选)
  * @query   populate - 是否填充引用的数据信息 (full/ids，默认为ids)
  * @query   include - 是否包含统计信息 (counts)

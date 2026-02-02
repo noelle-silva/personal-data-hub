@@ -40,7 +40,7 @@ export const getByName = async (name, options = {}) => {
  * @param {Object} pageData - 页面数据
  * @param {String} pageData.name - 页面名称
  * @param {Array} pageData.referencedDocumentIds - 引用的笔记ID数组
- * @param {Array} pageData.referencedQuoteIds - 引用的引用体ID数组
+ * @param {Array} pageData.referencedQuoteIds - 引用的收藏夹ID数组
  * @param {Array} pageData.referencedAttachmentIds - 引用的附件ID数组
  * @returns {Promise} 新创建的自定义页面
  */
@@ -55,7 +55,7 @@ export const createPage = async (pageData) => {
  * @param {Object} updateData - 更新数据
  * @param {String} updateData.name - 页面名称
  * @param {Array} updateData.referencedDocumentIds - 引用的笔记ID数组
- * @param {Array} updateData.referencedQuoteIds - 引用的引用体ID数组
+ * @param {Array} updateData.referencedQuoteIds - 引用的收藏夹ID数组
  * @param {Array} updateData.referencedAttachmentIds - 引用的附件ID数组
  * @param {Object} options - 查询选项
  * @param {String} options.populate - 是否填充引用的数据 ('full', 'ids')

@@ -101,23 +101,23 @@ const GlobalModals: React.FC = () => {
     }
   };
 
-  // 处理引用体创建
+  // 处理收藏夹创建
   const handleQuoteCreate = async (quoteData: any) => {
     try {
       const response = await apiClient.post('/quotes', quoteData);
       const result = response.data;
 
-      console.log('引用体创建成功:', result);
+      console.log('收藏夹创建成功:', result);
 
-      // 触发引用体创建事件，通知其他组件刷新
+      // 触发收藏夹创建事件，通知其他组件刷新
       window.dispatchEvent(new CustomEvent('quoteCreated', {
         detail: result.data
       }));
 
       dispatch(closeQuoteCreateModal());
     } catch (error) {
-      console.error('创建引用体失败:', error);
-      alert('创建引用体失败，请重试');
+      console.error('创建收藏夹失败:', error);
+      alert('创建收藏夹失败，请重试');
     }
   };
 
@@ -132,7 +132,7 @@ const GlobalModals: React.FC = () => {
         document={undefined}
       />
       
-      {/* 引用体创建模态框 */}
+      {/* 收藏夹创建模态框 */}
       <QuoteFormModal
         open={quoteModalOpen}
         handleClose={() => dispatch(closeQuoteCreateModal())}

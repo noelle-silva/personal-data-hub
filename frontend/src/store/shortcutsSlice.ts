@@ -23,7 +23,7 @@ const ACTION_METADATA: Record<ShortcutActionId, ActionMetadata> = {
   },
   'create-quote': {
     id: 'create-quote',
-    description: '创建新引用体',
+    description: '创建新收藏夹',
     category: 'create',
     defaultCombos: {
       windows: 'ctrl+alt+q',
@@ -105,7 +105,7 @@ const WINDOWS_CONFLICTING_COMBOS = [
 const ALTERNATIVE_COMBOS = {
   windows: {
     'ctrl+alt+n': 'ctrl+shift+n',    // 创建笔记
-    'ctrl+alt+q': 'ctrl+shift+q',    // 创建引用体
+    'ctrl+alt+q': 'ctrl+shift+q',    // 创建收藏夹
     'ctrl+alt+i': 'ctrl+shift+i',    // 上传图片
     'ctrl+alt+v': 'ctrl+shift+v',    // 上传视频
     'ctrl+alt+d': 'ctrl+shift+d',    // 上传文档

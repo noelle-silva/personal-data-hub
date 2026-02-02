@@ -119,7 +119,7 @@ const CustomPagesSettingsCard = () => {
 
           <Box sx={{ mb: 3 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              创建新的自定义页面，用于组织和管理您的笔记、引用体和附件
+              创建新的自定义页面，用于组织和管理您的笔记、收藏夹和附件
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
@@ -178,7 +178,7 @@ const CustomPagesSettingsCard = () => {
                       secondary={
                         <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                           <Chip label={`笔记: ${page.counts?.documents || 0}`} size="small" variant="outlined" />
-                          <Chip label={`引用体: ${page.counts?.quotes || 0}`} size="small" variant="outlined" />
+                          <Chip label={`收藏夹: ${page.counts?.quotes || 0}`} size="small" variant="outlined" />
                           <Chip label={`附件: ${page.counts?.attachments || 0}`} size="small" variant="outlined" />
                         </Box>
                       }
@@ -233,10 +233,10 @@ const CustomPagesSettingsCard = () => {
                     此页面包含以下内容，删除后这些关联关系将被移除：
                     <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                       {pageToDelete.counts?.documents > 0 && <li>{pageToDelete.counts.documents} 个笔记</li>}
-                      {pageToDelete.counts?.quotes > 0 && <li>{pageToDelete.counts.quotes} 个引用体</li>}
+                      {pageToDelete.counts?.quotes > 0 && <li>{pageToDelete.counts.quotes} 个收藏夹</li>}
                       {pageToDelete.counts?.attachments > 0 && <li>{pageToDelete.counts.attachments} 个附件</li>}
                     </ul>
-                    笔记、引用体和附件本身不会被删除，只是从此页面中移除。
+                    笔记、收藏夹和附件本身不会被删除，只是从此页面中移除。
                   </Typography>
                 </Alert>
               )}

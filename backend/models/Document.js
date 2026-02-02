@@ -61,7 +61,7 @@ const documentSchema = new mongoose.Schema(
       default: []
     }],
     
-    // 引用的引用体ID数组，可选字段（允许为空，支持引用体删除后笔记保留）
+    // 引用的收藏夹ID数组，可选字段（允许为空，支持收藏夹删除后笔记保留）
     referencedQuoteIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Quote',
@@ -88,7 +88,7 @@ documentSchema.index({ createdAt: -1 }); // 按创建时间降序索引
 documentSchema.index({ updatedAt: -1 }); // 按更新时间降序索引（用于搜索排序）
 documentSchema.index({ referencedDocumentIds: 1 }); // 引用文档ID索引
 documentSchema.index({ referencedAttachmentIds: 1 }); // 引用附件ID索引
-documentSchema.index({ referencedQuoteIds: 1 }); // 引用引用体ID索引
+documentSchema.index({ referencedQuoteIds: 1 }); // 引用收藏夹ID索引
 
 /**
  * 虚拟字段：文档摘要
@@ -102,8 +102,8 @@ documentSchema.virtual('summary').get(function() {
 });
 
 /**
- * 虚拟字段：引用此笔记的引用体
- * 通过查询引用体模型获取所有引用此笔记的引用体
+ * 虚拟字段：引用此笔记的收藏夹
+ * 通过查询收藏夹模型获取所有引用此笔记的收藏夹
  */
 documentSchema.virtual('referencingQuotes', {
   ref: 'Quote',

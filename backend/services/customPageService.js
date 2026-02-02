@@ -111,7 +111,7 @@ class CustomPageService {
             : '_id title tags updatedAt summary'
         });
         
-        // 填充引用的引用体信息
+        // 填充引用的收藏夹信息
         query = query.populate({
           path: 'referencedQuoteIds',
           select: includePreviews
@@ -278,7 +278,7 @@ class CustomPageService {
         await CustomPage.validateReferencedDocuments(updateData.referencedDocumentIds);
       }
       
-      // 如果更新包含引用引用体，进行验证
+      // 如果更新包含引用收藏夹，进行验证
       if (updateData.referencedQuoteIds) {
         await CustomPage.validateReferencedQuotes(updateData.referencedQuoteIds);
       }

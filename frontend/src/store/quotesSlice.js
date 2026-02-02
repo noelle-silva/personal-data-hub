@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiClient from '../services/apiClient';
 
-// 异步thunk：获取所有引用体
+// 异步thunk：获取所有收藏夹
 export const fetchQuotes = createAsyncThunk(
   'quotes/fetchQuotes',
   async (_, { rejectWithValue }) => {
@@ -10,12 +10,12 @@ export const fetchQuotes = createAsyncThunk(
       const response = await apiClient.get('/quotes?limit=0&sort=-createdAt');
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(error.message || '获取引用体列表失败');
+      return rejectWithValue(error.message || '获取收藏夹列表失败');
     }
   }
 );
 
-// 异步thunk：根据ID获取单个引用体
+// 异步thunk：根据ID获取单个收藏夹
 export const fetchQuoteById = createAsyncThunk(
   'quotes/fetchQuoteById',
   async (id, { rejectWithValue }) => {
@@ -23,12 +23,12 @@ export const fetchQuoteById = createAsyncThunk(
       const response = await apiClient.get(`/quotes/${id}`);
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(error.message || '获取引用体详情失败');
+      return rejectWithValue(error.message || '获取收藏夹详情失败');
     }
   }
 );
 
-// 异步thunk：创建引用体
+// 异步thunk：创建收藏夹
 export const createQuote = createAsyncThunk(
   'quotes/createQuote',
   async (quoteData, { rejectWithValue }) => {
@@ -36,12 +36,12 @@ export const createQuote = createAsyncThunk(
       const response = await apiClient.post('/quotes', quoteData);
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || '创建引用体失败');
+      return rejectWithValue(error.response?.data?.message || error.message || '创建收藏夹失败');
     }
   }
 );
 
-// 异步thunk：更新引用体
+// 异步thunk：更新收藏夹
 export const updateQuote = createAsyncThunk(
   'quotes/updateQuote',
   async ({ id, quoteData }, { rejectWithValue }) => {
@@ -49,12 +49,12 @@ export const updateQuote = createAsyncThunk(
       const response = await apiClient.put(`/quotes/${id}`, quoteData);
       return response.data.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || '更新引用体失败');
+      return rejectWithValue(error.response?.data?.message || error.message || '更新收藏夹失败');
     }
   }
 );
 
-// 异步thunk：删除引用体
+// 异步thunk：删除收藏夹
 export const deleteQuote = createAsyncThunk(
   'quotes/deleteQuote',
   async (id, { rejectWithValue }) => {
@@ -62,19 +62,19 @@ export const deleteQuote = createAsyncThunk(
       const response = await apiClient.delete(`/quotes/${id}`);
       return { id, ...response.data.data };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || '删除引用体失败');
+      return rejectWithValue(error.response?.data?.message || error.message || '删除收藏夹失败');
     }
   }
 );
 
 const initialState = {
   items: [],
-  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于引用体列表
+  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于收藏夹列表
   error: null,
   selectedQuote: null,
   isModalOpen: false,
-  isCreateModalOpen: false, // 新建引用体模态框开关
-  selectedQuoteStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于单个引用体
+  isCreateModalOpen: false, // 新建收藏夹模态框开关
+  selectedQuoteStatus: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于单个收藏夹
 };
 
 const quotesSlice = createSlice({
@@ -107,7 +107,7 @@ const quotesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // 获取引用体列表
+      // 获取收藏夹列表
       .addCase(fetchQuotes.pending, (state) => {
         state.status = 'loading';
         state.error = null;
@@ -120,7 +120,7 @@ const quotesSlice = createSlice({
         state.status = 'failed';
         state.error = action.payload;
       })
-      // 获取单个引用体
+      // 获取单个收藏夹
       .addCase(fetchQuoteById.pending, (state) => {
         state.selectedQuoteStatus = 'loading';
         state.error = null;
@@ -133,28 +133,28 @@ const quotesSlice = createSlice({
         state.selectedQuoteStatus = 'failed';
         state.error = action.payload;
       })
-      // 创建引用体
+      // 创建收藏夹
       .addCase(createQuote.pending, (state) => {
         state.error = null;
       })
       .addCase(createQuote.fulfilled, (state, action) => {
-        // 将新创建的引用体添加到列表开头
+        // 将新创建的收藏夹添加到列表开头
         state.items.unshift(action.payload);
       })
       .addCase(createQuote.rejected, (state, action) => {
         state.error = action.payload;
       })
-      // 更新引用体
+      // 更新收藏夹
       .addCase(updateQuote.pending, (state) => {
         state.error = null;
       })
       .addCase(updateQuote.fulfilled, (state, action) => {
-        // 更新列表中的引用体
+        // 更新列表中的收藏夹
         const index = state.items.findIndex(item => item._id === action.payload._id);
         if (index !== -1) {
           state.items[index] = action.payload;
         }
-        // 更新选中的引用体
+        // 更新选中的收藏夹
         if (state.selectedQuote && state.selectedQuote._id === action.payload._id) {
           state.selectedQuote = action.payload;
         }
@@ -162,14 +162,14 @@ const quotesSlice = createSlice({
       .addCase(updateQuote.rejected, (state, action) => {
         state.error = action.payload;
       })
-      // 删除引用体
+      // 删除收藏夹
       .addCase(deleteQuote.pending, (state) => {
         state.error = null;
       })
       .addCase(deleteQuote.fulfilled, (state, action) => {
-        // 从列表中移除引用体
+        // 从列表中移除收藏夹
         state.items = state.items.filter(item => item._id !== action.payload.id);
-        // 如果删除的是当前选中的引用体，关闭弹窗
+        // 如果删除的是当前选中的收藏夹，关闭弹窗
         if (state.selectedQuote && state.selectedQuote._id === action.payload.id) {
           state.selectedQuote = null;
           state.isModalOpen = false;

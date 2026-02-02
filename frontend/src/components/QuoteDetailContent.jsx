@@ -456,7 +456,7 @@ const SortableReferencedAttachmentItem = ({ attachment, index, onRemove, onView,
   );
 };
 
-// 可排序的引用引用体项组件
+// 可排序的引用收藏夹项组件
 const SortableReferencedQuoteItem = ({ quote, index, onRemove, onView, isEditing }) => {
   const {
     attributes,
@@ -608,7 +608,7 @@ const QuoteDetailContent = ({
   const [isAttachmentPickerOpen, setIsAttachmentPickerOpen] = useState(false);
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
   
-  // 引用引用体相关状态
+  // 引用收藏夹相关状态
   const [referencedQuotes, setReferencedQuotes] = useState([]);
   const [, setOriginalReferencedQuoteIds] = useState([]);
   const [isQuoteReferencesDirty, setIsQuoteReferencesDirty] = useState(false);
@@ -628,7 +628,7 @@ const QuoteDetailContent = ({
     })
   );
 
-  // 当引用体数据变化时，更新表单和引用列表
+  // 当收藏夹数据变化时，更新表单和引用列表
   useEffect(() => {
     if (quote) {
       setEditForm({
@@ -664,7 +664,7 @@ const QuoteDetailContent = ({
       setOriginalAttachmentIds(attachmentRefs.map(ref => typeof ref === 'string' ? ref : ref._id));
       setIsAttachmentReferencesDirty(false);
       
-      // 初始化引用引用体列表，兼容已填充对象和ID两种形态
+      // 初始化引用收藏夹列表，兼容已填充对象和ID两种形态
       const quoteRefs = quote.referencedQuoteIds || [];
       const normalizedQuoteRefs = quoteRefs.map(ref => {
         if (typeof ref === 'string') {
@@ -767,7 +767,7 @@ const QuoteDetailContent = ({
 
   // 处理删除
   const handleDelete = async () => {
-    if (window.confirm('确定要删除这个引用体吗？此操作不可撤销。')) {
+    if (window.confirm('确定要删除这个收藏夹吗？此操作不可撤销。')) {
       setLoading(true);
       try {
         await onDelete(quote._id);
@@ -1025,12 +1025,12 @@ const QuoteDetailContent = ({
     setDocumentFormModalOpen(false);
   };
 
-  // 处理打开引用体创建模态框
+  // 处理打开收藏夹创建模态框
   const handleOpenQuoteFormModal = () => {
     setQuoteFormModalOpen(true);
   };
 
-  // 处理关闭引用体创建模态框
+  // 处理关闭收藏夹创建模态框
   const handleCloseQuoteFormModal = () => {
     setQuoteFormModalOpen(false);
   };
@@ -1041,7 +1041,7 @@ const QuoteDetailContent = ({
       // 创建新笔记
       const newDocument = await createDocumentService(documentData);
       
-      // 更新当前引用体的引用列表，添加新创建的笔记ID
+      // 更新当前收藏夹的引用列表，添加新创建的笔记ID
       const updatedReferencedIds = [...referencedDocuments.map(doc => doc._id || doc), newDocument.data._id];
       
       // 调用 updateQuote 持久化引用关系
@@ -1058,13 +1058,13 @@ const QuoteDetailContent = ({
     }
   };
 
-  // 处理创建并引用引用体
+  // 处理创建并引用收藏夹
   const handleCreateAndReferenceQuote = async (quoteData) => {
     try {
-      // 创建新引用体
+      // 创建新收藏夹
       const newQuote = await dispatch(createQuote(quoteData)).unwrap();
       
-      // 更新当前引用体的引用列表，添加新创建的引用体ID
+      // 更新当前收藏夹的引用列表，添加新创建的收藏夹ID
       const updatedReferencedIds = [...referencedQuotes.map(quote => quote._id || quote), newQuote._id];
       
       // 调用 updateQuote 持久化引用关系
@@ -1076,12 +1076,12 @@ const QuoteDetailContent = ({
       setReferencedQuotes(prev => [...prev, newQuote]);
       return Promise.resolve();
     } catch (error) {
-      console.error('创建并引用引用体失败:', error);
+      console.error('创建并引用收藏夹失败:', error);
       return Promise.reject(error);
     }
   };
 
-  // 处理引用引用体拖拽结束
+  // 处理引用收藏夹拖拽结束
   const handleQuoteDragEnd = (event) => {
     const { active, over } = event;
 
@@ -1096,16 +1096,16 @@ const QuoteDetailContent = ({
     }
   };
 
-  // 处理移除引用引用体
+  // 处理移除引用收藏夹
   const handleRemoveQuoteReference = (index) => {
     setReferencedQuotes(prev => prev.filter((_, i) => i !== index));
     setIsQuoteReferencesDirty(true);
   };
 
-  // 处理添加引用引用体
+  // 处理添加引用收藏夹
   const handleAddQuoteReferences = async (selectedIds) => {
     try {
-      // 获取新添加的引用体详情
+      // 获取新添加的收藏夹详情
       const newQuotes = [];
       for (const id of selectedIds) {
         // 如果已经存在，跳过（重复添加去重）
@@ -1117,7 +1117,7 @@ const QuoteDetailContent = ({
           const response = await apiClient.get(`/quotes/${id}`);
           newQuotes.push(response.data.data);
         } catch (error) {
-          console.error('获取引用体详情失败:', error);
+          console.error('获取收藏夹详情失败:', error);
         }
       }
       
@@ -1125,11 +1125,11 @@ const QuoteDetailContent = ({
       setReferencedQuotes(prev => [...prev, ...newQuotes]);
       setIsQuoteReferencesDirty(true);
     } catch (error) {
-      console.error('添加引用引用体失败:', error);
+      console.error('添加引用收藏夹失败:', error);
     }
   };
 
-  // 处理保存引用引用体列表
+  // 处理保存引用收藏夹列表
   const handleSaveQuoteReferences = async () => {
     if (!isQuoteReferencesDirty || !onSaveQuoteReferences) return;
     
@@ -1140,12 +1140,12 @@ const QuoteDetailContent = ({
       setOriginalReferencedQuoteIds(referencedQuoteIds);
       setIsQuoteReferencesDirty(false);
     } catch (error) {
-      console.error('保存引用引用体列表失败:', error);
-      setError('保存引用引用体列表失败');
+      console.error('保存引用收藏夹列表失败:', error);
+      setError('保存引用收藏夹列表失败');
     }
   };
 
-  // 处理重置引用引用体列表
+  // 处理重置引用收藏夹列表
   const handleResetQuoteReferences = () => {
     // 恢复到原始状态
     const refs = quote.referencedQuoteIds || [];
@@ -1160,17 +1160,17 @@ const QuoteDetailContent = ({
     setIsQuoteReferencesDirty(false);
   };
 
-  // 处理查看引用引用体
+  // 处理查看引用收藏夹
   const handleViewReferencedQuote = async (quoteId) => {
     try {
-      // 打开引用体详情窗口
+      // 打开收藏夹详情窗口
       await dispatch(openQuoteWindowAndFetch({
         quoteId,
-        label: '查看引用体详情',
+        label: '查看收藏夹详情',
         source: 'quote-detail'
       })).unwrap();
     } catch (error) {
-      console.error('打开引用体窗口失败:', error);
+      console.error('打开收藏夹窗口失败:', error);
     }
   };
 
@@ -1185,7 +1185,7 @@ const QuoteDetailContent = ({
       }}>
         <CircularProgress size={40} />
         <Typography variant="body1" sx={{ ml: 2 }}>
-          正在加载引用体内容...
+          正在加载收藏夹内容...
         </Typography>
       </Box>
     );
@@ -1432,9 +1432,9 @@ const QuoteDetailContent = ({
           
         </CollapsibleRelationModule>
         
-        {/* 引用的引用体模块 */}
+        {/* 引用的收藏夹模块 */}
         <CollapsibleRelationModule
-          title="引用的引用体"
+          title="引用的收藏夹"
           count={referencedQuotes.length}
           expanded={quotesExpanded}
           onExpandedChange={setQuotesExpanded}
@@ -1449,11 +1449,11 @@ const QuoteDetailContent = ({
                     borderRadius: 16,
                   }}
                 >
-                  添加引用体
+                  添加收藏夹
                 </Button>
                 {isQuoteReferencesDirty && onSaveQuoteReferences && (
                   <>
-                    <Tooltip title="保存引用体">
+                    <Tooltip title="保存收藏夹">
                       <IconButton
                         size="small"
                         onClick={handleSaveQuoteReferences}
@@ -1465,7 +1465,7 @@ const QuoteDetailContent = ({
                         <SaveIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="重置引用体">
+                    <Tooltip title="重置收藏夹">
                       <IconButton
                         size="small"
                         onClick={handleResetQuoteReferences}
@@ -1496,14 +1496,14 @@ const QuoteDetailContent = ({
               </>
             ) : (
               <>
-                <Tooltip title="新建并引用引用体">
+                <Tooltip title="新建并引用收藏夹">
                   <IconButton
                     size="small"
                     onClick={handleOpenQuoteFormModal}
                     sx={{
                       borderRadius: 16,
                     }}
-                    aria-label="新建并引用引用体"
+                    aria-label="新建并引用收藏夹"
                   >
                     <AddIcon fontSize="small" />
                   </IconButton>
@@ -1550,7 +1550,7 @@ const QuoteDetailContent = ({
           ) : (
             <EmptyStateContainer>
               <Typography variant="body2">
-                暂无引用的引用体
+                暂无引用的收藏夹
               </Typography>
             </EmptyStateContainer>
           )}
@@ -1904,7 +1904,7 @@ const QuoteDetailContent = ({
           <ListItemIcon>
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>删除引用体</ListItemText>
+          <ListItemText>删除收藏夹</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -1925,13 +1925,13 @@ const QuoteDetailContent = ({
         initialSelectedIds={referencedAttachments.map(att => att._id)}
       />
       
-      {/* 引用体选择对话框 */}
+      {/* 收藏夹选择对话框 */}
       <QuotePickerDialog
         open={isQuotePickerOpen}
         handleClose={() => setIsQuotePickerOpen(false)}
         onConfirm={handleAddQuoteReferences}
         excludeIds={referencedQuotes.map(quote => quote._id)}
-        hiddenIds={[quote._id]} // 传递当前引用体的ID，使其不在列表中显示
+        hiddenIds={[quote._id]} // 传递当前收藏夹的ID，使其不在列表中显示
       />
 
       {/* 文档创建模态框 */}
@@ -1941,7 +1941,7 @@ const QuoteDetailContent = ({
         onSave={handleCreateAndReferenceDocument}
       />
 
-      {/* 引用体创建模态框 */}
+      {/* 收藏夹创建模态框 */}
       <QuoteFormModal
         open={quoteFormModalOpen}
         handleClose={handleCloseQuoteFormModal}

@@ -481,13 +481,13 @@ export const generateTabActionFancyCssScoped = (scopeClass = 'markdown-body') =>
 };
 
 /**
- * 生成非作用域化的引用体专用炫酷按钮 CSS
+ * 生成非作用域化的收藏夹专用炫酷按钮 CSS
  * 用于 HTML 沙盒环境
  * @returns {string} CSS 样式字符串
  */
 export const generateQuoteActionFancyCssUnscoped = () => {
   return `
-    /* 引用体专用动作按钮样式 */
+    /* 收藏夹专用动作按钮样式 */
     .quote-action-button {
       display: inline-flex;
       align-items: center;
@@ -719,14 +719,14 @@ export const generateQuoteActionFancyCssUnscoped = () => {
 };
 
 /**
- * 生成作用域化的引用体专用炫酷按钮 CSS
+ * 生成作用域化的收藏夹专用炫酷按钮 CSS
  * 用于 Markdown 内联渲染环境
  * @param {string} scopeClass - 作用域类名，默认为 'markdown-body'
  * @returns {string} 作用域化的 CSS 样式字符串
  */
 export const generateQuoteActionFancyCssScoped = (scopeClass = 'markdown-body') => {
   return `
-    /* 引用体专用动作按钮样式 - 作用域化 */
+    /* 收藏夹专用动作按钮样式 - 作用域化 */
     .${scopeClass} .quote-action-button {
       display: inline-flex;
       align-items: center;

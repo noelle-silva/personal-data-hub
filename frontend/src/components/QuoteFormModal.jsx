@@ -161,7 +161,7 @@ const QuoteFormModal = ({
         setReferencedDocuments([]);
       }
       
-      // 如果有初始引用体ID，获取引用体信息
+      // 如果有初始收藏夹ID，获取收藏夹信息
       if (initialQuoteId) {
         fetchQuoteInfo(initialQuoteId);
       } else {
@@ -185,13 +185,13 @@ const QuoteFormModal = ({
     }
   };
 
-  // 获取引用体信息
+  // 获取收藏夹信息
   const fetchQuoteInfo = async (quoteId) => {
     try {
       const response = await apiClient.get(`/quotes/${quoteId}`);
       setReferencedQuotes([response.data.data]);
     } catch (error) {
-      console.error('获取引用体信息失败:', error);
+      console.error('获取收藏夹信息失败:', error);
     }
   };
 
@@ -286,7 +286,7 @@ const QuoteFormModal = ({
     }
   };
 
-  // 处理引用体选择
+  // 处理收藏夹选择
   const handleQuoteSelect = async (selectedIds) => {
     try {
       const newQuotes = [];
@@ -306,7 +306,7 @@ const QuoteFormModal = ({
         referencedQuoteIds: [...prev.referencedQuoteIds, ...selectedIds.filter(id => !prev.referencedQuoteIds.includes(id))]
       }));
     } catch (error) {
-      console.error('获取引用体信息失败:', error);
+      console.error('获取收藏夹信息失败:', error);
     }
   };
 
@@ -334,7 +334,7 @@ const QuoteFormModal = ({
     }));
   };
 
-  // 移除引用引用体
+  // 移除引用收藏夹
   const handleRemoveQuote = (index) => {
     const newQuotes = [...referencedQuotes];
     const removedQuote = newQuotes.splice(index, 1)[0];
@@ -374,7 +374,7 @@ const QuoteFormModal = ({
         await onSave(formData);
         handleClose();
       } catch (error) {
-        setErrors({ submit: error.message || '创建引用体失败' });
+        setErrors({ submit: error.message || '创建收藏夹失败' });
       } finally {
         setLoading(false);
       }
@@ -424,7 +424,7 @@ const QuoteFormModal = ({
                 lineHeight: 1.2,
               }}
             >
-              创建新引用体
+              创建新收藏夹
             </Typography>
             <IconButton
               onClick={handleClose}
@@ -698,11 +698,11 @@ const QuoteFormModal = ({
 
               <Divider />
 
-              {/* 引用引用体 */}
+              {/* 引用收藏夹 */}
               <Box>
                 <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <FormatQuoteIcon fontSize="small" />
-                  引用引用体
+                  引用收藏夹
                 </Typography>
                 <Button
                   variant="outlined"
@@ -712,10 +712,10 @@ const QuoteFormModal = ({
                     mb: 2,
                   }}
                 >
-                  选择引用体
+                  选择收藏夹
                 </Button>
                 
-                {/* 已选择的引用体列表 */}
+                {/* 已选择的收藏夹列表 */}
                 {referencedQuotes.map((quote, index) => (
                   <ReferenceItemContainer key={quote._id}>
                     <ReferenceItemContent>
@@ -762,7 +762,7 @@ const QuoteFormModal = ({
                         <IconButton
                           size="small"
                           onClick={() => window.open(`/quotes/${quote._id}`, '_blank')}
-                          aria-label="查看引用体"
+                          aria-label="查看收藏夹"
                         >
                           <LaunchIcon fontSize="small" />
                         </IconButton>
@@ -822,7 +822,7 @@ const QuoteFormModal = ({
         onConfirm={handleAttachmentSelect}
       />
 
-      {/* 引用体选择对话框 */}
+      {/* 收藏夹选择对话框 */}
       <QuotePickerDialog
         open={isQuotePickerOpen}
         handleClose={() => setIsQuotePickerOpen(false)}

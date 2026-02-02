@@ -78,7 +78,7 @@ const QuoteGrid = ({
   error, 
   hasMore, 
   onLoadMore, 
-  emptyMessage = '暂无匹配的引用体',
+  emptyMessage = '暂无匹配的收藏夹',
   showLoadMore = true 
 }) => {
   const dispatch = useDispatch();
@@ -92,21 +92,21 @@ const QuoteGrid = ({
   // 处理查看详情
   const handleViewDetail = async (quote) => {
     try {
-      // 使用新的引用体窗口系统
+      // 使用新的收藏夹窗口系统
       await dispatch(openQuoteWindowAndFetch({
         quoteId: quote._id,
         label: quote.title || '查看详情',
         source: 'quote-grid'
       })).unwrap();
     } catch (error) {
-      console.error('打开引用体窗口失败:', error);
+      console.error('打开收藏夹窗口失败:', error);
       // 如果新窗口系统失败，使用旧的模态框作为后备
       dispatch(openQuoteModal(quote));
       
       // 如果没有完整内容，则在后台获取
       if (!quote.content) {
         dispatch(fetchQuoteById(quote._id)).catch(error => {
-          console.error('获取引用体详情失败:', error);
+          console.error('获取收藏夹详情失败:', error);
         });
       }
     }
@@ -117,13 +117,13 @@ const QuoteGrid = ({
     dispatch(closeQuoteModal());
   };
 
-  // 处理保存引用体
+  // 处理保存收藏夹
   const handleSaveQuote = async (id, quoteData) => {
     try {
       const response = await apiClient.put(`/quotes/${id}`, quoteData);
-      console.log('引用体更新成功:', response.data);
+      console.log('收藏夹更新成功:', response.data);
       
-      // 更新选中的引用体
+      // 更新选中的收藏夹
       dispatch(openQuoteModal(response.data));
       
       // 通知父组件刷新数据
@@ -131,17 +131,17 @@ const QuoteGrid = ({
         onLoadMore({ refresh: true });
       }
     } catch (error) {
-      console.error('更新引用体失败:', error);
-      alert('更新引用体失败，请重试');
+      console.error('更新收藏夹失败:', error);
+      alert('更新收藏夹失败，请重试');
     }
   };
 
-  // 处理删除引用体
+  // 处理删除收藏夹
   const handleDeleteQuote = async (id) => {
     try {
       const response = await apiClient.delete(`/quotes/${id}`);
       const result = response.data;
-      console.log('引用体删除成功:', result);
+      console.log('收藏夹删除成功:', result);
       
       // 关闭弹窗
       dispatch(closeQuoteModal());
@@ -151,8 +151,8 @@ const QuoteGrid = ({
         onLoadMore({ refresh: true });
       }
     } catch (error) {
-      console.error('删除引用体失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '删除引用体失败，请重试';
+      console.error('删除收藏夹失败:', error);
+      const errorMessage = error.response?.data?.message || error.message || '删除收藏夹失败，请重试';
       alert(errorMessage);
     }
   };
@@ -165,7 +165,7 @@ const QuoteGrid = ({
       const result = response.data;
       console.log('引用列表更新成功:', result);
       
-      // 更新选中的引用体
+      // 更新选中的收藏夹
       dispatch(openQuoteModal(result.data));
       
       // 通知父组件刷新数据
@@ -217,10 +217,10 @@ const QuoteGrid = ({
       // 关闭文档弹窗
       dispatch(closeDocumentModal());
       
-      // 如果存在选中的引用体，刷新引用体数据以更新引用列表
+      // 如果存在选中的收藏夹，刷新收藏夹数据以更新引用列表
       if (selectedQuote) {
         dispatch(fetchQuoteById(selectedQuote._id)).catch(error => {
-          console.error('刷新引用体数据失败:', error);
+          console.error('刷新收藏夹数据失败:', error);
         });
       }
       
@@ -252,7 +252,7 @@ const QuoteGrid = ({
           mt: 2,
         }}
       >
-        正在加载引用体...
+        正在加载收藏夹...
       </Typography>
     </LoadingContainer>
   );
@@ -271,7 +271,7 @@ const QuoteGrid = ({
       >
         <Typography variant="h6">加载失败</Typography>
         <Typography variant="body2">
-          {error || '无法加载引用体，请稍后重试。'}
+          {error || '无法加载收藏夹，请稍后重试。'}
         </Typography>
       </Alert>
     </Container>
@@ -304,7 +304,7 @@ const QuoteGrid = ({
     </Container>
   );
 
-  // 渲染引用体卡片
+  // 渲染收藏夹卡片
   const renderQuotes = () => {
     if (items.length === 0) {
       return renderEmpty();

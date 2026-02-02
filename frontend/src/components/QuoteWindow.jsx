@@ -193,7 +193,7 @@ const QuoteWindow = ({
   const [headerIsEditing, setHeaderIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(windowData.title || '');
   
-  // 注入源状态（引用体）
+  // 注入源状态（收藏夹）
   const [injectionSource, setInjectionSource] = useState({
     type: 'quote',
     subtype: 'text',
@@ -201,7 +201,7 @@ const QuoteWindow = ({
     available: false
   });
   
-  // 监听引用体内容变化，更新注入源
+  // 监听收藏夹内容变化，更新注入源
   useEffect(() => {
     if (windowData.quote && windowData.quote.content) {
       setInjectionSource({
@@ -323,7 +323,7 @@ const QuoteWindow = ({
     <LoadingContainer>
       <CircularProgress size={40} />
       <Typography variant="body1" color="text.secondary">
-        正在加载引用体内容...
+        正在加载收藏夹内容...
       </Typography>
     </LoadingContainer>
   );
@@ -335,7 +335,7 @@ const QuoteWindow = ({
         加载失败
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {windowData.error || '无法加载引用体内容，请稍后重试。'}
+        {windowData.error || '无法加载收藏夹内容，请稍后重试。'}
       </Typography>
     </ErrorContainer>
   );
@@ -366,7 +366,7 @@ const QuoteWindow = ({
           return result.quote;
         };
 
-        // 实现保存引用体引用的回调
+        // 实现保存收藏夹引用的回调
         const handleSaveQuoteReferences = async (quoteId, referencedIds) => {
           const result = await dispatch(saveQuoteReferences({
             quoteId,
@@ -439,7 +439,7 @@ const QuoteWindow = ({
               variant="outlined"
               size="small"
               isActive={isActive}
-              aria-label="编辑引用体标题"
+              aria-label="编辑收藏夹标题"
               placeholder="输入标题..."
             />
           ) : (
@@ -470,18 +470,18 @@ const QuoteWindow = ({
           <WindowControlButton
             size="small"
             onClick={onPrevQuote}
-            title="上一个引用体"
+            title="上一个收藏夹"
             disabled={!canNavigateQuotes}
-            aria-label="切换到上一个已打开引用体"
+            aria-label="切换到上一个已打开收藏夹"
           >
             <NavigateBeforeIcon />
           </WindowControlButton>
           <WindowControlButton
             size="small"
             onClick={onNextQuote}
-            title="下一个引用体"
+            title="下一个收藏夹"
             disabled={!canNavigateQuotes}
-            aria-label="切换到下一个已打开引用体"
+            aria-label="切换到下一个已打开收藏夹"
           >
             <NavigateNextIcon />
           </WindowControlButton>

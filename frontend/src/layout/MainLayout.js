@@ -108,8 +108,8 @@ const fixedNavigationItems = [
     icon: <LocalOfferIcon />,
   },
   {
-    text: '引用体',
-    path: '/引用体',
+    text: '收藏夹',
+    path: '/收藏夹',
     icon: <FormatQuoteIcon />,
   },
   {
@@ -269,21 +269,21 @@ const MainLayout = () => {
           data: event.data
         });
 
-        // 使用多窗口系统打开引用体
+        // 使用多窗口系统打开收藏夹
         const handleOpenQuote = async (quoteId, label, source) => {
           try {
-            console.debug('MainLayout: 开始打开引用体窗口', { quoteId, label, source });
+            console.debug('MainLayout: 开始打开收藏夹窗口', { quoteId, label, source });
             
-            // 使用 openQuoteWindowAndFetch thunk，原子化创建窗口和获取引用体
+            // 使用 openQuoteWindowAndFetch thunk，原子化创建窗口和获取收藏夹
             await dispatch(openQuoteWindowAndFetch({
               quoteId,
               label: label || '加载中...',
               source: source || 'tab-action'
             })).unwrap();
             
-            console.debug('MainLayout: 引用体窗口打开成功', { quoteId });
+            console.debug('MainLayout: 收藏夹窗口打开成功', { quoteId });
           } catch (error) {
-            console.error('MainLayout: 打开引用体失败', {
+            console.error('MainLayout: 打开收藏夹失败', {
               quoteId,
               error: error.message,
               stack: error.stack
@@ -291,7 +291,7 @@ const MainLayout = () => {
             
             // 如果是网络或服务器错误，提供更友好的错误提示
             if (error.message?.includes('404') || error.message?.includes('500')) {
-              alert('打开引用体失败，请稍后重试');
+              alert('打开收藏夹失败，请稍后重试');
             }
           }
         };

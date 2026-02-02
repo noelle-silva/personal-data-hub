@@ -133,7 +133,7 @@ const Quotes = () => {
     }
   }, [error]);
   
-  // 默认加载所有引用体（当没有搜索条件和标签时）
+  // 默认加载所有收藏夹（当没有搜索条件和标签时）
   useEffect(() => {
     if (status === 'idle' && !query && selectedTags.length === 0) {
       dispatch(fetchAllQuotesPaged({
@@ -257,11 +257,11 @@ const Quotes = () => {
     setCreateModalOpen(false);
   };
   
-  // 处理创建引用体
+  // 处理创建收藏夹
   const handleCreateQuote = async (quoteData) => {
     try {
       await dispatch(createQuote(quoteData)).unwrap();
-      setSuccessMessage('引用体创建成功');
+      setSuccessMessage('收藏夹创建成功');
       
       // 刷新当前列表（保留筛选和分页状态）
       if (query || selectedTags.length > 0) {
@@ -321,7 +321,7 @@ const Quotes = () => {
   return (
     <Container maxWidth="xl">
       <PageTitle variant="h3" component="h1">
-        引用体
+        收藏夹
       </PageTitle>
       
       {/* 工具栏 */}
@@ -330,7 +330,7 @@ const Quotes = () => {
           <SearchField
             variant="outlined"
             size="small"
-            placeholder="搜索引用体..."
+            placeholder="搜索收藏夹..."
             value={query}
             onChange={handleQueryChange}
             InputProps={{
@@ -382,7 +382,7 @@ const Quotes = () => {
               py: 1,
             }}
           >
-            新建引用体
+            新建收藏夹
           </Button>
         </ControlsContainer>
       </Toolbar>
@@ -396,22 +396,22 @@ const Quotes = () => {
       {/* 提示信息 */}
       {!query && selectedTags.length === 0 ? (
         <InfoAlert severity="info">
-          未输入关键词或选择标签时将显示全部引用体，可随时筛选。
+          未输入关键词或选择标签时将显示全部收藏夹，可随时筛选。
         </InfoAlert>
       ) : (
         <InfoAlert severity="info">
-          系统将返回匹配的引用体。
+          系统将返回匹配的收藏夹。
         </InfoAlert>
       )}
       
-      {/* 引用体列表 */}
+      {/* 收藏夹列表 */}
       <QuoteGrid
         items={items}
         status={status}
         error={error}
         hasMore={hasMore}
         onLoadMore={handleLoadMore}
-        emptyMessage={(!query && selectedTags.length === 0) ? "暂无引用体" : "没有找到匹配的引用体"}
+        emptyMessage={(!query && selectedTags.length === 0) ? "暂无收藏夹" : "没有找到匹配的收藏夹"}
       />
       
       {/* 错误提示 */}
@@ -438,7 +438,7 @@ const Quotes = () => {
         </Alert>
       </Snackbar>
       
-      {/* 创建引用体模态框 */}
+      {/* 创建收藏夹模态框 */}
       <QuoteFormModal
         open={createModalOpen}
         handleClose={handleCloseCreateModal}
@@ -448,7 +448,7 @@ const Quotes = () => {
       {/* 浮动创建按钮（移动端友好） */}
       <Fab
         color="primary"
-        aria-label="添加引用体"
+        aria-label="添加收藏夹"
         onClick={handleOpenCreateModal}
         sx={{
           position: 'fixed',

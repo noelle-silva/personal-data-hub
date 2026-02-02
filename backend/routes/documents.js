@@ -53,16 +53,16 @@ router.get('/stats', documentController.getDocumentStats);
  * @access  Public
  * @param   id - 文档ID
  * @query   populate - 是否填充引用的文档信息 (title/full/none)
- * @query   include - 是否包含引用此文档的引用体 (referencingQuotes)
- * @query   quotesLimit - 引用体分页限制 (默认20)
- * @query   quotesPage - 引用体分页页码 (默认1)
- * @query   quotesSort - 引用体排序字段 (默认-updatedAt)
+ * @query   include - 是否包含引用此文档的收藏夹 (referencingQuotes)
+ * @query   quotesLimit - 收藏夹分页限制 (默认20)
+ * @query   quotesPage - 收藏夹分页页码 (默认1)
+ * @query   quotesSort - 收藏夹排序字段 (默认-updatedAt)
  */
 router.get('/:id', documentController.getDocumentById);
 
 /**
  * @route   GET /api/documents/:id/referencing-quotes
- * @desc    获取引用此文档的引用体列表
+ * @desc    获取引用此文档的收藏夹列表
  * @access  Public
  * @param   id - 文档ID
  * @query   page - 页码 (默认1)

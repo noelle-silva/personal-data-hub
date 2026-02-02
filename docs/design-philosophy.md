@@ -1,6 +1,6 @@
 # 个人数据中心·设计哲学与系统落地说明
 
-本文面向系统使用者与维护者，系统化阐述本项目的知识组织设计哲学，以及这些理念在数据模型、服务接口、前端交互与内容渲染中的具体落地方式。阅读本说明，可理解为何选择“原子化笔记 + 引用体 + 标签 + 数据库优先 + MD/HTML 混合内容 + 窗口化引用”的整体方案，以及如何在日常实践中贯彻，以降低心智负担、放大表达与连接的上限。
+本文面向系统使用者与维护者，系统化阐述本项目的知识组织设计哲学，以及这些理念在数据模型、服务接口、前端交互与内容渲染中的具体落地方式。阅读本说明，可理解为何选择“原子化笔记 + 收藏夹 + 标签 + 数据库优先 + MD/HTML 混合内容 + 窗口化引用”的整体方案，以及如何在日常实践中贯彻，以降低心智负担、放大表达与连接的上限。
 
 关联源码入口：
 - 后端数据模型与接口： [backend/models/Document.js](backend/models/Document.js) · [backend/models/Quote.js](backend/models/Quote.js) · [backend/models/Attachment.js](backend/models/Attachment.js) · [backend/models/CustomPage.js](backend/models/CustomPage.js) · [backend/services/documentService.js](backend/services/documentService.js) · [backend/routes/documents.js](backend/routes/documents.js)
@@ -10,11 +10,11 @@
 1. 核心设计哲学
 
 - 原子化笔记：每条笔记是最小知识单元，彼此的引用与组织就像原子之间的键合，构成更高阶的知识结构。对应数据实体为 Document。
-- 连接优先：笔记之间可相互引用；此外引入“引用体”来以某个角度聚合若干笔记与素材，实现多维度的自由组织。
+- 连接优先：笔记之间可相互引用；此外引入“收藏夹”来以某个角度聚合若干笔记与素材，实现多维度的自由组织。
 - 数据库优于手工归档：不依赖文件夹层级管理，改以数据库与索引来供需两端解耦，减少人为分类的开销与错位。
 - 标签多视角：标签为轻量的多属性标注，支持并存的视角与语义，驱动检索与筛选。
 - 内容多形态：同时支持 Markdown 与 HTML。Markdown关注易写易读；HTML承担更强表现力与交互，适配 AI 时代由模型生成丰富交互内容的趋势。
-- 窗口化引用：在笔记内容中渲染“打开窗口”的动作，直达目标笔记或引用体，现场联动，增强关联说明上限。
+- 窗口化引用：在笔记内容中渲染“打开窗口”的动作，直达目标笔记或收藏夹，现场联动，增强关联说明上限。
 - 附件即一等公民：图片、视频、文档、脚本等外部资料通过本机网关转发与引用被纳入知识网络，增强语义上下文。
 
 2. 概念到数据模型的映射
@@ -22,11 +22,11 @@
 2.1 Document：原子化笔记
 - 字段要点：标题、Markdown 内容 content、HTML 内容 htmlContent、tags、source、referencedDocumentIds、referencedAttachmentIds 等，见 [backend/models/Document.js](backend/models/Document.js)。
 - 内建索引：如 [documentSchema.index()](backend/models/Document.js:90) 强化全文与标签检索、时间排序与引用追踪。
-- 自引用图谱：通过 referencedDocumentIds 建立原生“笔记到笔记”的连接；反向引用通过虚拟字段 [documentSchema.virtual()](backend/models/Document.js:113) 暴露 referencingQuotes，用于发现哪些引用体指向本笔记。
+- 自引用图谱：通过 referencedDocumentIds 建立原生“笔记到笔记”的连接；反向引用通过虚拟字段 [documentSchema.virtual()](backend/models/Document.js:113) 暴露 referencingQuotes，用于发现哪些收藏夹指向本笔记。
 - 搜索能力：提供 [documentSchema.statics.searchDocuments()](backend/models/Document.js:152)，服务层组合分页与排序后经 API 暴露，见 [backend/routes/documents.js](backend/routes/documents.js) 与 [DocumentService.getDocumentById()](backend/services/documentService.js:80)。
 - 约束校验：服务层提供 [DocumentService.validateReferencedDocuments()](backend/services/documentService.js:223) 与 [DocumentService.validateReferencedAttachments()](backend/services/documentService.js:268)，避免自引用、重复与无效 ObjectId，保证引用图一致性。
 
-2.2 Quote：引用体（聚合视角）
+2.2 Quote：收藏夹（聚合视角）
 - 定义：用于从某个角度聚合若干 Document、Quote、Attachment 并进行描述，贴近“类似文件夹但更自由”的组织诉求，见 [backend/models/Quote.js](backend/models/Quote.js)。
 - 连接能力：包含 referencedDocumentIds、referencedQuoteIds、referencedAttachmentIds，可构造层层相引的柔性分类网络。
 - 索引与摘要：全文检索与标签索引，见 [quoteSchema.index()](backend/models/Quote.js:90)；内容摘要见 [quoteSchema.virtual()](backend/models/Quote.js:103)。
@@ -41,10 +41,10 @@
 - 类别与状态：category 包含 image、video、document、script；status 区分 active 与 deleted，见 [backend/models/Attachment.js](backend/models/Attachment.js)。
 - 访问机制：桌面端通过本机网关提供可直接加载的资源 URL（附件/壁纸等），避免 WebView 的跨域/安全头限制；相关实现见 [backend/routes/attachments.js](backend/routes/attachments.js) 与 [frontend/src-tauri/src/gateway.rs](frontend/src-tauri/src/gateway.rs)。
 
-3. 两条组织路径：原生连接与引用体连接
+3. 两条组织路径：原生连接与收藏夹连接
 
-- 原生连接（笔记 → 笔记）：Document.referencedDocumentIds 构成知识图主干；反向可通过 [DocumentService.getReferencingQuotes()](backend/services/documentService.js:310) 或在取单条笔记时附带 include 参数聚合相关引用体，API 详见 [backend/routes/documents.js](backend/routes/documents.js) 的 [router.get()](backend/routes/documents.js:73)。
-- 引用体连接（视角聚合）：Quote 将若干笔记、引用体、附件拉入同一“叙事场”，并允许引用体之间相互引用，形成更灵活的分类体系。
+- 原生连接（笔记 → 笔记）：Document.referencedDocumentIds 构成知识图主干；反向可通过 [DocumentService.getReferencingQuotes()](backend/services/documentService.js:310) 或在取单条笔记时附带 include 参数聚合相关收藏夹，API 详见 [backend/routes/documents.js](backend/routes/documents.js) 的 [router.get()](backend/routes/documents.js:73)。
+- 收藏夹连接（视角聚合）：Quote 将若干笔记、收藏夹、附件拉入同一“叙事场”，并允许收藏夹之间相互引用，形成更灵活的分类体系。
 - 自定义页面：CustomPage 借助 contentItems 混排不同实体，适合搭建主题页、看板或专题洞察视图，前端呈现见 [frontend/src/pages/CustomPage.jsx](frontend/src/pages/CustomPage.jsx)。
 
 4. 标签系统：多视角多属性
@@ -86,14 +86,14 @@ graph LR
 7. 数据库优先与认知负担的降低
 
 - 弱化手工归档：不再为“放在哪个文件夹”纠结，任何笔记都可通过标签、引用与搜索被找到。
-- 连接即组织：原生引用与引用体两条路径互补，既保留知识的“本体连接”，又提供“视角叙事”的集合组织。
+- 连接即组织：原生引用与收藏夹两条路径互补，既保留知识的“本体连接”，又提供“视角叙事”的集合组织。
 - 统一素材池：附件作为一等公民被引用与网关访问，跨笔记复用易于治理。
 - 索引与统计：模型级索引保证检索速度；服务层统计能力可用于评估标签热度与知识增长，参见 [backend/services/documentService.js](backend/services/documentService.js)。
 
 8. 一致性与安全
 
 - 引用有效性：新增或更新引用时强制通过 [DocumentService.validateReferencedDocuments()](backend/services/documentService.js:223) 与 [DocumentService.validateReferencedAttachments()](backend/services/documentService.js:268)；附件仅允许 active 状态被引用。
-- 反向清理：删除文档后，服务层会在引用体与其他文档中进行清理，见 [DocumentService.deleteDocument()](backend/services/documentService.js:378)。
+- 反向清理：删除文档后，服务层会在收藏夹与其他文档中进行清理，见 [DocumentService.deleteDocument()](backend/services/documentService.js:378)。
 - 附件安全：所有附件接口需要登录态；本机网关会在请求转发时注入 Bearer Token。
 
 9. 面向 AI 时代的内容生产
@@ -104,14 +104,14 @@ graph LR
 10. 推荐实践
 
 - 链接知识：优先使用“笔记→笔记”的 referencedDocumentIds 形成知识骨架；当需要从某个角度叙事或聚合时，引入 Quote 并允许多级引用。
-- 善用标签：为笔记与引用体标注多维标签，用 [TagMultiSelect()](frontend/src/components/TagMultiSelect.js:34) 快速筛选。
+- 善用标签：为笔记与收藏夹标注多维标签，用 [TagMultiSelect()](frontend/src/components/TagMultiSelect.js:34) 快速筛选。
 - 富媒体：上传素材为 Attachment 并在 HTML 内容中经 attach://ID 引用；加载由本机网关完成，无需签名URL流程。
-- 即开即看：在 HTML 中插入 x-tab-action 元素生成“在窗口中打开”按钮，便于在说明文本中现场调取相关笔记或引用体进行串讲。
+- 即开即看：在 HTML 中插入 x-tab-action 元素生成“在窗口中打开”按钮，便于在说明文本中现场调取相关笔记或收藏夹进行串讲。
 
 11. 术语速览
 
 - 原子化笔记：最小知识单元，对应 Document。
-- 引用体：以“角度”为核心的聚合单位，对应 Quote，可相互引用。
+- 收藏夹：以“角度”为核心的聚合单位，对应 Quote，可相互引用。
 - 自定义页面：以展示为目的的混合面板，对应 CustomPage。
 - 附件：各类外部素材，对应 Attachment。
 - 窗口系统：前端内的浮动窗口集合，承载查看与编辑动作。

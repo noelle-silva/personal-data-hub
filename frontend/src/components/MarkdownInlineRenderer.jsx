@@ -212,14 +212,14 @@ const MarkdownInlineRenderer = ({
       
       // 处理 open-quote 动作
       if (action === 'open-quote' && quoteId) {
-        const buttonText = label || (node.children && node.children[0] && node.children[0].data) || '查看引用体';
+        const buttonText = label || (node.children && node.children[0] && node.children[0].data) || '查看收藏夹';
         
-        // 创建一个原生按钮元素，使用引用体专用的炫酷样式
+        // 创建一个原生按钮元素，使用收藏夹专用的炫酷样式
         return (
           <button
             className="quote-action-button"
             data-variant={variant}
-            title={`打开引用体: ${quoteId}`}
+            title={`打开收藏夹: ${quoteId}`}
             onClick={() => {
               // 发送消息到父窗口
               window.postMessage({
@@ -442,7 +442,7 @@ const MarkdownInlineRenderer = ({
       const sanitizedHtml = sanitizeDocLevelHtml(processedHtml);
 
       // DOMPurify：系统内容可能来自用户输入/外部同步，必须做强净化
-      // 允许项目内自定义标签 x-tab-action（用于“打开文档/引用体/附件”的交互入口）
+      // 允许项目内自定义标签 x-tab-action（用于“打开文档/收藏夹/附件”的交互入口）
       const purifiedHtml = DOMPurify.sanitize(sanitizedHtml, {
         USE_PROFILES: { html: true },
         ADD_TAGS: ['x-tab-action'],

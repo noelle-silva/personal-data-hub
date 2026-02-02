@@ -14,7 +14,7 @@ export const fetchAvailableQuoteTags = createAsyncThunk(
       }));
       return { tags, fetchedAt: Date.now() };
     } catch (error) {
-      return rejectWithValue(error.message || '获取引用体标签列表失败');
+      return rejectWithValue(error.message || '获取收藏夹标签列表失败');
     }
   },
   {
@@ -42,7 +42,7 @@ export const fetchAvailableQuoteTags = createAsyncThunk(
   }
 );
 
-// 异步thunk：复合搜索引用体（支持关键词和标签）
+// 异步thunk：复合搜索收藏夹（支持关键词和标签）
 export const fetchQuotesByFilter = createAsyncThunk(
   'quotesFilter/fetchQuotesByFilter',
   async ({ query, tags, mode = 'all', page = 1, limit = 20, sort = '-updatedAt' }, { rejectWithValue }) => {
@@ -70,7 +70,7 @@ export const fetchQuotesByFilter = createAsyncThunk(
         isFirstPage: page === 1
       };
     } catch (error) {
-      return rejectWithValue(error.message || '搜索引用体失败');
+      return rejectWithValue(error.message || '搜索收藏夹失败');
     }
   },
   {
@@ -94,7 +94,7 @@ export const fetchQuotesByFilter = createAsyncThunk(
   }
 );
 
-// 异步thunk：获取所有引用体（分页）
+// 异步thunk：获取所有收藏夹（分页）
 export const fetchAllQuotesPaged = createAsyncThunk(
   'quotesFilter/fetchAllQuotesPaged',
   async ({ page = 1, limit = 20, sort = '-updatedAt' }, { rejectWithValue }) => {
@@ -119,7 +119,7 @@ export const fetchAllQuotesPaged = createAsyncThunk(
         isFirstPage: page === 1
       };
     } catch (error) {
-      return rejectWithValue(error.message || '获取引用体列表失败');
+      return rejectWithValue(error.message || '获取收藏夹列表失败');
     }
   },
   {
@@ -148,7 +148,7 @@ const initialState = {
   availableTags: [], // 可用标签列表 {name, count}[]
   selectedTags: [], // 当前选中的标签数组
   query: '', // 搜索关键词
-  items: [], // 搜索结果引用体列表
+  items: [], // 搜索结果收藏夹列表
   status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed' - 用于列表加载状态
   error: null,
   mode: 'all', // 匹配模式，固定为'all'
@@ -234,7 +234,7 @@ const quotesFilterSlice = createSlice({
         state.tagsLoading = false;
         state.tagsError = action.payload;
       })
-      // 复合搜索引用体
+      // 复合搜索收藏夹
       .addCase(fetchQuotesByFilter.pending, (state, action) => {
         state.status = 'loading';
         state.listLoading = true;
@@ -268,7 +268,7 @@ const quotesFilterSlice = createSlice({
         // 清除最后请求参数，允许重试
         state.lastListRequest = null;
       })
-      // 获取所有引用体（分页）
+      // 获取所有收藏夹（分页）
       .addCase(fetchAllQuotesPaged.pending, (state, action) => {
         state.status = 'loading';
         state.listLoading = true;

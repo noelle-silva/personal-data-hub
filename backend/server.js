@@ -167,7 +167,7 @@ app.use('/api/attachments', attachmentRoutes);
 // 文档相关路由
 app.use('/api/documents', documentRoutes);
 
-// 引用体相关路由
+// 收藏夹相关路由
 app.use('/api/quotes', quoteRoutes);
 
 // 自定义页面相关路由

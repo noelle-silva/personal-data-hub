@@ -156,7 +156,7 @@ const RelationModuleTitle = styled(Typography)(({ theme }) => ({
   gap: theme.spacing(1),
 }));
 
-// 引用体列表容器
+// 收藏夹列表容器
 const QuotesListContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
@@ -175,7 +175,7 @@ const QuotesListContainer = styled(Box)(({ theme }) => ({
   },
 }));
 
-// 引用体项
+// 收藏夹项
 const QuoteItem = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -502,7 +502,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
       setIsReferencesDirty(false);
       setIsReferencesEditing(false);
       
-      // 初始化引用此文档的引用体列表
+      // 初始化引用此文档的收藏夹列表
       setReferencingQuotes(document.referencingQuotes || []);
       setQuotesPagination(document.referencingQuotesPagination || null);
     }
@@ -676,13 +676,13 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
     setIsReferencesEditing(false);
   }, [originalReferencedIds]);
 
-  // 处理查看引用体详情
+  // 处理查看收藏夹详情
   const handleViewQuoteDetail = (quote) => {
     setSelectedQuote(quote);
     setQuoteDetailOpen(true);
   };
 
-  // 处理加载更多引用体
+  // 处理加载更多收藏夹
   const handleLoadMoreQuotes = async () => {
     if (!document || !quotesPagination || !quotesPagination.hasNext || loadingQuotes) return;
     
@@ -704,7 +704,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
       setReferencingQuotes(prev => [...prev, ...data.data]);
       setQuotesPagination(data.pagination);
     } catch (error) {
-      console.error('加载更多引用体失败:', error);
+      console.error('加载更多收藏夹失败:', error);
     } finally {
       setLoadingQuotes(false);
     }
@@ -922,10 +922,10 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
           <ContentBox id="document-detail-content">
             {/* 左侧关系区域 */}
             <RelationsBox>
-              {/* 引用此笔记的引用体 */}
+              {/* 引用此笔记的收藏夹 */}
               <RelationModule>
                 <RelationModuleTitle variant="subtitle2">
-                  引用此笔记的引用体
+                  引用此笔记的收藏夹
                 </RelationModuleTitle>
                 {referencingQuotes.length > 0 ? (
                   <>
@@ -973,14 +973,14 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                               更新于 {formatDate(quote.updatedAt)}
                             </Typography>
                           </Box>
-                          <Tooltip title="查看引用体详情">
+                          <Tooltip title="查看收藏夹详情">
                             <IconButton
                               size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleViewQuoteDetail(quote);
                               }}
-                              aria-label="查看引用体详情"
+                              aria-label="查看收藏夹详情"
                             >
                               <LaunchIcon fontSize="small" />
                             </IconButton>
@@ -1006,7 +1006,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                 ) : (
                   <EmptyStateContainer>
                     <Typography variant="body2">
-                      暂无引用此笔记的引用体
+                      暂无引用此笔记的收藏夹
                     </Typography>
                   </EmptyStateContainer>
                 )}
@@ -1448,7 +1448,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
         )]}
       />
 
-      {/* 引用体详情对话框 */}
+      {/* 收藏夹详情对话框 */}
       {selectedQuote && (
         <QuoteDetailModal
           open={quoteDetailOpen}

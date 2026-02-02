@@ -15,8 +15,8 @@ export const fetchWindowDocument = createAsyncThunk(
       // 添加查询参数以获取引用关系数据
       const params = new URLSearchParams({
         populate: 'full', // 获取引用文档的完整信息
-        include: 'referencingQuotes', // 包含引用此文档的引用体
-        quotesLimit: '20' // 限制引用体数量
+        include: 'referencingQuotes', // 包含引用此文档的收藏夹
+        quotesLimit: '20' // 限制收藏夹数量
       });
       
       const response = await apiClient.get(`/documents/${docId}?${params.toString()}`);
@@ -33,7 +33,7 @@ export const fetchWindowDocument = createAsyncThunk(
   }
 );
 
-// 异步thunk：获取窗口引用体内容
+// 异步thunk：获取窗口收藏夹内容
 export const fetchWindowQuote = createAsyncThunk(
   'windows/fetchWindowQuote',
   async ({ windowId, quoteId }, { rejectWithValue }) => {
@@ -142,7 +142,7 @@ export const openWindowAndFetch = createAsyncThunk(
   }
 );
 
-// 异步thunk：打开引用体窗口并获取引用体内容
+// 异步thunk：打开收藏夹窗口并获取收藏夹内容
 export const openQuoteWindowAndFetch = createAsyncThunk(
   'windows/openQuoteWindowAndFetch',
   async ({ quoteId, label, source, variant }, { dispatch, getState, rejectWithValue }) => {
@@ -177,7 +177,7 @@ export const openQuoteWindowAndFetch = createAsyncThunk(
         viewport,
       }));
       
-      // 获取引用体内容
+      // 获取收藏夹内容
       const result = await dispatch(fetchWindowQuote({ windowId, quoteId })).unwrap();
       
       return {
@@ -257,7 +257,7 @@ export const openAttachmentWindowAndFetch = createAsyncThunk(
   }
 );
 
-// 异步thunk：保存引用引用体
+// 异步thunk：保存引用收藏夹
 export const saveQuoteReferences = createAsyncThunk(
   'windows/saveQuoteReferences',
   async ({ quoteId, referencedQuoteIds }, { rejectWithValue }) => {
@@ -273,7 +273,7 @@ export const saveQuoteReferences = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         quoteId,
-        error: error.response?.data?.message || error.message || '保存引用引用体失败'
+        error: error.response?.data?.message || error.message || '保存引用收藏夹失败'
       });
     }
   }
@@ -331,7 +331,7 @@ export const saveAttachmentReferences = createAsyncThunk(
   }
 );
 
-// 异步thunk：保存文档引用体引用
+// 异步thunk：保存文档收藏夹引用
 export const saveDocumentQuoteReferences = createAsyncThunk(
   'windows/saveDocumentQuoteReferences',
   async ({ documentId, referencedQuoteIds }, { rejectWithValue }) => {
@@ -353,7 +353,7 @@ export const saveDocumentQuoteReferences = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         documentId,
-        error: error.response?.data?.message || error.message || '保存引用体引用失败'
+        error: error.response?.data?.message || error.message || '保存收藏夹引用失败'
       });
     }
   }
@@ -404,7 +404,7 @@ export const updateQuoteById = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         quoteId,
-        error: error.response?.data?.message || error.message || '更新引用体失败'
+        error: error.response?.data?.message || error.message || '更新收藏夹失败'
       });
     }
   }
@@ -419,7 +419,7 @@ export const deleteQuoteById = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         quoteId,
-        error: error.response?.data?.message || error.message || '删除引用体失败'
+        error: error.response?.data?.message || error.message || '删除收藏夹失败'
       });
     }
   }
@@ -438,7 +438,7 @@ export const saveQuoteDocumentReferences = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         quoteId,
-        error: error.response?.data?.message || error.message || '保存引用体引用失败'
+        error: error.response?.data?.message || error.message || '保存收藏夹引用失败'
       });
     }
   }
@@ -457,7 +457,7 @@ export const saveQuoteAttachmentReferences = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         quoteId,
-        error: error.response?.data?.message || error.message || '保存引用体附件引用失败'
+        error: error.response?.data?.message || error.message || '保存收藏夹附件引用失败'
       });
     }
   }
@@ -538,7 +538,7 @@ const updateWindowsForResource = (state, contentType, resourceId, data) => {
       window.title = data?.title || window.title || '无标题文档';
     } else if (contentType === 'quote') {
       window.quote = data;
-      window.title = data?.title || window.title || '无标题引用体';
+      window.title = data?.title || window.title || '无标题收藏夹';
     } else if (contentType === 'attachment') {
       window.attachment = data;
       window.title = window.title || data?.originalName || '无标题附件';
@@ -764,7 +764,7 @@ const windowsSlice = createSlice({
           window.title = '加载失败';
         }
       })
-      // 获取窗口引用体内容
+      // 获取窗口收藏夹内容
       .addCase(fetchWindowQuote.pending, (state, action) => {
         const { windowId } = action.meta.arg;
         const window = state.windows.find(w => w.id === windowId);
@@ -781,7 +781,7 @@ const windowsSlice = createSlice({
         if (window) {
           window.status = 'loaded';
           window.quote = quote;
-          window.title = quote.title || '无标题引用体';
+          window.title = quote.title || '无标题收藏夹';
         }
       })
       .addCase(fetchWindowQuote.rejected, (state, action) => {
@@ -857,7 +857,7 @@ const windowsSlice = createSlice({
         state.saving = false;
         console.error('删除文档失败:', action.payload?.error || action.error?.message);
       })
-      // 更新引用体
+      // 更新收藏夹
       .addCase(updateQuoteById.pending, (state) => {
         state.saving = true;
       })
@@ -868,9 +868,9 @@ const windowsSlice = createSlice({
       })
       .addCase(updateQuoteById.rejected, (state, action) => {
         state.saving = false;
-        console.error('更新引用体失败:', action.payload?.error || action.error?.message);
+        console.error('更新收藏夹失败:', action.payload?.error || action.error?.message);
       })
-      // 删除引用体
+      // 删除收藏夹
       .addCase(deleteQuoteById.pending, (state) => {
         state.saving = true;
       })
@@ -881,7 +881,7 @@ const windowsSlice = createSlice({
       })
       .addCase(deleteQuoteById.rejected, (state, action) => {
         state.saving = false;
-        console.error('删除引用体失败:', action.payload?.error || action.error?.message);
+        console.error('删除收藏夹失败:', action.payload?.error || action.error?.message);
       })
       // 删除附件
       .addCase(deleteAttachmentById.pending, (state) => {
@@ -924,7 +924,7 @@ const windowsSlice = createSlice({
         state.saving = false;
         console.error('保存附件引用失败:', action.payload.error);
       })
-      // 处理保存文档引用体引用
+      // 处理保存文档收藏夹引用
       .addCase(saveDocumentQuoteReferences.pending, (state) => {
         state.saving = true;
       })
@@ -935,9 +935,9 @@ const windowsSlice = createSlice({
       })
       .addCase(saveDocumentQuoteReferences.rejected, (state, action) => {
         state.saving = false;
-        console.error('保存引用体引用失败:', action.payload.error);
+        console.error('保存收藏夹引用失败:', action.payload.error);
       })
-      // 处理保存引用引用体
+      // 处理保存引用收藏夹
       .addCase(saveQuoteReferences.pending, (state) => {
         state.saving = true;
       })
@@ -949,9 +949,9 @@ const windowsSlice = createSlice({
       })
       .addCase(saveQuoteReferences.rejected, (state, action) => {
         state.saving = false;
-        console.error('保存引用引用体失败:', action.payload.error);
+        console.error('保存引用收藏夹失败:', action.payload.error);
       })
-      // 处理保存引用体引用（引用文档）
+      // 处理保存收藏夹引用（引用文档）
       .addCase(saveQuoteDocumentReferences.pending, (state) => {
         state.saving = true;
       })
@@ -962,9 +962,9 @@ const windowsSlice = createSlice({
       })
       .addCase(saveQuoteDocumentReferences.rejected, (state, action) => {
         state.saving = false;
-        console.error('保存引用体引用失败:', action.payload.error);
+        console.error('保存收藏夹引用失败:', action.payload.error);
       })
-      // 处理保存引用体附件引用
+      // 处理保存收藏夹附件引用
       .addCase(saveQuoteAttachmentReferences.pending, (state) => {
         state.saving = true;
       })
@@ -975,7 +975,7 @@ const windowsSlice = createSlice({
       })
       .addCase(saveQuoteAttachmentReferences.rejected, (state, action) => {
         state.saving = false;
-        console.error('保存引用体附件引用失败:', action.payload.error);
+        console.error('保存收藏夹附件引用失败:', action.payload.error);
       });
   },
 });

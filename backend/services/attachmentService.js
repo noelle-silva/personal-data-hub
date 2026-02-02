@@ -407,16 +407,16 @@ class AttachmentService {
         // 不抛出错误，避免影响附件删除
       }
       
-      // 从引用体中移除已删除的附件ID
+      // 从收藏夹中移除已删除的附件ID
       try {
         const quoteResult = await Quote.updateMany(
           { referencedAttachmentIds: attachmentId },
           { $pull: { referencedAttachmentIds: attachmentId } }
         );
         
-        console.log(`已从 ${quoteResult.modifiedCount} 个引用体中移除附件 ${attachmentId} 的引用`);
+        console.log(`已从 ${quoteResult.modifiedCount} 个收藏夹中移除附件 ${attachmentId} 的引用`);
       } catch (quoteError) {
-        console.error('清理引用体附件引用失败:', quoteError);
+        console.error('清理收藏夹附件引用失败:', quoteError);
         // 不抛出错误，避免影响附件删除
       }
       

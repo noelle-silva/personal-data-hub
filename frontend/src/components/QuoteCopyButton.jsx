@@ -3,8 +3,8 @@ import { IconButton, Tooltip } from '@mui/material';
 import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 
 /**
- * 引用体复制按钮组件
- * 提供统一的引用体复制功能，可在多个组件中复用
+ * 收藏夹复制按钮组件
+ * 提供统一的收藏夹复制功能，可在多个组件中复用
  */
 const QuoteCopyButton = ({ 
   quote, 
@@ -37,7 +37,7 @@ const QuoteCopyButton = ({
     const quoteTitle = quote.title || '查看详情';
     const escapedTitle = escapeHtml(quoteTitle);
     
-    // 生成包含 data-label 和引用体标题的标记
+    // 生成包含 data-label 和收藏夹标题的标记
     const actionMarkup = `<x-tab-action data-action="open-quote" data-quote-id="${quoteId}" data-label="${escapedTitle}">${escapedTitle}</x-tab-action>`;
     
     try {

@@ -276,7 +276,7 @@ class DocumentController {
   }
 
   /**
-   * 获取引用此文档的引用体列表
+   * 获取引用此文档的收藏夹列表
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象
    * @param {Function} next - Express下一个中间件函数
@@ -300,7 +300,7 @@ class DocumentController {
         success: true,
         data: result.quotes,
         pagination: result.pagination,
-        message: '获取引用体列表成功'
+        message: '获取收藏夹列表成功'
       });
     } catch (error) {
       next(error);

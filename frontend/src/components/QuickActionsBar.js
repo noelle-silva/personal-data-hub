@@ -61,12 +61,12 @@ const QuickActionsBar = ({ onCreateDocument }) => {
   const navigate = useNavigate();
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
-  // 处理打开引用体创建模态框
+  // 处理打开收藏夹创建模态框
   const handleOpenQuoteModal = () => {
     setQuoteModalOpen(true);
   };
 
-  // 处理关闭引用体创建模态框
+  // 处理关闭收藏夹创建模态框
   const handleCloseQuoteModal = () => {
     setQuoteModalOpen(false);
   };
@@ -80,7 +80,7 @@ const QuickActionsBar = ({ onCreateDocument }) => {
     },
     {
       icon: <QuoteIcon />,
-      label: '新建引用体',
+      label: '新建收藏夹',
       onClick: handleOpenQuoteModal,
       color: theme.palette?.warning?.main || '#ed6c02',
     },
@@ -126,19 +126,19 @@ const QuickActionsBar = ({ onCreateDocument }) => {
         ))}
       </Box>
       
-      {/* 引用体创建模态框 */}
+      {/* 收藏夹创建模态框 */}
       <QuoteFormModal
         open={quoteModalOpen}
         handleClose={handleCloseQuoteModal}
         onSave={async (quoteData) => {
           try {
             const response = await apiClient.post('/quotes', quoteData);
-            console.log('引用体创建成功:', response.data);
+            console.log('收藏夹创建成功:', response.data);
             // 创建成功后可以添加额外的处理逻辑，比如显示成功提示
             return response.data;
           } catch (error) {
-            console.error('创建引用体失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || '创建引用体失败，请重试';
+            console.error('创建收藏夹失败:', error);
+            const errorMessage = error.response?.data?.message || error.message || '创建收藏夹失败，请重试';
             alert(errorMessage);
             throw error;
           }

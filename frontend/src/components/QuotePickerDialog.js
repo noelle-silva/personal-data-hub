@@ -57,7 +57,7 @@ const TagsContainer = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
-// 样式化的引用体列表
+// 样式化的收藏夹列表
 const QuoteList = styled(List)(({ theme }) => ({
   flexGrow: 1,
   overflowY: 'auto',
@@ -73,7 +73,7 @@ const QuoteList = styled(List)(({ theme }) => ({
   },
 }));
 
-// 样式化的引用体项
+// 样式化的收藏夹项
 const QuoteItem = styled(ListItem)(({ theme }) => ({
   borderRadius: 16,
   marginBottom: theme.spacing(1),
@@ -160,7 +160,7 @@ const QuotePickerDialog = ({
     }
   }, []);
   
-  // 获取引用体列表
+  // 获取收藏夹列表
   const fetchQuotes = useCallback(async (isSearch = false, resetPage = false) => {
     if (loading) return;
     
@@ -194,7 +194,7 @@ const QuotePickerDialog = ({
         params.mode = 'all';
         endpoint = '/quotes/tags';
       } else {
-        // 默认加载所有引用体
+        // 默认加载所有收藏夹
         endpoint = '/quotes';
       }
       
@@ -218,7 +218,7 @@ const QuotePickerDialog = ({
       
     } catch (err) {
       if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
-        setError(err.response?.data?.message || err.message || '获取引用体失败');
+        setError(err.response?.data?.message || err.message || '获取收藏夹失败');
       }
     } finally {
       setLoading(false);
@@ -250,7 +250,7 @@ const QuotePickerDialog = ({
     setHasMore(true);
   }, []);
   
-  // 处理引用体选择
+  // 处理收藏夹选择
   const handleQuoteToggle = useCallback((quoteId) => {
     setSelectedQuoteIds(prev => {
       if (prev.includes(quoteId)) {
@@ -326,11 +326,11 @@ const QuotePickerDialog = ({
     };
   }, []);
   
-  // 过滤引用体（客户端交集过滤）
+  // 过滤收藏夹（客户端交集过滤）
   const filteredQuotes = React.useMemo(() => {
     let result = quotes;
     
-    // 首先过滤掉完全隐藏的引用体
+    // 首先过滤掉完全隐藏的收藏夹
     if (hiddenIds.length > 0) {
       result = result.filter(quote => !hiddenIds.includes(quote._id));
     }
@@ -338,7 +338,7 @@ const QuotePickerDialog = ({
     // 如果同时有搜索和标签，做客户端交集过滤
     if (searchQuery.trim() && selectedTags.length > 0) {
       result = result.filter(quote => {
-        // 检查引用体是否包含所有选中的标签
+        // 检查收藏夹是否包含所有选中的标签
         return selectedTags.every(tag =>
           quote.tags && quote.tags.includes(tag)
         );
@@ -348,7 +348,7 @@ const QuotePickerDialog = ({
     return result;
   }, [quotes, searchQuery, selectedTags, hiddenIds]);
   
-  // 渲染引用体项
+  // 渲染收藏夹项
   const renderQuoteItem = (quote) => {
     const isSelected = selectedQuoteIds.includes(quote._id);
     const isExcluded = excludeIds.includes(quote._id);
@@ -360,7 +360,7 @@ const QuotePickerDialog = ({
             checked={isSelected || isExcluded}
             disabled={isExcluded}
             onChange={() => handleQuoteToggle(quote._id)}
-            aria-label={`选择引用体: ${quote.title}`}
+            aria-label={`选择收藏夹: ${quote.title}`}
           />
         </ListItemIcon>
         <ListItemText
@@ -432,7 +432,7 @@ const QuotePickerDialog = ({
       <DialogTitle id="quote-picker-dialog-title">
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" component="h2">
-            选择引用引用体
+            选择引用收藏夹
           </Typography>
           <IconButton onClick={handleCloseDialog} aria-label="关闭">
             <CloseIcon />
@@ -445,7 +445,7 @@ const QuotePickerDialog = ({
         <SearchContainer>
           <TextField
             fullWidth
-            placeholder="搜索引用体..."
+            placeholder="搜索收藏夹..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             InputProps={{
@@ -456,7 +456,7 @@ const QuotePickerDialog = ({
                 </IconButton>
               ),
             }}
-            aria-label="搜索引用体"
+            aria-label="搜索收藏夹"
           />
         </SearchContainer>
         
@@ -503,7 +503,7 @@ const QuotePickerDialog = ({
           />
         </TagsContainer>
         
-        {/* 引用体列表 */}
+        {/* 收藏夹列表 */}
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -514,15 +514,15 @@ const QuotePickerDialog = ({
           <LoadingContainer>
             <CircularProgress />
             <Typography variant="body2" sx={{ mt: 2 }}>
-              正在加载引用体...
+              正在加载收藏夹...
             </Typography>
           </LoadingContainer>
         ) : filteredQuotes.length === 0 ? (
           <EmptyContainer>
             <Typography variant="body2">
               {searchQuery || selectedTags.length > 0
-                ? '未找到匹配的引用体'
-                : '暂无可用引用体'
+                ? '未找到匹配的收藏夹'
+                : '暂无可用收藏夹'
               }
             </Typography>
           </EmptyContainer>
@@ -542,7 +542,7 @@ const QuotePickerDialog = ({
       <DialogActions>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', px: 2, pb: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            已选择 {selectedQuoteIds.length} 个引用体
+            已选择 {selectedQuoteIds.length} 个收藏夹
             {total > 0 && ` / 共 ${total} 个`}
           </Typography>
           <Box>

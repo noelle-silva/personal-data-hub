@@ -73,10 +73,10 @@ class DocumentService {
    * @param {String} id - 文档ID
    * @param {Object} options - 查询选项
    * @param {String} options.populate - 是否填充引用的文档信息 ('title', 'full', 'none')
-   * @param {String} options.include - 是否包含引用此文档的引用体 ('referencingQuotes')
-   * @param {Number} options.quotesLimit - 引用体分页限制
-   * @param {Number} options.quotesPage - 引用体分页页码
-   * @param {String} options.quotesSort - 引用体排序字段
+   * @param {String} options.include - 是否包含引用此文档的收藏夹 ('referencingQuotes')
+   * @param {Number} options.quotesLimit - 收藏夹分页限制
+   * @param {Number} options.quotesPage - 收藏夹分页页码
+   * @param {String} options.quotesSort - 收藏夹排序字段
    * @returns {Promise} 文档对象
    */
   async getDocumentById(id, options = {}) {
@@ -109,7 +109,7 @@ class DocumentService {
           select: '_id originalName category mimeType size'
         });
         
-        // 填充引用的引用体信息
+        // 填充引用的收藏夹信息
         query = query.populate({
           path: 'referencedQuoteIds',
           select: populateFields
@@ -126,7 +126,7 @@ class DocumentService {
       // 转换为普通对象以便添加额外字段
       const result = document.toObject();
       
-      // 如果需要包含引用此文档的引用体
+      // 如果需要包含引用此文档的收藏夹
       if (include.includes('referencingQuotes')) {
         const referencingQuotes = await this.getReferencingQuotes(id, {
           page: quotesPage,
@@ -203,7 +203,7 @@ class DocumentService {
         await this.validateReferencedAttachments(updateData.referencedAttachmentIds);
       }
       
-      // 如果更新包含引用引用体，进行验证
+      // 如果更新包含引用收藏夹，进行验证
       if (updateData.referencedQuoteIds) {
         await this.validateReferencedQuotes(updateData.referencedQuoteIds);
       }
@@ -319,37 +319,37 @@ class DocumentService {
   }
 
   /**
-   * 验证引用的引用体
-   * @param {Array} referencedIds - 引用的引用体ID数组
+   * 验证引用的收藏夹
+   * @param {Array} referencedIds - 引用的收藏夹ID数组
    * @returns {Promise} 验证结果
    */
   async validateReferencedQuotes(referencedIds) {
     try {
       // 检查是否为数组
       if (!Array.isArray(referencedIds)) {
-        throw new Error('引用的引用体ID必须是数组');
+        throw new Error('引用的收藏夹ID必须是数组');
       }
       
       // 去重
       const uniqueIds = [...new Set(referencedIds)];
       if (uniqueIds.length !== referencedIds.length) {
-        throw new Error('引用的引用体ID存在重复');
+        throw new Error('引用的收藏夹ID存在重复');
       }
       
       // 验证ObjectId格式
       for (const refId of uniqueIds) {
         if (!mongoose.Types.ObjectId.isValid(refId)) {
-          throw new Error(`无效的引用体ID: ${refId}`);
+          throw new Error(`无效的收藏夹ID: ${refId}`);
         }
       }
       
-      // 检查所有引用的引用体是否存在
+      // 检查所有引用的收藏夹是否存在
       const existingQuotes = await Quote.find({
         _id: { $in: uniqueIds }
       }).select('_id');
       
       if (existingQuotes.length !== uniqueIds.length) {
-        throw new HttpError(400, '部分引用的引用体不存在', 'REFERENCED_QUOTE_NOT_FOUND');
+        throw new HttpError(400, '部分引用的收藏夹不存在', 'REFERENCED_QUOTE_NOT_FOUND');
       }
       
       return true;
@@ -359,10 +359,10 @@ class DocumentService {
   }
 
   /**
-   * 获取引用此文档的引用体列表
+   * 获取引用此文档的收藏夹列表
    * @param {String} documentId - 文档ID
    * @param {Object} options - 查询选项
-   * @returns {Promise} 引用体列表和分页信息
+   * @returns {Promise} 收藏夹列表和分页信息
    */
   async getReferencingQuotes(documentId, options = {}) {
     try {
@@ -424,7 +424,7 @@ class DocumentService {
       };
     } catch (error) {
       if (error.statusCode) throw error;
-      throw new Error(`获取引用体列表失败: ${error.message}`);
+      throw new Error(`获取收藏夹列表失败: ${error.message}`);
     }
   }
 
@@ -441,16 +441,16 @@ class DocumentService {
         throw new HttpError(404, '文档不存在', 'DOCUMENT_NOT_FOUND');
       }
 
-      // 从引用体中移除已删除的文档ID
+      // 从收藏夹中移除已删除的文档ID
       try {
         const quoteResult = await Quote.updateMany(
           { referencedDocumentIds: id },
           { $pull: { referencedDocumentIds: id } }
         );
         
-        console.log(`已从 ${quoteResult.modifiedCount} 个引用体中移除文档 ${id} 的引用`);
+        console.log(`已从 ${quoteResult.modifiedCount} 个收藏夹中移除文档 ${id} 的引用`);
       } catch (quoteError) {
-        console.error('清理引用体引用失败:', quoteError);
+        console.error('清理收藏夹引用失败:', quoteError);
         // 不抛出错误，避免影响文档删除
       }
 
@@ -467,16 +467,16 @@ class DocumentService {
         // 不抛出错误，避免影响文档删除
       }
 
-      // 从其他文档的引用引用体列表中移除已删除的文档ID
+      // 从其他文档的引用收藏夹列表中移除已删除的文档ID
       try {
         const quoteRefResult = await Document.updateMany(
           { referencedQuoteIds: id },
           { $pull: { referencedQuoteIds: id } }
         );
         
-        console.log(`已从 ${quoteRefResult.modifiedCount} 个文档的引用引用体列表中移除文档 ${id}`);
+        console.log(`已从 ${quoteRefResult.modifiedCount} 个文档的引用收藏夹列表中移除文档 ${id}`);
       } catch (quoteRefError) {
-        console.error('清理文档引用引用体失败:', quoteRefError);
+        console.error('清理文档引用收藏夹失败:', quoteRefError);
         // 不抛出错误，避免影响文档删除
       }
 

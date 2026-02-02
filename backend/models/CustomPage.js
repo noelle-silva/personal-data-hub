@@ -9,7 +9,7 @@ const HttpError = require('../utils/HttpError');
 
 /**
  * 自定义页面Schema定义
- * 包含名称、引用的文档ID数组、引用的引用体ID数组、引用的附件ID数组等字段
+ * 包含名称、引用的文档ID数组、引用的收藏夹ID数组、引用的附件ID数组等字段
  */
 const customPageSchema = new mongoose.Schema(
   {
@@ -36,7 +36,7 @@ const customPageSchema = new mongoose.Schema(
       default: []
     }],
     
-    // 引用的引用体ID数组，可选字段
+    // 引用的收藏夹ID数组，可选字段
     referencedQuoteIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Quote',
@@ -214,38 +214,38 @@ customPageSchema.statics.validateReferencedDocuments = async function(referenced
 };
 
 /**
- * 静态方法：验证引用的引用体
- * @param {Array} referencedIds - 引用的引用体ID数组
+ * 静态方法：验证引用的收藏夹
+ * @param {Array} referencedIds - 引用的收藏夹ID数组
  * @returns {Promise} 验证结果
  */
 customPageSchema.statics.validateReferencedQuotes = async function(referencedIds) {
   try {
     // 检查是否为数组
     if (!Array.isArray(referencedIds)) {
-      throw new Error('引用的引用体ID必须是数组');
+      throw new Error('引用的收藏夹ID必须是数组');
     }
     
     // 去重
     const uniqueIds = [...new Set(referencedIds)];
     if (uniqueIds.length !== referencedIds.length) {
-      throw new Error('引用的引用体ID存在重复');
+      throw new Error('引用的收藏夹ID存在重复');
     }
     
     // 验证ObjectId格式
     for (const refId of uniqueIds) {
       if (!mongoose.Types.ObjectId.isValid(refId)) {
-        throw new Error(`无效的引用体ID: ${refId}`);
+        throw new Error(`无效的收藏夹ID: ${refId}`);
       }
     }
     
-    // 检查所有引用的引用体是否存在
+    // 检查所有引用的收藏夹是否存在
     const Quote = mongoose.model('Quote');
     const existingQuotes = await Quote.find({
       _id: { $in: uniqueIds }
     }).select('_id');
     
     if (existingQuotes.length !== uniqueIds.length) {
-      throw new HttpError(400, '部分引用的引用体不存在', 'REFERENCED_QUOTE_NOT_FOUND');
+      throw new HttpError(400, '部分引用的收藏夹不存在', 'REFERENCED_QUOTE_NOT_FOUND');
     }
     
     return true;
@@ -362,7 +362,7 @@ customPageSchema.statics.validateContentItems = async function(contentItems) {
 /**
  * 静态方法：根据引用数组生成默认内容项（按更新时间降序）
  * @param {Array} documents - 文档数组
- * @param {Array} quotes - 引用体数组
+ * @param {Array} quotes - 收藏夹数组
  * @param {Array} attachments - 附件数组
  * @returns {Array} 内容项数组
  */
@@ -378,7 +378,7 @@ customPageSchema.statics.generateDefaultContentItems = function(documents, quote
     });
   });
   
-  // 添加引用体项
+  // 添加收藏夹项
   quotes.forEach(quote => {
     allItems.push({
       kind: 'Quote',
@@ -410,7 +410,7 @@ customPageSchema.statics.generateDefaultContentItems = function(documents, quote
  * 静态方法：同步内容项与引用数组
  * @param {Array} contentItems - 内容项数组
  * @param {Array} documentIds - 文档ID数组
- * @param {Array} quoteIds - 引用体ID数组
+ * @param {Array} quoteIds - 收藏夹ID数组
  * @param {Array} attachmentIds - 附件ID数组
  * @returns {Object} 同步后的数组
  *
@@ -470,7 +470,7 @@ customPageSchema.statics.syncContentItemsWithReferences = function(contentItems,
     }
   });
   
-  // 添加新引用体项（收集而不立即追加）
+  // 添加新收藏夹项（收集而不立即追加）
   quoteIds.forEach(id => {
     if (!existingQuoteIds.has(id.toString())) {
       newItems.push({

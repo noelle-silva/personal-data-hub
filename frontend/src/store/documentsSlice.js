@@ -23,8 +23,8 @@ export const fetchDocumentById = createAsyncThunk(
       // 添加查询参数以获取引用关系数据
       const params = new URLSearchParams({
         populate: 'full', // 获取引用文档的完整信息
-        include: 'referencingQuotes', // 包含引用此文档的引用体
-        quotesLimit: '20' // 限制引用体数量
+        include: 'referencingQuotes', // 包含引用此文档的收藏夹
+        quotesLimit: '20' // 限制收藏夹数量
       });
       
       const response = await apiClient.get(`/documents/${id}?${params.toString()}`);
