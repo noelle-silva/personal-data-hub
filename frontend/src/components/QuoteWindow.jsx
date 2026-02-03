@@ -17,14 +17,10 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
 import QuoteDetailContent from './QuoteDetailContent';
-import AIChatSidebar from './AIChatSidebar';
 import { saveQuoteReferences } from '../store/windowsSlice';
 import { getMaximizedWindowRect, getViewportSnapshot } from '../utils/windowSizing';
 import {
-  selectAiSidebarDefaultWidth,
-  selectAutoExpandAiSidebar,
   selectAutoExpandReferencesSidebar,
 } from '../store/settingsSlice';
 
@@ -190,44 +186,14 @@ const QuoteWindow = ({
 }) => {
   const dispatch = useDispatch();
   const autoExpandReferencesSidebar = useSelector(selectAutoExpandReferencesSidebar);
-  const autoExpandAiSidebar = useSelector(selectAutoExpandAiSidebar);
-  const aiSidebarDefaultWidth = useSelector(selectAiSidebarDefaultWidth);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => !autoExpandReferencesSidebar);
-  const [isAISidebarOpen, setIsAISidebarOpen] = useState(() => !!autoExpandAiSidebar);
   const [isMaximized, setIsMaximized] = useState(false);
   const [restoreRect, setRestoreRect] = useState(null);
   
   // 标题编辑相关状态
   const [headerIsEditing, setHeaderIsEditing] = useState(false);
   const [editableTitle, setEditableTitle] = useState(windowData.title || '');
-  
-  // 注入源状态（收藏夹）
-  const [injectionSource, setInjectionSource] = useState({
-    type: 'quote',
-    subtype: 'text',
-    content: '',
-    available: false
-  });
-  
-  // 监听收藏夹内容变化，更新注入源
-  useEffect(() => {
-    if (windowData.quote && windowData.quote.content) {
-      setInjectionSource({
-        type: 'quote',
-        subtype: 'text',
-        content: windowData.quote.content,
-        available: true
-      });
-    } else {
-      setInjectionSource({
-        type: 'quote',
-        subtype: 'text',
-        content: '',
-        available: false
-      });
-    }
-  }, [windowData.quote]);
   
   const windowRef = useRef(null);
   
@@ -401,17 +367,6 @@ const QuoteWindow = ({
                 externalTitle={headerIsEditing ? editableTitle : undefined}
               />
             </MainContent>
-            
-            {/* AI 聊天侧边栏 */}
-            <AIChatSidebar
-              isOpen={isAISidebarOpen}
-              onClose={() => setIsAISidebarOpen(false)}
-              injectionSource={injectionSource}
-              defaultWidth={aiSidebarDefaultWidth}
-              // 完全无级调节：禁用叠加模式，移除所有宽度限制
-              overlayThreshold={Infinity}
-              overlayGap={0}
-            />
           </>
         );
       default:
@@ -463,16 +418,6 @@ const QuoteWindow = ({
             title={isSidebarCollapsed ? "展开引用区" : "收起引用区"}
           >
             {isSidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </WindowControlButton>
-          <WindowControlButton
-            size="small"
-            onClick={() => setIsAISidebarOpen(!isAISidebarOpen)}
-            title={isAISidebarOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-            sx={{
-              backgroundColor: isAISidebarOpen ? 'rgba(255, 255, 255, 0.3)' : 'transparent',
-            }}
-          >
-            <SmartToyIcon />
           </WindowControlButton>
         </Box>
         
