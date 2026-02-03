@@ -50,15 +50,25 @@ const MessageContainer = styled(Box)(({ theme }) => ({
 }));
 
 // 样式化的消息卡片
-const MessageCard = styled(Paper)(({ theme, isUser }) => ({
-  padding: theme.spacing(2),
-  maxWidth: '80%',
+const MessageRow = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isUser'
+})(({ theme, isUser }) => ({
   alignSelf: isUser ? 'flex-end' : 'flex-start',
-  backgroundColor: isUser 
-    ? theme.palette.primary.main 
+  maxWidth: '80%',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(0.75),
+}));
+
+const MessageBubble = styled(Paper, {
+  shouldForwardProp: (prop) => prop !== 'isUser'
+})(({ theme, isUser }) => ({
+  padding: theme.spacing(2),
+  backgroundColor: isUser
+    ? theme.palette.primary.main
     : theme.palette.background.paper,
-  color: isUser 
-    ? theme.palette.primary.contrastText 
+  color: isUser
+    ? theme.palette.primary.contrastText
     : theme.palette.text.primary,
   borderRadius: theme.spacing(2),
   boxShadow: theme.shadows[2],
@@ -565,9 +575,18 @@ ${content}
         </Alert>
       )}
 
-      <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          minHeight: 0,
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {/* 消息列表 */}
-        <MessageContainer sx={{ pb: 18 }}>
+        <MessageContainer sx={{ pb: 16, scrollbarGutter: 'stable' }}>
           {messages.length === 0 && !currentResponse && (
             <Box sx={{ 
               display: 'flex', 
@@ -584,13 +603,14 @@ ${content}
             </Box>
           )}
           
-          {messages.map((message) => (
-            <MessageCard key={message.id} isUser={message.role === 'user'}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Avatar sx={{ width: 24, height: 24 }}>
-                  {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
+          {messages.map((message) => {
+            const isUser = message.role === 'user';
+            return (
+              <MessageRow key={message.id} isUser={isUser}>
+                <Avatar sx={{ width: 24, height: 24, alignSelf: isUser ? 'flex-end' : 'flex-start' }}>
+                  {isUser ? <PersonIcon /> : <BotIcon />}
                 </Avatar>
-                <Box sx={{ flexGrow: 1 }}>
+                <MessageBubble isUser={isUser}>
                   {/* 显示注入标记 */}
                   {message.injected && (
                     <Chip
@@ -609,24 +629,22 @@ ${content}
                       sx={{ mt: 1 }}
                     />
                   )}
-                </Box>
-              </Box>
-            </MessageCard>
-          ))}
+                </MessageBubble>
+              </MessageRow>
+            );
+          })}
           
           {/* 当前流式响应 */}
           {currentResponse && (
-            <MessageCard isUser={false}>
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Avatar sx={{ width: 24, height: 24 }}>
-                  <BotIcon />
-                </Avatar>
-                <Box sx={{ flexGrow: 1 }}>
-                  {renderMessageContent(currentResponse)}
-                  <CircularProgress size={16} sx={{ mt: 1 }} />
-                </Box>
-              </Box>
-            </MessageCard>
+            <MessageRow isUser={false}>
+              <Avatar sx={{ width: 24, height: 24 }}>
+                <BotIcon />
+              </Avatar>
+              <MessageBubble isUser={false}>
+                {renderMessageContent(currentResponse)}
+                <CircularProgress size={16} sx={{ mt: 1 }} />
+              </MessageBubble>
+            </MessageRow>
           )}
           
           <div ref={messagesEndRef} />
