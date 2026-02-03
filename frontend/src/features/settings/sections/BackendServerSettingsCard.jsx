@@ -11,11 +11,15 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
+  FormControl,
   IconButton,
+  InputLabel,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  Select,
   Switch,
   TextField,
   Tooltip,
@@ -30,6 +34,7 @@ import {
   normalizeServerUrl,
   removeServer,
   setActiveServerId,
+  updateServer,
   upsertServer,
 } from '../../../services/serverConfig';
 import { isTauri, secretDeletePassword, secretGetPassword, secretSetPassword, setGatewayBackendUrl } from '../../../services/tauriBridge';
@@ -50,7 +55,9 @@ const BackendServerSettingsCard = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ url: '', name: '', username: '', password: '', rememberPassword: true });
-  const [dialogMode, setDialogMode] = useState('add'); // add | edit
+  const [dialogMode, setDialogMode] = useState('add'); // add | login | edit
+  const [loginServerId, setLoginServerId] = useState('');
+  const [editingServerId, setEditingServerId] = useState('');
   const [confirmingRemoveId, setConfirmingRemoveId] = useState('');
 
   const reloadServers = () => {
@@ -72,16 +79,40 @@ const BackendServerSettingsCard = () => {
     return `${ok}${who}：${alias}${active.url}`;
   }, [active?.name, active?.url, isAuthenticated, user?.username]);
 
-  const openAddDialog = (preset) => {
+  const openAddDialog = () => {
     setStatus(null);
     setDialogMode('add');
+    setLoginServerId('');
+    setEditingServerId('');
     setForm({
-      url: preset?.url || active?.url || '',
-      name: preset?.name || active?.name || '',
-      username: preset?.username || active?.username || '',
+      url: '',
+      name: '',
+      username: '',
       password: '',
       rememberPassword: true,
     });
+    setDialogOpen(true);
+  };
+
+  const openLoginDialog = (server) => {
+    const nextServers = getServers();
+    const fallback = server?.id || active?.id || nextServers[0]?.id || '';
+
+    setStatus(null);
+    setDialogMode('login');
+    setLoginServerId(fallback);
+    setEditingServerId('');
+
+    const preset = nextServers.find((s) => s.id === fallback) || server || active || null;
+    setForm((p) => ({
+      ...p,
+      url: preset?.url || '',
+      name: preset?.name || '',
+      username: preset?.username || '',
+      password: '',
+      rememberPassword: true,
+    }));
+
     setDialogOpen(true);
   };
 
@@ -89,6 +120,8 @@ const BackendServerSettingsCard = () => {
     if (!server?.url) return;
     setStatus(null);
     setDialogMode('edit');
+    setLoginServerId('');
+    setEditingServerId(server.id || '');
     setForm({
       url: server.url,
       name: server.name || '',
@@ -182,74 +215,147 @@ const BackendServerSettingsCard = () => {
   };
 
   const handleConfirmAddOrLogin = async () => {
-    const normalized = normalizeServerUrl(form.url);
-    const name = (form.name || '').trim();
-    const username = (form.username || '').trim();
-    const password = String(form.password || '');
     const rememberPassword = !!form.rememberPassword;
-
-    if (!normalized) {
-      setStatus({ ok: false, message: '服务器地址无效' });
-      return;
-    }
-    if (!username) {
-      setStatus({ ok: false, message: '请输入用户名' });
-      return;
-    }
 
     setBusy(true);
     setStatus(null);
     try {
-      const existing = getServers().find((s) => s.url === normalized) || null;
+      if (dialogMode === 'add') {
+        const normalized = normalizeServerUrl(form.url);
+        const name = (form.name || '').trim();
+        const username = (form.username || '').trim();
+        const password = String(form.password || '').trim();
 
-      // 先保存并激活服务器，再执行登录
-      const server = upsertServer({ url: normalized, username, name });
-      if (!server?.url) throw new Error('保存服务器失败');
+        if (!normalized) {
+          throw new Error('服务器地址无效');
+        }
+        if (!username || !password) {
+          throw new Error('请输入用户名和密码');
+        }
 
-      if (isTauri()) {
-        await ensureDesktopGatewayReady().catch(() => {});
-        await setGatewayBackendUrl(server.url);
+        const existing = getServers().find((s) => s.url === normalized) || null;
+
+        // 先保存并激活服务器，再执行登录
+        const server = upsertServer({ url: normalized, username, name });
+        if (!server?.url) throw new Error('保存服务器失败');
+
+        if (isTauri()) {
+          await ensureDesktopGatewayReady().catch(() => {});
+          await setGatewayBackendUrl(server.url);
+        }
+
+        const action = await dispatch(login({ username, password }));
+        if (action?.error) {
+          throw new Error(action.payload || action.error?.message || '登录失败');
+        }
+
+        // 记住密码：仅桌面端写入 OS 凭据库；不记住则清理同 server+username 的已存密码
+        if (isTauri()) {
+          if (existing?.username && existing.username !== username) {
+            await secretDeletePassword(server.url, existing.username).catch(() => {});
+          }
+
+          if (rememberPassword) {
+            await secretSetPassword(server.url, username, password);
+          } else {
+            await secretDeletePassword(server.url, username).catch(() => {});
+          }
+        }
+
+        setStatus({ ok: true, message: `已连接：${server.url}` });
+        setDialogOpen(false);
+        return;
       }
 
-      // 有密码则用用户输入的；没密码则尝试读取已保存密码自动登录（桌面端）
-      let passwordToUse = password && password.trim() ? password.trim() : '';
-      if (!passwordToUse && isTauri()) {
-        const saved = await secretGetPassword(server.url, username).catch(() => null);
-        if (typeof saved === 'string' && saved.trim()) passwordToUse = saved.trim();
-      }
+      if (dialogMode === 'login') {
+        const nextServers = getServers();
+        const selected = nextServers.find((s) => s.id === loginServerId) || null;
+        if (!selected?.url) throw new Error('请选择要登录的服务器');
 
-      if (passwordToUse) {
+        const name = (selected.name || '').trim();
+        const normalized = normalizeServerUrl(selected.url);
+        if (!normalized) throw new Error('服务器地址无效');
+
+        const username = (form.username || selected.username || '').trim();
+        if (!username) throw new Error('请输入用户名');
+
+        let passwordToUse = String(form.password || '').trim();
+        if (!passwordToUse && isTauri()) {
+          const saved = await secretGetPassword(normalized, username).catch(() => null);
+          if (typeof saved === 'string' && saved.trim()) passwordToUse = saved.trim();
+        }
+        if (!passwordToUse) throw new Error('请输入密码（或在桌面端先勾选记住密码）');
+
+        // 切换激活服务器，并把用户名写回服务器配置（方便下次直接填充）
+        setActiveServerId(selected.id);
+        upsertServer({ url: normalized, username, name });
+
+        if (isTauri()) {
+          await ensureDesktopGatewayReady().catch(() => {});
+          await setGatewayBackendUrl(normalized).catch(() => {});
+        }
+
         const action = await dispatch(login({ username, password: passwordToUse }));
         if (action?.error) {
           throw new Error(action.payload || action.error?.message || '登录失败');
         }
-      } else {
-        const check = await dispatch(checkAuth());
-        if (check?.error) {
-          throw new Error('已保存服务器信息，但未保存密码且当前未登录，请输入密码后重试');
+
+        if (isTauri()) {
+          if (rememberPassword && form.password && String(form.password).trim()) {
+            await secretSetPassword(normalized, username, String(form.password).trim());
+          } else if (!rememberPassword) {
+            await secretDeletePassword(normalized, username).catch(() => {});
+          }
         }
+
+        setStatus({ ok: true, message: `已登录并连接：${normalized}` });
+        setDialogOpen(false);
+        return;
       }
 
-      // 记住密码：仅桌面端写入 OS 凭据库；不记住则清理同 server+username 的已存密码
-      if (isTauri()) {
-        if (existing?.username && existing.username !== username) {
-          await secretDeletePassword(server.url, existing.username).catch(() => {});
+      if (dialogMode === 'edit') {
+        const normalized = normalizeServerUrl(form.url);
+        const name = (form.name || '').trim();
+        const username = (form.username || '').trim();
+        const password = String(form.password || '').trim();
+
+        if (!normalized) throw new Error('服务器地址无效');
+        if (!username) throw new Error('请输入用户名');
+        if (!editingServerId) throw new Error('编辑目标丢失，请重试');
+
+        const existing = getServers().find((s) => s.url === normalized) || null;
+        const server = updateServer(editingServerId, { username, name });
+        if (!server?.url) throw new Error('保存服务器失败');
+
+        if (isTauri()) {
+          if (existing?.username && existing.username !== username) {
+            await secretDeletePassword(server.url, existing.username).catch(() => {});
+          }
+
+          if (!rememberPassword) {
+            await secretDeletePassword(server.url, username).catch(() => {});
+          } else if (password) {
+            await secretSetPassword(server.url, username, password);
+          }
         }
 
-        if (rememberPassword && password && password.trim()) {
-          await secretSetPassword(server.url, username, password.trim());
+        // 编辑模式：如用户填了密码，顺手登录一次；没填则仅保存信息
+        if (password) {
+          if (isTauri()) {
+            await ensureDesktopGatewayReady().catch(() => {});
+            await setGatewayBackendUrl(server.url).catch(() => {});
+          }
+          const action = await dispatch(login({ username, password }));
+          if (action?.error) throw new Error(action.payload || action.error?.message || '登录失败');
         } else {
-          await secretDeletePassword(server.url, username).catch(() => {});
+          // 尝试刷新一下状态（避免用户误解为“保存失败”）
+          await dispatch(checkAuth());
         }
-      }
 
-      const action = await dispatch(checkAuth());
-      if (action?.error) {
-        setStatus({ ok: true, message: `已保存：${server.url}（需要登录）` });
-      } else {
-        setStatus({ ok: true, message: `已连接：${server.url}` });
+        setStatus({ ok: true, message: '已保存' });
+        setDialogOpen(false);
+        return;
       }
-      setDialogOpen(false);
     } catch (e) {
       setStatus({ ok: false, message: e.message || String(e) });
     } finally {
@@ -289,16 +395,16 @@ const BackendServerSettingsCard = () => {
         )}
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-          <Button variant="contained" onClick={() => openAddDialog()} disabled={busy || authLoading}>
+          <Button variant="contained" onClick={openAddDialog} disabled={busy || authLoading}>
             添加服务器
           </Button>
           <Button
             variant="outlined"
             startIcon={<LoginIcon />}
-            onClick={() => openAddDialog(active)}
-            disabled={busy || authLoading || !active?.url}
+            onClick={() => openLoginDialog()}
+            disabled={busy || authLoading || servers.length === 0}
           >
-            {isAuthenticated ? '重新登录' : '登录'}
+            登录已保存服务器
           </Button>
           <Button
             variant="outlined"
@@ -332,6 +438,13 @@ const BackendServerSettingsCard = () => {
                   }}
                   secondaryAction={
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="登录此服务器">
+                        <span>
+                          <IconButton size="small" disabled={busy || authLoading} onClick={() => openLoginDialog(s)}>
+                            <LoginIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title="编辑信息（别名/用户名/密码）">
                         <span>
                           <IconButton size="small" disabled={busy || authLoading} onClick={() => openEditDialog(s)}>
@@ -373,30 +486,65 @@ const BackendServerSettingsCard = () => {
       </CardContent>
 
       <Dialog open={dialogOpen} onClose={closeAddDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{dialogMode === 'edit' ? '编辑服务器信息' : '添加服务器并登录'}</DialogTitle>
+        <DialogTitle>
+          {dialogMode === 'add' && '添加服务器并登录'}
+          {dialogMode === 'login' && '登录服务器'}
+          {dialogMode === 'edit' && '编辑服务器信息'}
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             桌面端可选“记住密码”，密码会存到系统凭据库；refresh token 同样存到系统凭据库。
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2, mt: 1 }}>
-            <TextField
-              label="服务器地址"
-              value={form.url}
-              onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
-              placeholder="127.0.0.1:8444"
-              helperText={dialogMode === 'edit' ? '如需修改地址，建议删除后重新添加' : '支持填写 host:port 或 https://...'}
-              autoFocus
-              fullWidth
-              disabled={dialogMode === 'edit'}
-            />
-            <TextField
-              label="别名（可选）"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="比如：家里 / 公司 / VPS"
-              fullWidth
-            />
+            {dialogMode === 'login' ? (
+              <FormControl fullWidth>
+                <InputLabel id="pdh-login-server-label">选择服务器</InputLabel>
+                <Select
+                  labelId="pdh-login-server-label"
+                  label="选择服务器"
+                  value={loginServerId}
+                  onChange={(e) => {
+                    const nextId = String(e.target.value || '');
+                    setLoginServerId(nextId);
+                    const next = getServers().find((s) => s.id === nextId) || null;
+                    setForm((p) => ({
+                      ...p,
+                      url: next?.url || '',
+                      name: next?.name || '',
+                      username: next?.username || p.username || '',
+                      password: '',
+                    }));
+                  }}
+                >
+                  {servers.map((s) => (
+                    <MenuItem key={s.id} value={s.id}>
+                      {s.name ? `${s.name}（${s.url}）` : s.url}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                label="服务器地址"
+                value={form.url}
+                onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+                placeholder="127.0.0.1:8444"
+                helperText={dialogMode === 'edit' ? '如需修改地址，建议删除后重新添加' : '支持填写 host:port 或 https://...'}
+                autoFocus
+                fullWidth
+                disabled={dialogMode === 'edit'}
+              />
+            )}
+            {dialogMode !== 'login' && (
+              <TextField
+                label="别名（可选）"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="比如：家里 / 公司 / VPS"
+                fullWidth
+              />
+            )}
             <TextField
               label="用户名"
               value={form.username}
@@ -408,7 +556,7 @@ const BackendServerSettingsCard = () => {
               type="password"
               value={form.password}
               onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-              helperText={dialogMode === 'edit' ? '留空则尝试使用已保存密码自动登录' : ''}
+              helperText={dialogMode === 'login' ? '留空会尝试使用已保存密码（桌面端）' : dialogMode === 'edit' ? '留空则只保存信息（不改密码）' : ''}
               fullWidth
             />
 

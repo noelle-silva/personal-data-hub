@@ -217,6 +217,35 @@ export const upsertServer = ({ url, username = '', name = '' }) => {
   return next;
 };
 
+export const updateServer = (id, { username, name } = {}) => {
+  if (typeof window === 'undefined') return null;
+  migrateLegacyServer();
+
+  const servers = readServers();
+  const idx = servers.findIndex((s) => s.id === id);
+  if (idx < 0) return null;
+
+  const prev = servers[idx];
+  const next = {
+    ...prev,
+    username: typeof username === 'string' ? username : prev.username,
+    name: typeof name === 'string' ? name : prev.name,
+    lastUsedAt: Date.now(),
+  };
+
+  const nextServers = [...servers];
+  nextServers[idx] = next;
+  writeServers(nextServers);
+
+  try {
+    window.dispatchEvent(new CustomEvent('pdh-servers-updated', { detail: { id } }));
+  } catch {
+    // ignore
+  }
+
+  return next;
+};
+
 export const removeServer = (id) => {
   if (typeof window === 'undefined') return;
   migrateLegacyServer();
