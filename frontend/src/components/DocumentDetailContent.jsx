@@ -2041,6 +2041,13 @@ const DocumentDetailContent = ({
 
           {/* 左侧底部元信息：来源/创建/更新 */}
           <SidebarMetaInfoContainer>
+            <DocumentVersionsSection
+              documentId={document._id}
+              isEditing={isEditing}
+              formatDate={formatDate}
+              onSuccessMessage={setSuccessMessage}
+            />
+
             <SidebarMetaRow>
               <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
                 来源:
@@ -2081,7 +2088,7 @@ const DocumentDetailContent = ({
             <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
               更新时间:
             </Typography>
-            <Typography variant="caption">{formatDate(document.updatedAt)}</Typography>
+              <Typography variant="caption">{formatDate(document.updatedAt)}</Typography>
           </SidebarMetaRow>
 
           {!isEditing && (
@@ -2113,13 +2120,6 @@ const DocumentDetailContent = ({
               </Button>
             </SidebarMetaRow>
           )}
-
-          <DocumentVersionsSection
-            documentId={document._id}
-            isEditing={isEditing}
-            formatDate={formatDate}
-            onSuccessMessage={setSuccessMessage}
-          />
           </SidebarMetaInfoContainer>
         </RelationsBox>
 
