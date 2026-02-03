@@ -17,8 +17,6 @@ const apiClient = axios.create({
   },
 });
 
-// 防止重复跳转登录页的标志
-let redirectingToLogin = false;
 // 防止并发 401 时重复刷新
 let refreshInFlight = null;
 
@@ -52,8 +50,6 @@ apiClient.interceptors.response.use(
   async (error) => {
     // 处理 401 未授权错误
     if (error.response?.status === 401) {
-      const currentHash = window.location.hash || '';
-      const isOnLogin = currentHash.startsWith('#/登录') || currentHash.startsWith('#/%E7%99%BB%E5%BD%95');
       const url = String(error.config?.url || '');
       const isLoginRequest = url.includes('/auth/login');
       const isRefreshRequest = url.includes('/auth/refresh');
@@ -95,22 +91,6 @@ apiClient.interceptors.response.use(
             detail: { message: '需要重新登录' },
           })
         );
-
-        // 如果当前不在登录页，且没有正在重定向中，则重定向到登录页面
-        if (!isOnLogin && !redirectingToLogin) {
-          // 设置重定向标志，防止重复跳转
-          redirectingToLogin = true;
-
-          // 延迟重定向，让组件有时间处理错误
-          setTimeout(() => {
-            window.location.hash = '#/登录';
-
-            // 1.5秒后重置重定向标志，允许后续的401可以再次触发重定向
-            setTimeout(() => {
-              redirectingToLogin = false;
-            }, 1500);
-          }, 100);
-        }
       }
     }
     

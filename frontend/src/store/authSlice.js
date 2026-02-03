@@ -98,6 +98,14 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    // 切换服务器/重置认证状态
+    resetAuthState: (state) => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.initialized = false;
+      state.isLoading = false;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     // 登录
@@ -165,7 +173,7 @@ const authSlice = createSlice({
 });
 
 // 导出 actions
-export const { clearError } = authSlice.actions;
+export const { clearError, resetAuthState } = authSlice.actions;
 
 // 选择器
 export const selectAuth = (state) => state.auth;

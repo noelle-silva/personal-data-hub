@@ -46,3 +46,11 @@ export const setGatewayToken = async (token) => invoke('pdh_gateway_set_token', 
 export const authLogin = async (username, password) => invoke('pdh_auth_login', { username, password });
 export const authRefresh = async () => invoke('pdh_auth_refresh');
 export const clearRefreshToken = async () => invoke('pdh_auth_clear_refresh_token');
+
+// 本地密钥/凭据（OS 凭据库）：用于“记住密码”
+export const secretSetPassword = async (backendBaseUrl, username, password) =>
+  invoke('pdh_secret_set_password', { backendBaseUrl, username, password });
+export const secretGetPassword = async (backendBaseUrl, username) =>
+  invoke('pdh_secret_get_password', { backendBaseUrl, username });
+export const secretDeletePassword = async (backendBaseUrl, username) =>
+  invoke('pdh_secret_delete_password', { backendBaseUrl, username });
