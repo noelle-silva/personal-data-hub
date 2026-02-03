@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -26,6 +26,11 @@ import {
   DragIndicator as DragIndicatorIcon,
   Undo as UndoIcon,
   AttachFile as AttachFileIcon,
+  FileUpload as UploadIcon,
+  Image as ImageIcon,
+  VideoLibrary as VideoIcon,
+  Description as DocumentIcon,
+  Code as CodeIcon,
   ContentCopy as ContentCopyIcon,
   FormatQuote as FormatQuoteIcon,
   Close as CloseIcon,
@@ -67,7 +72,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getAttachmentMetadata } from '../services/attachments';
+import { getAttachmentMetadata, uploadAttachment } from '../services/attachments';
 import {
   ClickableListItem,
   ContentBox,
@@ -635,6 +640,11 @@ const QuoteDetailContent = ({
   const [isAttachmentReferencesDirty, setIsAttachmentReferencesDirty] = useState(false);
   const [isAttachmentPickerOpen, setIsAttachmentPickerOpen] = useState(false);
   const [isAttachmentReferencesEditing, setIsAttachmentReferencesEditing] = useState(false);
+  const attachmentUploadInputRef = useRef(null);
+  const attachmentUploadCategoryRef = useRef('image');
+  const [attachmentUploadMenuAnchorEl, setAttachmentUploadMenuAnchorEl] = useState(null);
+  const [attachmentUploadCategory, setAttachmentUploadCategory] = useState('image');
+  const [isUploadingAndReferencingAttachment, setIsUploadingAndReferencingAttachment] = useState(false);
   
   // 引用收藏夹相关状态
   const [referencedQuotes, setReferencedQuotes] = useState([]);
@@ -941,6 +951,98 @@ const QuoteDetailContent = ({
       console.log(`[QuoteDetailContent.handleAddAttachmentReferences] 设置附件引用为脏状态`);
     } catch (error) {
       console.error('[QuoteDetailContent.handleAddAttachmentReferences] 添加附件引用失败:', error);
+    }
+  };
+
+  const getAcceptByAttachmentCategory = (category) => {
+    switch (category) {
+      case 'video':
+        return 'video/*';
+      case 'document':
+        return 'application/*,text/plain';
+      case 'script':
+        return 'text/*,application/javascript,application/x-msdos-program,application/x-msdownload';
+      default:
+        return 'image/*';
+    }
+  };
+
+  const handleOpenAttachmentUploadMenu = (event) => {
+    setAttachmentUploadMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseAttachmentUploadMenu = () => {
+    setAttachmentUploadMenuAnchorEl(null);
+  };
+
+  const handleSelectAttachmentUploadCategory = (category) => {
+    attachmentUploadCategoryRef.current = category;
+    setAttachmentUploadCategory(category);
+    setAttachmentUploadMenuAnchorEl(null);
+    setTimeout(() => {
+      if (attachmentUploadInputRef.current) {
+        attachmentUploadInputRef.current.accept = getAcceptByAttachmentCategory(category);
+      }
+      attachmentUploadInputRef.current?.click();
+    }, 0);
+  };
+
+  const handleUploadAndReferenceSelectedFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    if (!quote || !onSave) return;
+
+    setIsUploadingAndReferencingAttachment(true);
+    setError('');
+
+    const category = attachmentUploadCategoryRef.current || attachmentUploadCategory;
+    const uploadedAttachments = [];
+    const failedFileNames = [];
+
+    for (const file of files) {
+      try {
+        const result = await uploadAttachment(file, category);
+        const attachment = result?.data;
+        if (!attachment?._id) {
+          throw new Error('上传返回缺少附件信息');
+        }
+        uploadedAttachments.push(attachment);
+      } catch (e) {
+        console.error('上传附件失败:', e);
+        failedFileNames.push(file?.name || '未知文件');
+      }
+    }
+
+    if (uploadedAttachments.length === 0) {
+      setError('上传附件失败，请重试');
+      setIsUploadingAndReferencingAttachment(false);
+      return;
+    }
+
+    try {
+      const existingIds = referencedAttachments.map(att => att._id).filter(Boolean);
+      const mergedIds = [...existingIds];
+      for (const att of uploadedAttachments) {
+        if (!mergedIds.includes(att._id)) mergedIds.push(att._id);
+      }
+
+      await onSave(quote._id, { referencedAttachmentIds: mergedIds });
+
+      setReferencedAttachments(prev => {
+        const existing = new Set(prev.map(att => att._id));
+        const toAdd = uploadedAttachments.filter(att => !existing.has(att._id));
+        return [...prev, ...toAdd];
+      });
+
+      setAttachmentsExpanded(true);
+
+      if (failedFileNames.length > 0) {
+        setError(`部分文件上传失败：${failedFileNames.join('，')}`);
+      }
+    } catch (e) {
+      console.error('上传并引用附件失败:', e);
+      setError(e?.message || '上传并引用附件失败');
+    } finally {
+      setIsUploadingAndReferencingAttachment(false);
     }
   };
 
@@ -1423,17 +1525,77 @@ const QuoteDetailContent = ({
                 </Tooltip>
               </>
             ) : (
-              <Tooltip title="编辑引用">
-                <IconButton
-                  size="small"
-                  onClick={() => setIsAttachmentReferencesEditing(true)}
-                  sx={{
-                    borderRadius: 16,
-                  }}
+              <>
+                <Tooltip title="上传并引用附件">
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenAttachmentUploadMenu}
+                      disabled={isUploadingAndReferencingAttachment}
+                      sx={{
+                        borderRadius: 16,
+                      }}
+                      aria-label="上传并引用附件"
+                    >
+                      <UploadIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Menu
+                  anchorEl={attachmentUploadMenuAnchorEl}
+                  open={Boolean(attachmentUploadMenuAnchorEl)}
+                  onClose={handleCloseAttachmentUploadMenu}
                 >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+                  <MenuItem onClick={() => handleSelectAttachmentUploadCategory('image')}>
+                    <ListItemIcon>
+                      <ImageIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>上传图片并引用</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSelectAttachmentUploadCategory('video')}>
+                    <ListItemIcon>
+                      <VideoIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>上传视频并引用</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSelectAttachmentUploadCategory('document')}>
+                    <ListItemIcon>
+                      <DocumentIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>上传文档并引用</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={() => handleSelectAttachmentUploadCategory('script')}>
+                    <ListItemIcon>
+                      <CodeIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>上传程序与脚本并引用</ListItemText>
+                  </MenuItem>
+                </Menu>
+                <input
+                  type="file"
+                  ref={attachmentUploadInputRef}
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    e.target.value = '';
+                    handleUploadAndReferenceSelectedFiles(files);
+                  }}
+                  accept={getAcceptByAttachmentCategory(attachmentUploadCategory)}
+                  multiple
+                  style={{ display: 'none' }}
+                  disabled={isUploadingAndReferencingAttachment}
+                />
+                <Tooltip title="编辑引用">
+                  <IconButton
+                    size="small"
+                    onClick={() => setIsAttachmentReferencesEditing(true)}
+                    sx={{
+                      borderRadius: 16,
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </>
             )
           }
         >
