@@ -512,27 +512,37 @@ const DocumentWindow = ({
                 {detailHeaderControls.isEditing ? <SaveIcon /> : <EditIcon />}
               </WindowControlButton>
 
-              {detailHeaderControls.isEditing && (
-                <WindowControlButton
-                  size="small"
-                  onClick={detailHeaderControls.onCancelEdit}
-                  title="取消编辑"
-                  aria-label="取消编辑并恢复原内容"
-                >
-                  <UndoIcon />
-                </WindowControlButton>
-              )}
+              <WindowControlButton
+                size="small"
+                onClick={detailHeaderControls.isEditing ? detailHeaderControls.onCancelEdit : undefined}
+                title={detailHeaderControls.isEditing ? '取消编辑' : ''}
+                aria-label={detailHeaderControls.isEditing ? '取消编辑并恢复原内容' : undefined}
+                disabled={!detailHeaderControls.isEditing}
+                aria-hidden={!detailHeaderControls.isEditing}
+                tabIndex={detailHeaderControls.isEditing ? 0 : -1}
+                sx={{
+                  visibility: detailHeaderControls.isEditing ? 'visible' : 'hidden',
+                }}
+              >
+                <UndoIcon />
+              </WindowControlButton>
             </WindowControlGroup>
           )}
 
-          {detailHeaderControls && !detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType && (
+          {detailHeaderControls && (
             <WindowControlGroup>
               <WindowControlButton
                 size="small"
-                onClick={() => detailHeaderControls.onSetContentType('html')}
-                title="切换为 HTML 视图"
-                aria-label="切换为 HTML 视图"
+                onClick={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType)
+                  ? () => detailHeaderControls.onSetContentType('html')
+                  : undefined}
+                title={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? '切换为 HTML 视图' : ''}
+                aria-label={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? '切换为 HTML 视图' : undefined}
+                disabled={detailHeaderControls.isEditing || !detailHeaderControls.canToggleContentType}
+                aria-hidden={detailHeaderControls.isEditing || !detailHeaderControls.canToggleContentType}
+                tabIndex={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? 0 : -1}
                 sx={{
+                  visibility: (!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? 'visible' : 'hidden',
                   backgroundColor: detailHeaderControls.contentType === 'html'
                     ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
                     : 'transparent',
@@ -547,10 +557,16 @@ const DocumentWindow = ({
               </WindowControlButton>
               <WindowControlButton
                 size="small"
-                onClick={() => detailHeaderControls.onSetContentType('text')}
-                title="切换为 文本 视图"
-                aria-label="切换为 文本 视图"
+                onClick={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType)
+                  ? () => detailHeaderControls.onSetContentType('text')
+                  : undefined}
+                title={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? '切换为 文本 视图' : ''}
+                aria-label={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? '切换为 文本 视图' : undefined}
+                disabled={detailHeaderControls.isEditing || !detailHeaderControls.canToggleContentType}
+                aria-hidden={detailHeaderControls.isEditing || !detailHeaderControls.canToggleContentType}
+                tabIndex={(!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? 0 : -1}
                 sx={{
+                  visibility: (!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType) ? 'visible' : 'hidden',
                   backgroundColor: detailHeaderControls.contentType === 'text'
                     ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
                     : 'transparent',
