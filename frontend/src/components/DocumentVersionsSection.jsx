@@ -141,7 +141,19 @@ const DocumentVersionPreviewDialog = ({
   const referencedQuotes = snapshot?.referencedQuotes || [];
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" scroll="paper">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      scroll="paper"
+      PaperProps={{
+        sx: {
+          height: { xs: '90vh', md: '80vh' },
+          maxHeight: { xs: '90vh', md: '80vh' },
+        },
+      }}
+    >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h6" noWrap title={version?.versionName || ''}>
@@ -158,50 +170,94 @@ const DocumentVersionPreviewDialog = ({
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ overflow: 'hidden' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
             <CircularProgress size={28} />
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {!!version?.description && (
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {version.description}
-              </Typography>
-            )}
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant="subtitle2">标题</Typography>
-              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                {snapshot?.title || '-'}
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant="subtitle2">标签</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {(snapshot?.tags || []).length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    -
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '320px 1fr' },
+              gap: 2,
+              height: '100%',
+              minHeight: 0,
+            }}
+          >
+            <Box
+              sx={{
+                pr: { xs: 0, md: 2 },
+                borderRight: { xs: 'none', md: (theme) => `1px solid ${theme.palette.border}` },
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                overflowY: 'auto',
+                minHeight: 0,
+              }}
+            >
+              {!!version?.description && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="subtitle2">提交说明</Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {version.description}
                   </Typography>
-                ) : (
-                  (snapshot.tags || []).map((tag, idx) => (
-                    <Chip
-                      key={`${tag}-${idx}`}
-                      label={tag}
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 12 }}
-                    />
-                  ))
-                )}
-              </Box>
-            </Box>
+                </Box>
+              )}
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant="subtitle2">引用信息</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2">标题</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                  {snapshot?.title || '-'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2">来源</Typography>
+                <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                  {snapshot?.source || '-'}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2">标签</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {(snapshot?.tags || []).length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      -
+                    </Typography>
+                  ) : (
+                    (snapshot.tags || []).map((tag, idx) => (
+                      <Chip
+                        key={`${tag}-${idx}`}
+                        label={tag}
+                        size="small"
+                        variant="outlined"
+                        sx={{ borderRadius: 12 }}
+                      />
+                    ))
+                  )}
+                </Box>
+              </Box>
+
+              {(snapshot?.sourceDocumentUpdatedAt || snapshot?.sourceDocumentCreatedAt) && (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="subtitle2">快照时间</Typography>
+                  {snapshot?.sourceDocumentCreatedAt && (
+                    <Typography variant="caption" color="text.secondary">
+                      原笔记创建于 {formatDate ? formatDate(snapshot.sourceDocumentCreatedAt) : String(snapshot.sourceDocumentCreatedAt)}
+                    </Typography>
+                  )}
+                  {snapshot?.sourceDocumentUpdatedAt && (
+                    <Typography variant="caption" color="text.secondary">
+                      原笔记更新于 {formatDate ? formatDate(snapshot.sourceDocumentUpdatedAt) : String(snapshot.sourceDocumentUpdatedAt)}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2">引用信息</Typography>
                 <Typography variant="body2" color="text.secondary">
                   引用笔记：{(snapshot?.referencedDocumentIds || []).length}，附件：{(snapshot?.referencedAttachmentIds || []).length}，收藏夹：{(snapshot?.referencedQuoteIds || []).length}
                 </Typography>
@@ -237,67 +293,64 @@ const DocumentVersionPreviewDialog = ({
                       <Chip size="small" label={`+${referencedQuotes.length - 12}`} sx={{ borderRadius: 12 }} />
                     )}
                   </Box>
-                )}
+              )}
               </Box>
             </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="subtitle2">内容</Typography>
-              <Box sx={{ flexGrow: 1 }} />
-              {(hasText || hasHtml) && (
-                <ToggleButtonGroup
-                  value={mode}
-                  exclusive
-                  size="small"
-                  onChange={(_, next) => next && setMode(next)}
-                  sx={{
-                    '& .MuiToggleButton-root': {
-                      borderRadius: 16,
-                      textTransform: 'none',
-                    },
-                  }}
-                >
-                  <ToggleButton value="text" disabled={!hasText}>
-                    文本
-                  </ToggleButton>
-                  <ToggleButton value="html" disabled={!hasHtml}>
-                    HTML
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              )}
-            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minHeight: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle2">内容</Typography>
+                <Box sx={{ flexGrow: 1 }} />
+                {(hasText || hasHtml) && (
+                  <ToggleButtonGroup
+                    value={mode}
+                    exclusive
+                    size="small"
+                    onChange={(_, next) => next && setMode(next)}
+                    sx={{
+                      '& .MuiToggleButton-root': {
+                        borderRadius: 16,
+                        textTransform: 'none',
+                      },
+                    }}
+                  >
+                    <ToggleButton value="text" disabled={!hasText}>
+                      文本
+                    </ToggleButton>
+                    <ToggleButton value="html" disabled={!hasHtml}>
+                      HTML
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                )}
+              </Box>
 
-            <Box sx={{ minHeight: 120 }}>
-              {mode === 'html' ? (
-                snapshot?.htmlContent ? (
-                  <HtmlSandboxRenderer
-                    content={snapshot.htmlContent}
-                    cacheKey={version?._id && version?.createdAt ? `${version._id}|html|${version.createdAt}` : null}
+              <Box sx={{ overflowY: 'auto', minHeight: 0, flexGrow: 1 }}>
+                {mode === 'html' ? (
+                  snapshot?.htmlContent ? (
+                    <HtmlSandboxRenderer
+                      content={snapshot.htmlContent}
+                      cacheKey={version?._id && version?.createdAt ? `${version._id}|html|${version.createdAt}` : null}
+                    />
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      暂无HTML内容
+                    </Typography>
+                  )
+                ) : snapshot?.content ? (
+                  <MarkdownInlineRenderer
+                    content={snapshot.content}
+                    cacheKey={version?._id && version?.createdAt ? `${version._id}|text|${version.createdAt}` : null}
                   />
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    暂无HTML内容
+                    暂无文本内容
                   </Typography>
-                )
-              ) : snapshot?.content ? (
-                <MarkdownInlineRenderer
-                  content={snapshot.content}
-                  cacheKey={version?._id && version?.createdAt ? `${version._id}|text|${version.createdAt}` : null}
-                />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  暂无文本内容
-                </Typography>
-              )}
+                )}
+              </Box>
             </Box>
           </Box>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={{ borderRadius: 16 }}>
-          关闭
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };
@@ -468,4 +521,3 @@ const DocumentVersionsSection = ({
 };
 
 export default DocumentVersionsSection;
-
