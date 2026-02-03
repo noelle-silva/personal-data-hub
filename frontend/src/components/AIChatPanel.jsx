@@ -53,8 +53,9 @@ const MessageContainer = styled(Box)(({ theme }) => ({
 const MessageRow = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isUser'
 })(({ theme, isUser }) => ({
-  alignSelf: isUser ? 'flex-end' : 'flex-start',
-  maxWidth: '80%',
+  alignSelf: isUser ? 'flex-end' : 'stretch',
+  maxWidth: isUser ? '80%' : '100%',
+  width: isUser ? 'auto' : '100%',
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(0.75),
@@ -72,6 +73,11 @@ const MessageBubble = styled(Paper, {
     : theme.palette.text.primary,
   borderRadius: theme.spacing(2),
   boxShadow: theme.shadows[2],
+}));
+
+const AssistantMessageContent = styled(Box)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  padding: theme.spacing(0.25, 0),
 }));
 
 // 样式化的输入容器
@@ -610,26 +616,47 @@ ${content}
                 <Avatar sx={{ width: 24, height: 24, alignSelf: isUser ? 'flex-end' : 'flex-start' }}>
                   {isUser ? <PersonIcon /> : <BotIcon />}
                 </Avatar>
-                <MessageBubble isUser={isUser}>
-                  {/* 显示注入标记 */}
-                  {message.injected && (
-                    <Chip
-                      label="内容已注入"
-                      size="small"
-                      color="info"
-                      sx={{ mb: 1 }}
-                    />
-                  )}
-                  {renderMessageContent(message.content)}
-                  {message.incomplete && (
-                    <Chip
-                      label="响应被截断"
-                      size="small"
-                      color="warning"
-                      sx={{ mt: 1 }}
-                    />
-                  )}
-                </MessageBubble>
+                {isUser ? (
+                  <MessageBubble isUser={true}>
+                    {message.injected && (
+                      <Chip
+                        label="内容已注入"
+                        size="small"
+                        color="info"
+                        sx={{ mb: 1 }}
+                      />
+                    )}
+                    {renderMessageContent(message.content)}
+                    {message.incomplete && (
+                      <Chip
+                        label="响应被截断"
+                        size="small"
+                        color="warning"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </MessageBubble>
+                ) : (
+                  <AssistantMessageContent>
+                    {message.injected && (
+                      <Chip
+                        label="内容已注入"
+                        size="small"
+                        color="info"
+                        sx={{ mb: 1 }}
+                      />
+                    )}
+                    {renderMessageContent(message.content)}
+                    {message.incomplete && (
+                      <Chip
+                        label="响应被截断"
+                        size="small"
+                        color="warning"
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </AssistantMessageContent>
+                )}
               </MessageRow>
             );
           })}
@@ -640,10 +667,10 @@ ${content}
               <Avatar sx={{ width: 24, height: 24 }}>
                 <BotIcon />
               </Avatar>
-              <MessageBubble isUser={false}>
+              <AssistantMessageContent>
                 {renderMessageContent(currentResponse)}
                 <CircularProgress size={16} sx={{ mt: 1 }} />
-              </MessageBubble>
+              </AssistantMessageContent>
             </MessageRow>
           )}
           

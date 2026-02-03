@@ -33,14 +33,27 @@ const SidebarContainer = styled(Box, {
 // 拖拽手柄
 const DragHandle = styled(Box)(({ theme }) => ({
   position: 'absolute',
-  left: 0,
+  left: -6, // 让拖拽热区跨过分界线，避免“看不见/抓不到”
   top: 0,
   bottom: 0,
-  width: 8, // 增加拖拽热区宽度
+  width: 12, // 增加拖拽热区宽度
   cursor: 'col-resize',
   backgroundColor: 'transparent',
+  zIndex: 2,
   touchAction: 'none',
   userSelect: 'none',
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    left: '50%',
+    top: theme.spacing(2),
+    bottom: theme.spacing(2),
+    width: 2,
+    transform: 'translateX(-50%)',
+    backgroundColor: theme.palette.divider,
+    opacity: 0.6,
+    borderRadius: 1,
+  },
   '&:hover': {
     backgroundColor: theme.palette.primary.main,
     opacity: 0.5,
