@@ -170,8 +170,39 @@ const MarkdownInlineRenderer = ({
     return styles;
   }, [renderedHtml, scopeClass, enableAIChatEnhancements]);
 
+  const getWidthPercentFromAttribs = (attribs) => {
+    if (!attribs) return null;
+    const candidates = [
+      attribs['data-pdh-width'],
+      attribs['data-width-percent'],
+      attribs['data-width'],
+    ];
+    for (const raw of candidates) {
+      const n = Number.parseInt(String(raw ?? ''), 10);
+      if (!Number.isFinite(n)) continue;
+      if (n < 10 || n > 100) continue;
+      return n;
+    }
+    return null;
+  };
+
+  const applySafeWidthStyleFromDataAttr = (node) => {
+    if (!node || !node.attribs) return;
+    if (node.name !== 'img' && node.name !== 'video') return;
+
+    const widthPercent = getWidthPercentFromAttribs(node.attribs);
+    if (!widthPercent) return;
+
+    const baseStyle = `width:${widthPercent}%;max-width:100%;height:auto;display:block;margin:0 auto;`;
+    const safeStyle = node.name === 'video' ? `${baseStyle}background:#000;` : baseStyle;
+    node.attribs.style = node.attribs.style ? `${node.attribs.style};${safeStyle}` : safeStyle;
+  };
+
   // 处理特殊元素的替换函数
   const replaceElements = (node) => {
+    // 复制出来的引用支持 data-pdh-width（百分比），即便 DOMPurify 移除了 style 也能恢复可控尺寸
+    applySafeWidthStyleFromDataAttr(node);
+
     // 处理 x-tab-action 元素
     if (node.name === 'x-tab-action') {
       const docId = node.attribs && node.attribs['data-doc-id'];
@@ -268,14 +299,14 @@ const MarkdownInlineRenderer = ({
       const attachmentId = node.attribs.src.replace('attach://', '');
       const alt = node.attribs.alt || '';
       const title = node.attribs.title || '';
-      const style = node.attribs.style || '';
+      const widthPercent = getWidthPercentFromAttribs(node.attribs);
       
       return (
         <AttachmentImage
           id={attachmentId}
           alt={alt}
           title={title}
-          style={style ? { cssText: style } : undefined}
+          width={widthPercent ? `${widthPercent}%` : undefined}
           placeholderWidth={200}
           placeholderHeight={150}
         />
@@ -286,7 +317,7 @@ const MarkdownInlineRenderer = ({
     if (node.name === 'video' && node.attribs && node.attribs.src && node.attribs.src.startsWith('attach://')) {
       const attachmentId = node.attribs.src.replace('attach://', '');
       const title = node.attribs.title || '';
-      const style = node.attribs.style || '';
+      const widthPercent = getWidthPercentFromAttribs(node.attribs);
       const controls = node.attribs.controls !== undefined;
       const autoplay = node.attribs.autoplay !== undefined;
       const muted = node.attribs.muted !== undefined;
@@ -297,7 +328,7 @@ const MarkdownInlineRenderer = ({
         <AttachmentVideo
           id={attachmentId}
           title={title}
-          style={style ? { cssText: style } : undefined}
+          width={widthPercent ? `${widthPercent}%` : undefined}
           controls={controls}
           autoplay={autoplay}
           muted={muted}

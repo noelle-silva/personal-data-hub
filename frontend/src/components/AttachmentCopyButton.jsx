@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
+import { buildAttachmentImageHtml, buildAttachmentVideoHtml } from '../utils/attachmentEmbed';
 
 /**
  * 生成图片HTML表达式
@@ -10,18 +11,7 @@ import { ContentCopy as ContentCopyIcon } from '@mui/icons-material';
 const generateImageExpression = (attachment) => {
   const attachmentId = attachment._id || attachment.id;
   const attachmentName = attachment.originalName || attachment.name || '图片';
-  
-  // HTML转义处理
-  const escapeHtml = (text) => {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-  
-  const escapedName = escapeHtml(attachmentName);
-  
-  return `<img src="attach://${attachmentId}" alt="${escapedName}" title="${escapedName}" />`;
+  return buildAttachmentImageHtml({ attachmentId, name: attachmentName });
 };
 
 /**
@@ -32,18 +22,7 @@ const generateImageExpression = (attachment) => {
 const generateVideoExpression = (attachment) => {
   const attachmentId = attachment._id || attachment.id;
   const attachmentName = attachment.originalName || attachment.name || '视频';
-  
-  // HTML转义处理
-  const escapeHtml = (text) => {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-  
-  const escapedName = escapeHtml(attachmentName);
-  
-  return `<video src="attach://${attachmentId}" title="${escapedName}" controls></video>`;
+  return buildAttachmentVideoHtml({ attachmentId, name: attachmentName });
 };
 
 /**

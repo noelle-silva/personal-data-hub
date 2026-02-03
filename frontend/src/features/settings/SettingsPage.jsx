@@ -11,6 +11,7 @@ import AppearanceSettingsCard from './sections/AppearanceSettingsCard';
 import ThemePreviewCard from './sections/ThemePreviewCard';
 import WallpaperManagementCard from './sections/WallpaperManagementCard';
 import TransparencySettingsCard from './sections/TransparencySettingsCard';
+import ClipboardSettingsCard from './sections/ClipboardSettingsCard';
 import AiSettingsSection from './sections/AiSettingsSection';
 import DataManagementCard from './sections/DataManagementCard';
 import AboutAppCard from './sections/AboutAppCard';
@@ -51,6 +52,7 @@ const SettingsPage = () => {
       <ThemePreviewCard />
       <TransparencySettingsCard />
       <ShortcutSettingsPanel />
+      <ClipboardSettingsCard />
 
       {isAuthenticated && (
         <>

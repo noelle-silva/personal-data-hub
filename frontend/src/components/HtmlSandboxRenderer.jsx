@@ -285,7 +285,25 @@ const HtmlSandboxRenderer = ({
           (function() {
             const sandboxId = '${sandboxId}';
             let resizeTimeout;
-            
+
+            // 支持 data-pdh-width（百分比）控制媒体展示宽度
+            function applyPdhWidth() {
+              const elements = document.querySelectorAll('img[data-pdh-width], video[data-pdh-width]');
+              elements.forEach((el) => {
+                const raw = el.getAttribute('data-pdh-width');
+                const n = parseInt(String(raw || ''), 10);
+                if (!Number.isFinite(n) || n < 10 || n > 100) return;
+                el.style.width = n + '%';
+                el.style.maxWidth = '100%';
+                el.style.height = 'auto';
+                el.style.display = 'block';
+                el.style.margin = '0 auto';
+                if (el.tagName === 'VIDEO' && !el.style.backgroundColor) {
+                  el.style.backgroundColor = '#000';
+                }
+              });
+            }
+             
             // 发送高度消息给父窗口
             function sendHeight() {
               const height = document.body.scrollHeight + 32; // 加一些内边距
@@ -308,8 +326,9 @@ const HtmlSandboxRenderer = ({
               resizeObserver.observe(document.body);
               
               // 初始发送高度
+              applyPdhWidth();
               sendHeight();
-              
+               
               // 添加心跳重发机制，防止父页面错过首次消息
               setTimeout(sendHeight, 50);
               setTimeout(sendHeight, 150);
@@ -344,6 +363,7 @@ const HtmlSandboxRenderer = ({
               resizeTimeout = setTimeout(sendHeight, 200);
               // 处理新添加的 x-tab-action 元素
               processTabActions();
+              applyPdhWidth();
             });
             
             observer.observe(document.body, {
