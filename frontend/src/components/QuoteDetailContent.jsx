@@ -1322,19 +1322,187 @@ const QuoteDetailContent = ({
   }
 
   return (
-    <ContentBox>
-      {/* 右侧引用区域（视觉对调） */}
+    <ContentBox
+      sx={{
+        flexDirection: 'column',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        gap: 2,
+      }}
+    >
+      {/* 顶部：标签 + 操作栏 */}
+      <Box
+        sx={{
+          px: 3,
+          pt: 3,
+          pb: 2,
+        }}
+      >
+        {/* 标签 */}
+        <Box>
+          <Typography variant="subtitle1" gutterBottom>
+            标签
+          </Typography>
+          {isEditing ? (
+            <TagsContainer>
+              {editForm.tags.map((tag, index) => (
+                <Chip
+                  key={index}
+                  label={tag}
+                  onDelete={() => handleDeleteTag(tag)} // 使用统一的删除函数
+                  size="small"
+                  sx={{
+                    fontSize: '0.8rem',
+                    borderRadius: 12, // 设置为 12px 圆角，符合辅助组件规范
+                  }}
+                />
+              ))}
+              <TextField
+                size="small"
+                variant="standard"
+                placeholder="添加标签"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={handleTagInputKeyPress} // 使用统一的按键处理函数
+                sx={{
+                  minWidth: 300, // 增加输入框宽度到300px
+                  '& .MuiInput-underline:before': {
+                    borderBottomColor: 'primary.main',
+                  },
+                  '& .MuiInput-underline:after': {
+                    borderBottomColor: 'primary.main',
+                  },
+                }}
+                InputProps={{
+                  disableUnderline: true,
+                  endAdornment: (
+                    <IconButton
+                      size="small"
+                      onClick={handleAddTag} // 使用统一的添加函数
+                      disabled={!tagInput.trim()}
+                      sx={{
+                        borderRadius: 16,
+                        padding: 0.5,
+                      }}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  ),
+                }}
+              />
+            </TagsContainer>
+          ) : (
+            <TagsContainer>
+              {(quote.tags || []).map((tag, index) => (
+                <Chip
+                  key={index}
+                  label={tag}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    fontSize: '0.8rem',
+                    borderColor: 'secondary.main',
+                    color: 'secondary.main',
+                    '&:hover': {
+                      backgroundColor: 'secondaryContainer.main',
+                      color: 'secondaryContainer.contrastText',
+                    },
+                  }}
+                />
+              ))}
+            </TagsContainer>
+          )}
+        </Box>
+
+        {/* 操作栏：移除上下分割线 */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mt: 2,
+            p: 1,
+            backgroundColor: theme.palette.background.paper,
+          }}
+        >
+          {/* 左侧按钮组 */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* 编辑/保存按钮 */}
+            <Button
+              variant={isEditing ? "contained" : "outlined"}
+              size="small"
+              startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
+              onClick={isEditing ? handleSave : handleToggleEdit}
+              disabled={loading}
+              sx={{
+                borderRadius: 16,
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.5,
+                minWidth: 'auto',
+                fontWeight: 'medium',
+              }}
+            >
+              {isEditing ? '保存' : '编辑'}
+            </Button>
+
+            {/* 编辑模式下的取消按钮 */}
+            {isEditing && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleToggleEdit}
+                sx={{
+                  borderRadius: 16,
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  fontWeight: 'medium',
+                }}
+              >
+                取消
+              </Button>
+            )}
+          </Box>
+
+          {/* 右侧按钮组 */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* 非编辑模式下的更多操作按钮 */}
+            {!isEditing && (
+              <IconButton
+                onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
+                title="更多操作"
+                sx={{
+                  borderRadius: 16,
+                  backgroundColor: 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'light'
+                      ? 'rgba(0, 0, 0, 0.04)'
+                      : 'rgba(255, 255, 255, 0.08)',
+                  },
+                }}
+              >
+                <MoreVertIcon />
+              </IconButton>
+            )}
+          </Box>
+        </Box>
+      </Box>
+
+      {/* 引用区域：位于标签与操作栏下方 */}
       <RelationsBox
         isCollapsed={isSidebarCollapsed}
         borderColor={theme.palette.border}
         sx={{
-          // 视觉对调：引用区右侧 + 更宽（沿用原内容区的占比）
-          order: 2,
-          width: isSidebarCollapsed ? 0 : '60%',
-          minWidth: isSidebarCollapsed ? 0 : 360,
-          padding: isSidebarCollapsed ? 0 : 3,
+          order: 1,
+          width: '100%',
+          minWidth: 0,
+          padding: 3,
           borderRight: 'none',
-          borderLeft: isSidebarCollapsed ? 'none' : `1px solid ${theme.palette.border}`,
+          borderLeft: 'none',
+          overflowY: 'visible',
+          display: isSidebarCollapsed ? 'none' : 'flex',
         }}
       >
         {/* 引用的笔记模块 */}
@@ -1760,171 +1928,19 @@ const QuoteDetailContent = ({
         </CollapsibleRelationModule>
       </RelationsBox>
 
-      {/* 左侧内容区域（视觉对调） */}
+      {/* 详情内容区域：移动到引用区域下方 */}
       <RightContentBox
         sx={{
-          // 视觉对调：内容区左侧 + 更窄
-          order: 1,
-          flex: isSidebarCollapsed ? '1 1 100%' : '0 0 40%',
-          maxWidth: isSidebarCollapsed ? '100%' : '40%',
-          minWidth: 360,
+          order: 2,
+          flex: '0 0 auto',
+          flexGrow: 0,
+          maxWidth: '100%',
+          minWidth: 0,
+          overflowY: 'visible',
         }}
       >
-          {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
-          <Box sx={{
-            position: 'sticky',
-            top: -24, // 修改为负值，向上移动24px（相当于RightContentBox的padding值）
-            zIndex: 10,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 2,
-            p: 1,
-            backgroundColor: theme.palette.background.paper,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          }}>
-            {/* 左侧按钮组 */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 编辑/保存按钮 */}
-              <Button
-                variant={isEditing ? "contained" : "outlined"}
-                size="small"
-                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-                onClick={isEditing ? handleSave : handleToggleEdit}
-                disabled={loading}
-                sx={{
-                  borderRadius: 16,
-                  fontSize: '0.8rem',
-                  px: 2,
-                  py: 0.5,
-                  minWidth: 'auto',
-                  fontWeight: 'medium',
-                }}
-              >
-                {isEditing ? '保存' : '编辑'}
-              </Button>
-              
-              {/* 编辑模式下的取消按钮 */}
-              {isEditing && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={handleToggleEdit}
-                  sx={{
-                    borderRadius: 16,
-                    fontSize: '0.8rem',
-                    px: 2,
-                    py: 0.5,
-                    minWidth: 'auto',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  取消
-                </Button>
-              )}
-            </Box>
-            
-            {/* 右侧按钮组 */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 非编辑模式下的更多操作按钮 */}
-              {!isEditing && (
-                <IconButton
-                  onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
-                  title="更多操作"
-                  sx={{
-                    borderRadius: 16,
-                    backgroundColor: 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'light'
-                        ? 'rgba(0, 0, 0, 0.04)'
-                        : 'rgba(255, 255, 255, 0.08)',
-                    },
-                  }}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-              )}
-            </Box>
-          </Box>
-          
-          {/* 标签 */}
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              标签
-            </Typography>
-            {isEditing ? (
-              <TagsContainer>
-                {editForm.tags.map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    onDelete={() => handleDeleteTag(tag)} // 使用统一的删除函数
-                    size="small"
-                    sx={{
-                      fontSize: '0.8rem',
-                      borderRadius: 12, // 设置为 12px 圆角，符合辅助组件规范
-                    }}
-                  />
-                ))}
-                <TextField
-                  size="small"
-                  variant="standard"
-                  placeholder="添加标签"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={handleTagInputKeyPress} // 使用统一的按键处理函数
-                  sx={{
-                    minWidth: 300, // 增加输入框宽度到300px
-                    '& .MuiInput-underline:before': {
-                      borderBottomColor: 'primary.main',
-                    },
-                    '& .MuiInput-underline:after': {
-                      borderBottomColor: 'primary.main',
-                    },
-                  }}
-                  InputProps={{
-                    disableUnderline: true,
-                    endAdornment: (
-                      <IconButton
-                        size="small"
-                        onClick={handleAddTag} // 使用统一的添加函数
-                        disabled={!tagInput.trim()}
-                        sx={{
-                          borderRadius: 16,
-                          padding: 0.5,
-                        }}
-                      >
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
-                />
-              </TagsContainer>
-            ) : (
-              <TagsContainer>
-                {(quote.tags || []).map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      fontSize: '0.8rem',
-                      borderColor: 'secondary.main',
-                      color: 'secondary.main',
-                      '&:hover': {
-                        backgroundColor: 'secondaryContainer.main',
-                        color: 'secondaryContainer.contrastText',
-                      },
-                    }}
-                  />
-                ))}
-              </TagsContainer>
-            )}
-          </Box>
-
           {/* 内容 */}
-            <Typography variant="subtitle1" sx={{ mb: 1, mt: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
               内容
             </Typography>
 
