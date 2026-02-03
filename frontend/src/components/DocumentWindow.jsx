@@ -15,6 +15,12 @@ import CropSquareIcon from '@mui/icons-material/CropSquare';
 import FilterNoneIcon from '@mui/icons-material/FilterNone';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import UndoIcon from '@mui/icons-material/Undo';
+import HtmlIcon from '@mui/icons-material/Html';
+import CodeIcon from '@mui/icons-material/Code';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
@@ -188,6 +194,7 @@ const DocumentWindow = ({
   const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [restoreRect, setRestoreRect] = useState(null);
+  const [detailHeaderControls, setDetailHeaderControls] = useState(null);
   
   // 注入源状态
   const [injectionSource, setInjectionSource] = useState({
@@ -250,6 +257,12 @@ const DocumentWindow = ({
       setEditableTitle(windowData.title || '');
     }
   }, [windowData.title, headerIsEditing, editableTitle]);
+
+  useEffect(() => {
+    if (windowData.status !== 'loaded') {
+      setDetailHeaderControls(null);
+    }
+  }, [windowData.status]);
   
   // 包装 onSave 函数，合并编辑的标题
   const handleSave = useCallback(async (id, documentData) => {
@@ -306,6 +319,28 @@ const DocumentWindow = ({
       subtype: displayInfo.subtype || 'text',
       content: displayInfo.content || '',
       available: !!(displayInfo.content && displayInfo.content.trim())
+    });
+  }, []);
+
+  const handleHeaderControlsChange = useCallback((next) => {
+    setDetailHeaderControls((prev) => {
+      if (prev === next) return prev;
+      if (!prev || !next) return next;
+
+      const same =
+        prev.isEditing === next.isEditing &&
+        prev.canSave === next.canSave &&
+        prev.canToggleContentType === next.canToggleContentType &&
+        prev.contentType === next.contentType &&
+        prev.isActionsMenuOpen === next.isActionsMenuOpen &&
+        prev.canOpenActionsMenu === next.canOpenActionsMenu &&
+        prev.onSetContentType === next.onSetContentType &&
+        prev.onToggleEditMode === next.onToggleEditMode &&
+        prev.onSave === next.onSave &&
+        prev.onCancelEdit === next.onCancelEdit &&
+        prev.onOpenActionsMenu === next.onOpenActionsMenu;
+
+      return same ? prev : next;
     });
   }, []);
   
@@ -382,6 +417,7 @@ const DocumentWindow = ({
                 onEditModeChange={handleEditModeChange}
                 externalTitle={headerIsEditing ? editableTitle : undefined}
                 onViewDisplayChange={handleViewDisplayChange}
+                onHeaderControlsChange={handleHeaderControlsChange}
               />
             </MainContent>
             
@@ -459,6 +495,72 @@ const DocumentWindow = ({
         </Box>
         
         <WindowControls>
+          {detailHeaderControls && (
+            <>
+              <WindowControlButton
+                size="small"
+                onClick={detailHeaderControls.isEditing ? detailHeaderControls.onSave : detailHeaderControls.onToggleEditMode}
+                title={detailHeaderControls.isEditing ? '保存' : '编辑'}
+                disabled={detailHeaderControls.isEditing && !detailHeaderControls.canSave}
+                aria-label={detailHeaderControls.isEditing ? '保存笔记' : '编辑笔记'}
+              >
+                {detailHeaderControls.isEditing ? <SaveIcon /> : <EditIcon />}
+              </WindowControlButton>
+
+              {detailHeaderControls.isEditing && (
+                <WindowControlButton
+                  size="small"
+                  onClick={detailHeaderControls.onCancelEdit}
+                  title="取消编辑"
+                  aria-label="取消编辑并恢复原内容"
+                >
+                  <UndoIcon />
+                </WindowControlButton>
+              )}
+
+              {!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType && (
+                <>
+                  <WindowControlButton
+                    size="small"
+                    onClick={() => detailHeaderControls.onSetContentType('html')}
+                    title="切换为 HTML 视图"
+                    aria-label="切换为 HTML 视图"
+                    sx={{
+                      backgroundColor: detailHeaderControls.contentType === 'html'
+                        ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: detailHeaderControls.contentType === 'html'
+                          ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
+                          : undefined,
+                      },
+                    }}
+                  >
+                    <HtmlIcon />
+                  </WindowControlButton>
+                  <WindowControlButton
+                    size="small"
+                    onClick={() => detailHeaderControls.onSetContentType('text')}
+                    title="切换为 文本 视图"
+                    aria-label="切换为 文本 视图"
+                    sx={{
+                      backgroundColor: detailHeaderControls.contentType === 'text'
+                        ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: detailHeaderControls.contentType === 'text'
+                          ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
+                          : undefined,
+                      },
+                    }}
+                  >
+                    <CodeIcon />
+                  </WindowControlButton>
+                </>
+              )}
+            </>
+          )}
+
           <WindowControlButton
             size="small"
             onClick={onPrevDocument}
@@ -477,6 +579,24 @@ const DocumentWindow = ({
           >
             <NavigateNextIcon />
           </WindowControlButton>
+
+          {detailHeaderControls && detailHeaderControls.canOpenActionsMenu && (
+            <WindowControlButton
+              size="small"
+              onClick={detailHeaderControls.onOpenActionsMenu}
+              title="更多操作"
+              aria-label="打开更多操作菜单"
+              aria-controls={detailHeaderControls.isActionsMenuOpen ? 'detail-actions-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={detailHeaderControls.isActionsMenuOpen ? 'true' : undefined}
+              sx={{
+                transition: 'transform 0.15s ease',
+                transform: detailHeaderControls.isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+            >
+              <ExpandMoreIcon />
+            </WindowControlButton>
+          )}
           <WindowControlButton
             size="small"
             onClick={handleMaximize}

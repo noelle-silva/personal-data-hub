@@ -27,15 +27,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import apiClient from '../services/apiClient';
 import ListItemText from '@mui/material/ListItemText';
 import NoteIcon from '@mui/icons-material/Note';
 import UndoIcon from '@mui/icons-material/Undo';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import CodeIcon from '@mui/icons-material/Code';
-import HtmlIcon from '@mui/icons-material/Html';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CloseIcon from '@mui/icons-material/Close';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -93,15 +90,21 @@ const ReferencedDocItem = ClickableListItem;
 const ReferencedAttachmentsContainer = VerticalListContainer;
 const ReferencedAttachmentItem = ClickableListItem;
 
-// 元信息容器
-const MetaInfoContainer = styled(Box)(({ theme }) => ({
-  marginTop: theme.spacing(3),
+// 左侧侧边栏底部元信息
+const SidebarMetaInfoContainer = styled(Box)(({ theme }) => ({
+  marginTop: 'auto',
   paddingTop: theme.spacing(2),
   borderTop: `1px solid ${theme.palette.border}`,
   display: 'flex',
-  justifyContent: 'space-between',
-  flexWrap: 'wrap',
+  flexDirection: 'column',
+  gap: theme.spacing(0.75),
+}));
+
+const SidebarMetaRow = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
   gap: theme.spacing(1),
+  flexWrap: 'wrap',
 }));
 
 // 编辑器容器 - 大屏使用 Grid，小屏使用 Flex
@@ -628,6 +631,7 @@ const DocumentDetailContent = ({
   onEditModeChange,
   externalTitle,
   onViewDisplayChange,
+  onHeaderControlsChange,
 }) => {
   const dispatch = useDispatch();
   const theme = useTheme();
@@ -924,7 +928,7 @@ const DocumentDetailContent = ({
   }, [externalTitle, isEditing, formData.title]);
 
   // 切换编辑模式
-  const toggleEditMode = () => {
+  const toggleEditMode = useCallback(() => {
     if (isEditing) {
       // 取消编辑，恢复原始数据
       setFormData({
@@ -976,15 +980,62 @@ const DocumentDetailContent = ({
     if (onEditModeChange) {
       onEditModeChange(newIsEditing);
     }
-  };
+  }, [document, editorType, formData.content, formData.htmlContent, isEditing, onEditModeChange]);
 
   // 保存编辑
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (formData.title.trim()) {
       onSave(document._id, formData);
       setIsEditing(false);
+      if (onEditModeChange) {
+        onEditModeChange(false);
+      }
     }
-  };
+  }, [document._id, formData, onEditModeChange, onSave]);
+
+  const handleOpenActionsMenu = useCallback((event) => {
+    setActionsMenuAnchorEl(event.currentTarget);
+  }, []);
+
+  const handleCloseActionsMenu = useCallback(() => {
+    setActionsMenuAnchorEl(null);
+  }, []);
+
+  const handleSetContentType = useCallback((newType) => {
+    if (!newType) return;
+    setContentType(newType);
+  }, []);
+
+  useEffect(() => {
+    if (!onHeaderControlsChange) return;
+
+    const canToggleContentType = !isEditing && !!(document.content && document.htmlContent);
+    onHeaderControlsChange({
+      isEditing,
+      canSave: !!formData.title.trim(),
+      canToggleContentType,
+      contentType,
+      isActionsMenuOpen,
+      canOpenActionsMenu: !isEditing,
+      onSetContentType: handleSetContentType,
+      onToggleEditMode: toggleEditMode,
+      onSave: handleSave,
+      onCancelEdit: toggleEditMode,
+      onOpenActionsMenu: handleOpenActionsMenu,
+    });
+  }, [
+    contentType,
+    document.content,
+    document.htmlContent,
+    formData.title,
+    handleOpenActionsMenu,
+    handleSave,
+    handleSetContentType,
+    isActionsMenuOpen,
+    isEditing,
+    onHeaderControlsChange,
+    toggleEditMode,
+  ]);
 
   // 添加标签
   const handleAddTag = () => {
@@ -1023,14 +1074,6 @@ const DocumentDetailContent = ({
   const handleConfirmDelete = () => {
     setDeleteDialogOpen(false);
     onDelete(document._id);
-  };
-
-  const handleOpenActionsMenu = (event) => {
-    setActionsMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseActionsMenu = () => {
-    setActionsMenuAnchorEl(null);
   };
 
   // 处理拖拽结束
@@ -1473,6 +1516,82 @@ const DocumentDetailContent = ({
       <ContentBox id="document-detail-content">
         {/* 左侧关系区域 */}
         <RelationsBox isCollapsed={isSidebarCollapsed}>
+          {/* 标签（移到左侧栏顶部） */}
+          <Box>
+            <Typography variant="subtitle1" gutterBottom>
+              标签
+            </Typography>
+            {isEditing ? (
+              <TagsContainer sx={{ mt: 0 }}>
+                {formData.tags.map((tag, index) => (
+                  <Chip
+                    key={index}
+                    label={tag}
+                    onDelete={() => handleDeleteTag(tag)}
+                    size="small"
+                    sx={{
+                      fontSize: '0.8rem',
+                      borderRadius: 12, // 设置为 12px 圆角，符合辅助组件规范
+                    }}
+                  />
+                ))}
+                <TextField
+                  size="small"
+                  variant="standard"
+                  placeholder="添加标签"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={handleTagInputKeyPress}
+                  sx={{
+                    minWidth: 120,
+                    '& .MuiInput-underline:before': {
+                      borderBottomColor: 'primary.main',
+                    },
+                    '& .MuiInput-underline:after': {
+                      borderBottomColor: 'primary.main',
+                    },
+                  }}
+                  InputProps={{
+                    disableUnderline: true,
+                    endAdornment: (
+                      <IconButton
+                        size="small"
+                        onClick={handleAddTag}
+                        disabled={!tagInput.trim()}
+                        sx={{
+                          borderRadius: 16,
+                          padding: 0.5,
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    ),
+                  }}
+                />
+              </TagsContainer>
+            ) : (
+              <TagsContainer sx={{ mt: 0 }}>
+                {(document.tags || []).map((tag, index) => (
+                  <Chip
+                    key={index}
+                    label={tag}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      fontSize: '0.8rem',
+                      borderColor: 'secondary.main',
+                      color: 'secondary.main',
+                      '&:hover': {
+                        backgroundColor: 'secondaryContainer.main',
+                        color: 'secondaryContainer.contrastText',
+                      },
+                    }}
+                  />
+                ))}
+              </TagsContainer>
+            )}
+          </Box>
+
           {/* 引用此笔记的收藏夹 */}
           <CollapsibleRelationModule
             title="引用此笔记的收藏夹"
@@ -1917,139 +2036,22 @@ const DocumentDetailContent = ({
               </DndContext>
             )}
           </CollapsibleRelationModule>
-        </RelationsBox>
 
-        {/* 右侧内容区域 */}
-        <RightContentBox>
-          {/* 编辑模式和非编辑模式下的顶部按钮栏 */}
-          <Box sx={{
-            position: 'sticky',
-            top: -24, // 修改为负值，向上移动24px（相当于RightContentBox的padding值）
-            zIndex: 10,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 2,
-            p: 1,
-            backgroundColor: theme.palette.background.paper,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          }}>
-            {/* 左侧按钮组 */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 编辑/保存按钮 */}
-              <Button
-                variant={isEditing ? "contained" : "outlined"}
-                size="small"
-                startIcon={isEditing ? <SaveIcon /> : <EditIcon />}
-                onClick={isEditing ? handleSave : toggleEditMode}
-                sx={{
-                  borderRadius: 16,
-                  fontSize: '0.8rem',
-                  px: 2,
-                  py: 0.5,
-                  minWidth: 'auto',
-                  fontWeight: 'medium',
-                }}
-              >
-                {isEditing ? '保存' : '编辑'}
-              </Button>
-              
-              {/* 编辑模式下的取消按钮 */}
-              {isEditing && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={toggleEditMode}
-                  sx={{
-                    borderRadius: 16,
-                    fontSize: '0.8rem',
-                    px: 2,
-                    py: 0.5,
-                    minWidth: 'auto',
-                    fontWeight: 'medium',
-                  }}
-                >
-                  取消
-                </Button>
-              )}
-            </Box>
-            
-            {/* 右侧按钮组 */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* 非编辑模式下的更多操作按钮 */}
-              {!isEditing && (
-                <IconButton
-                  onClick={handleOpenActionsMenu}
-                  aria-controls={isActionsMenuOpen ? 'detail-actions-menu' : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={isActionsMenuOpen ? 'true' : undefined}
-                  sx={(theme) => ({
-                    transition: theme.transitions.create('transform', {
-                      duration: theme.transitions.duration.shortest,
-                    }),
-                    transform: isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    color: theme.palette.text.secondary,
-                    borderRadius: 16,
-                    backgroundColor: 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'light'
-                        ? 'rgba(0, 0, 0, 0.04)'
-                        : 'rgba(255, 255, 255, 0.08)',
-                    },
-                  })}
-                >
-                  <ExpandMoreIcon />
-                </IconButton>
-              )}
-              
-              {/* 非编辑模式下的内容类型切换按钮 */}
-              {!isEditing && document.content && document.htmlContent && (
-                <ToggleButtonGroup
-                  value={contentType}
-                  exclusive
-                  onChange={(e, newType) => newType && setContentType(newType)}
-                  size="small"
-                >
-                  <ToggleButton value="html" sx={{ px: 1, py: 0.5 }}>
-                    <HtmlIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    HTML
-                  </ToggleButton>
-                  <ToggleButton value="text" sx={{ px: 1, py: 0.5 }}>
-                    <CodeIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                    文本
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              )}
-            </Box>
-          </Box>
-          
-          {/* 标签 */}
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>
-              标签
-            </Typography>
-            {isEditing ? (
-              <TagsContainer>
-                {formData.tags.map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    onDelete={() => handleDeleteTag(tag)}
-                    size="small"
-                    sx={{
-                      fontSize: '0.8rem',
-                      borderRadius: 12, // 设置为 12px 圆角，符合辅助组件规范
-                    }}
-                  />
-                ))}
+          {/* 左侧底部元信息：来源/创建/更新 */}
+          <SidebarMetaInfoContainer>
+            <SidebarMetaRow>
+              <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                来源:
+              </Typography>
+              {isEditing ? (
                 <TextField
-                  size="small"
+                  name="source"
+                  value={formData.source}
+                  onChange={handleChange}
                   variant="standard"
-                  placeholder="添加标签"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={handleTagInputKeyPress}
+                  size="small"
                   sx={{
+                    flexGrow: 1,
                     minWidth: 120,
                     '& .MuiInput-underline:before': {
                       borderBottomColor: 'primary.main',
@@ -2058,46 +2060,33 @@ const DocumentDetailContent = ({
                       borderBottomColor: 'primary.main',
                     },
                   }}
-                  InputProps={{
-                    disableUnderline: true,
-                    endAdornment: (
-                      <IconButton
-                        size="small"
-                        onClick={handleAddTag}
-                        disabled={!tagInput.trim()}
-                        sx={{
-                          borderRadius: 16,
-                          padding: 0.5,
-                        }}
-                      >
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    ),
-                  }}
                 />
-              </TagsContainer>
-            ) : (
-              <TagsContainer>
-                {(document.tags || []).map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      fontSize: '0.8rem',
-                      borderColor: 'secondary.main',
-                      color: 'secondary.main',
-                      '&:hover': {
-                        backgroundColor: 'secondaryContainer.main',
-                        color: 'secondaryContainer.contrastText',
-                      },
-                    }}
-                  />
-                ))}
-              </TagsContainer>
-            )}
-          </Box>
+              ) : (
+                <Typography variant="caption" sx={{ wordBreak: 'break-word' }}>
+                  {document.source || '-'}
+                </Typography>
+              )}
+            </SidebarMetaRow>
+
+            <SidebarMetaRow>
+              <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                创建时间:
+              </Typography>
+              <Typography variant="caption">{formatDate(document.createdAt)}</Typography>
+            </SidebarMetaRow>
+
+            <SidebarMetaRow>
+              <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                更新时间:
+              </Typography>
+              <Typography variant="caption">{formatDate(document.updatedAt)}</Typography>
+            </SidebarMetaRow>
+          </SidebarMetaInfoContainer>
+        </RelationsBox>
+
+        {/* 右侧内容区域 */}
+        <RightContentBox>
+          {/* 顶部按钮栏已移到窗口标题栏 */}
 
           {/* 内容 */}
           <Box sx={{ mt: 3, flexGrow: 1 }}>
@@ -2137,7 +2126,7 @@ const DocumentDetailContent = ({
                 </ToggleButtonGroup>
               )}
               
-              {/* HTML/文本切换按钮已移动到顶部按钮栏 */}
+              {/* HTML/文本切换按钮已移动到窗口标题栏 */}
             </Box>
             
             {isEditing ? (
@@ -2290,70 +2279,7 @@ const DocumentDetailContent = ({
         </RightContentBox>
       </ContentBox>
 
-      {/* 元信息 */}
-      <MetaInfoContainer>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              mb: 1,
-            }}
-          >
-            <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
-              来源:
-            </Box>
-            {isEditing ? (
-              <TextField
-                name="source"
-                value={formData.source}
-                onChange={handleChange}
-                variant="standard"
-                size="small"
-                sx={{
-                  '& .MuiInput-underline:before': {
-                    borderBottomColor: 'primary.main',
-                  },
-                  '& .MuiInput-underline:after': {
-                    borderBottomColor: 'primary.main',
-                  },
-                }}
-              />
-            ) : (
-              document.source
-            )}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
-              创建时间:
-            </Box>
-            {formatDate(document.createdAt)}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Box component="span" sx={{ fontWeight: 'bold', mr: 1 }}>
-              更新时间:
-            </Box>
-            {formatDate(document.updatedAt)}
-          </Typography>
-        </Box>
-        {/* 编辑按钮和更多操作按钮已移到顶部栏 */}
-      </MetaInfoContainer>
+      {/* 底部元信息栏已移到左侧侧边栏底部 */}
 
       <Menu
         id="detail-actions-menu"
