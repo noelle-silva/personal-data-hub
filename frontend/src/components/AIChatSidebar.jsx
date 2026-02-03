@@ -6,15 +6,16 @@ import AIChatPanel from './AIChatPanel';
 
 // 侧边栏容器
 const SidebarContainer = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'isMobile' && prop !== 'width' && prop !== 'isOpen' && prop !== 'isOverlay'
-})(({ theme, isMobile, width, isOpen, isOverlay }) => ({
+  shouldForwardProp: (prop) =>
+    prop !== 'isMobile' && prop !== 'width' && prop !== 'isOpen' && prop !== 'isOverlay' && prop !== 'isResizing'
+})(({ theme, isMobile, width, isOpen, isOverlay, isResizing }) => ({
   position: isMobile ? 'fixed' : (isOverlay ? 'absolute' : 'relative'),
-  top: isMobile ? 0 : (isOverlay ? 0 : 'auto'),
-  left: isMobile ? 'auto' : (isOverlay ? 0 : 0),
-  right: isMobile ? 'auto' : (isOverlay ? 0 : 0),
-  bottom: isMobile ? 0 : (isOverlay ? 0 : 0),
+  top: (isMobile || isOverlay) ? 0 : 'auto',
+  right: isMobile ? 0 : (isOverlay ? 0 : 'auto'),
+  bottom: (isMobile || isOverlay) ? 0 : 'auto',
+  left: isMobile ? 0 : 'auto',
   width: isMobile ? '100%' : `${width}px`,
-  height: isMobile ? '100vh' : (isOverlay ? '100%' : '100%'),
+  height: isMobile ? '100vh' : '100%',
   backgroundColor: theme.palette.background.paper,
   borderLeft: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,
   boxShadow: isMobile ? theme.shadows[8] : (isOverlay ? theme.shadows[8] : 'none'),
@@ -22,10 +23,11 @@ const SidebarContainer = styled(Box, {
   transform: isMobile
     ? (isOpen ? 'translateX(0)' : 'translateX(100%)')
     : 'translateX(0)',
-  transition: 'transform 0.3s ease, width 0.2s ease',
+  transition: isResizing ? 'transform 0.3s ease' : 'transform 0.3s ease, width 0.2s ease',
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
+  willChange: isMobile ? 'transform' : 'width',
 }));
 
 // 拖拽手柄
@@ -37,6 +39,8 @@ const DragHandle = styled(Box)(({ theme }) => ({
   width: 8, // 增加拖拽热区宽度
   cursor: 'col-resize',
   backgroundColor: 'transparent',
+  touchAction: 'none',
+  userSelect: 'none',
   '&:hover': {
     backgroundColor: theme.palette.primary.main,
     opacity: 0.5,
@@ -72,14 +76,19 @@ const AIChatSidebar = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [width, setWidth] = useState(defaultWidth);
   const [isOverlay, setIsOverlay] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef(null);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
   const isDraggingRef = useRef(false);
+  const rafIdRef = useRef(0);
+  const pendingWidthRef = useRef(defaultWidth);
+  const activeCleanupRef = useRef(null);
 
   // 检查是否应该进入叠加模式
   const checkOverlayMode = useCallback((currentWidth) => {
     if (isMobile) return false;
+    if (overlayThreshold === Infinity) return false;
     
     const parentElement = sidebarRef.current?.parentElement;
     if (!parentElement) return false;
@@ -89,6 +98,21 @@ const AIChatSidebar = ({
     
     return currentWidth >= threshold;
   }, [isMobile, overlayThreshold]);
+
+  const clampWidth = useCallback((nextWidth) => {
+    const clampedMin = Math.max(minWidth, nextWidth);
+
+    if (overlayThreshold === Infinity) {
+      if (typeof maxWidth === 'number') return Math.min(maxWidth, clampedMin);
+      return clampedMin;
+    }
+
+    const parentElement = sidebarRef.current?.parentElement;
+    if (!parentElement) return clampedMin;
+
+    const dynamicMaxWidth = parentElement.clientWidth - overlayGap;
+    return Math.min(dynamicMaxWidth, clampedMin);
+  }, [minWidth, maxWidth, overlayGap, overlayThreshold]);
 
   // 重置宽度为默认值（当窗口大小变化时）
   useEffect(() => {
@@ -104,60 +128,106 @@ const AIChatSidebar = ({
     }
   }, [width, isMobile, checkOverlayMode]);
 
-  // 处理拖拽开始
-  const handleMouseDown = useCallback((e) => {
-    if (isMobile) return; // 移动端不支持拖拽
-    
+  const scheduleApplyWidthStyle = useCallback((nextWidth) => {
+    pendingWidthRef.current = nextWidth;
+    if (rafIdRef.current) return;
+
+    rafIdRef.current = window.requestAnimationFrame(() => {
+      rafIdRef.current = 0;
+      if (!sidebarRef.current || isMobile) return;
+      sidebarRef.current.style.width = `${pendingWidthRef.current}px`;
+    });
+  }, [isMobile]);
+
+  const cleanupResizeSideEffects = useCallback(() => {
+    if (rafIdRef.current) {
+      window.cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
+
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, []);
+
+  // 处理拖拽开始（Pointer Events）
+  const handlePointerDown = useCallback((e) => {
+    if (isMobile) return;
+    if (e.button !== 0) return;
+
     isDraggingRef.current = true;
+    setIsResizing(true);
+
     dragStartX.current = e.clientX;
-    dragStartWidth.current = width;
-    
-    // 防止选中文本
+    const measuredWidth = sidebarRef.current?.getBoundingClientRect?.().width;
+    dragStartWidth.current = (typeof measuredWidth === 'number' && measuredWidth > 0) ? measuredWidth : width;
+    pendingWidthRef.current = dragStartWidth.current;
+
     e.preventDefault();
-    
-    // 内联定义鼠标移动处理函数，避免闭包问题
-    const handleMouseMove = (e) => {
-      if (!isDraggingRef.current) return;
-      
-      const deltaX = e.clientX - dragStartX.current;
-      const newWidth = dragStartWidth.current - deltaX; // 向左拖拽增加宽度
-      
-      // 获取父容器宽度作为动态上限
-      const parentElement = sidebarRef.current?.parentElement;
-      let dynamicMaxWidth = maxWidth;
-      
-      // 只有在非无限阈值时才应用宽度限制
-      if (overlayThreshold !== Infinity && parentElement) {
-        dynamicMaxWidth = parentElement.clientWidth - overlayGap;
-      }
-      
-      // 限制宽度范围
-      const clampedWidth = Math.max(minWidth, Math.min(dynamicMaxWidth || Infinity, newWidth));
-      setWidth(clampedWidth);
-      
-      // 检查是否需要进入叠加模式
-      setIsOverlay(checkOverlayMode(clampedWidth));
-    };
-    
-    // 内联定义鼠标释放处理函数
-    const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      
-      // 移除全局鼠标事件监听
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      
-      // 恢复文本选择
-      document.body.style.userSelect = '';
-    };
-    
-    // 添加全局鼠标事件监听
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    // 禁用文本选择
+    e.currentTarget?.setPointerCapture?.(e.pointerId);
+
     document.body.style.userSelect = 'none';
-  }, [width, isMobile, minWidth, maxWidth, overlayGap, overlayThreshold, checkOverlayMode]);
+    document.body.style.cursor = 'col-resize';
+
+    const handlePointerMove = (moveEvent) => {
+      if (!isDraggingRef.current) return;
+      if (typeof moveEvent?.pointerId === 'number' && typeof e.pointerId === 'number' && moveEvent.pointerId !== e.pointerId) return;
+
+      const deltaX = moveEvent.clientX - dragStartX.current;
+      const nextWidth = clampWidth(dragStartWidth.current - deltaX);
+      scheduleApplyWidthStyle(nextWidth);
+    };
+
+    const handlePointerUp = (upEvent) => {
+      if (typeof upEvent?.pointerId === 'number' && upEvent.pointerId !== e.pointerId) return;
+
+      isDraggingRef.current = false;
+      activeCleanupRef.current?.();
+
+      const committedWidth = pendingWidthRef.current;
+      setWidth(committedWidth);
+      setIsOverlay(checkOverlayMode(committedWidth));
+      setIsResizing(false);
+
+      activeCleanupRef.current = null;
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
+    window.addEventListener('blur', handlePointerUp);
+
+    activeCleanupRef.current = () => {
+      isDraggingRef.current = false;
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+      window.removeEventListener('blur', handlePointerUp);
+
+      cleanupResizeSideEffects();
+    };
+  }, [checkOverlayMode, clampWidth, cleanupResizeSideEffects, isMobile, scheduleApplyWidthStyle, width]);
+
+  const handleHandleKeyDown = useCallback((e) => {
+    if (isMobile) return;
+
+    const step = e.shiftKey ? 64 : 16;
+    let nextWidth = null;
+
+    if (e.key === 'ArrowLeft') nextWidth = clampWidth(width + step);
+    if (e.key === 'ArrowRight') nextWidth = clampWidth(width - step);
+
+    if (typeof nextWidth !== 'number') return;
+
+    e.preventDefault();
+    setWidth(nextWidth);
+    setIsOverlay(checkOverlayMode(nextWidth));
+  }, [checkOverlayMode, clampWidth, isMobile, width]);
+
+  useEffect(() => {
+    return () => {
+      if (activeCleanupRef.current) activeCleanupRef.current();
+    };
+  }, []);
 
   // 处理背景点击（仅移动端）
   const handleBackdropClick = useCallback(() => {
@@ -199,8 +269,19 @@ const AIChatSidebar = ({
       width={width}
       isOpen={isOpen}
       isOverlay={isOverlay}
+      isResizing={isResizing}
     >
-      <DragHandle onMouseDown={handleMouseDown} />
+      <DragHandle
+        onPointerDown={handlePointerDown}
+        onKeyDown={handleHandleKeyDown}
+        role="separator"
+        tabIndex={0}
+        aria-label="调整 AI 侧边栏宽度"
+        aria-orientation="vertical"
+        aria-valuenow={Math.round(width)}
+        aria-valuemin={minWidth}
+        aria-valuemax={typeof maxWidth === 'number' ? maxWidth : undefined}
+      />
       {children || <AIChatPanel onClose={onClose} injectionSource={injectionSource} />}
     </SidebarContainer>
   );
