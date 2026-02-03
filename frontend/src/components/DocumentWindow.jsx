@@ -113,6 +113,12 @@ const EditableTitleInput = styled(TextField)(({ theme, isActive }) => ({
 const WindowControls = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
+  gap: theme.spacing(1.5),
+}));
+
+const WindowControlGroup = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
   gap: theme.spacing(0.5),
 }));
 
@@ -492,10 +498,10 @@ const DocumentWindow = ({
             <SmartToyIcon />
           </WindowControlButton>
         </Box>
-        
+
         <WindowControls>
           {detailHeaderControls && (
-            <>
+            <WindowControlGroup>
               <WindowControlButton
                 size="small"
                 onClick={detailHeaderControls.isEditing ? detailHeaderControls.onSave : detailHeaderControls.onToggleEditMode}
@@ -516,89 +522,94 @@ const DocumentWindow = ({
                   <UndoIcon />
                 </WindowControlButton>
               )}
-
-              {!detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType && (
-                <>
-                  <WindowControlButton
-                    size="small"
-                    onClick={() => detailHeaderControls.onSetContentType('html')}
-                    title="切换为 HTML 视图"
-                    aria-label="切换为 HTML 视图"
-                    sx={{
-                      backgroundColor: detailHeaderControls.contentType === 'html'
-                        ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
-                        : 'transparent',
-                      '&:hover': {
-                        backgroundColor: detailHeaderControls.contentType === 'html'
-                          ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
-                          : undefined,
-                      },
-                    }}
-                  >
-                    <HtmlIcon />
-                  </WindowControlButton>
-                  <WindowControlButton
-                    size="small"
-                    onClick={() => detailHeaderControls.onSetContentType('text')}
-                    title="切换为 文本 视图"
-                    aria-label="切换为 文本 视图"
-                    sx={{
-                      backgroundColor: detailHeaderControls.contentType === 'text'
-                        ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
-                        : 'transparent',
-                      '&:hover': {
-                        backgroundColor: detailHeaderControls.contentType === 'text'
-                          ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
-                          : undefined,
-                      },
-                    }}
-                  >
-                    <CodeIcon />
-                  </WindowControlButton>
-                </>
-              )}
-            </>
+            </WindowControlGroup>
           )}
 
-          <WindowControlButton
-            size="small"
-            onClick={onPrevDocument}
-            title="上一个笔记"
-            disabled={!canNavigateDocuments}
-            aria-label="切换到上一个已打开笔记"
-          >
-            <NavigateBeforeIcon />
-          </WindowControlButton>
-          <WindowControlButton
-            size="small"
-            onClick={onNextDocument}
-            title="下一个笔记"
-            disabled={!canNavigateDocuments}
-            aria-label="切换到下一个已打开笔记"
-          >
-            <NavigateNextIcon />
-          </WindowControlButton>
-          <WindowControlButton
-            size="small"
-            onClick={handleMaximize}
-            title={isMaximized ? "还原" : "最大化"}
-          >
-            {isMaximized ? <FilterNoneIcon /> : <CropSquareIcon />}
-          </WindowControlButton>
-          <WindowControlButton
-            size="small"
-            onClick={onMinimize}
-            title="最小化"
-          >
-            <MinimizeIcon />
-          </WindowControlButton>
-          <WindowControlButton
-            size="small"
-            onClick={onClose}
-            title="关闭"
-          >
-            <CloseIcon />
-          </WindowControlButton>
+          {detailHeaderControls && !detailHeaderControls.isEditing && detailHeaderControls.canToggleContentType && (
+            <WindowControlGroup>
+              <WindowControlButton
+                size="small"
+                onClick={() => detailHeaderControls.onSetContentType('html')}
+                title="切换为 HTML 视图"
+                aria-label="切换为 HTML 视图"
+                sx={{
+                  backgroundColor: detailHeaderControls.contentType === 'html'
+                    ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
+                    : 'transparent',
+                  '&:hover': {
+                    backgroundColor: detailHeaderControls.contentType === 'html'
+                      ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
+                      : undefined,
+                  },
+                }}
+              >
+                <HtmlIcon />
+              </WindowControlButton>
+              <WindowControlButton
+                size="small"
+                onClick={() => detailHeaderControls.onSetContentType('text')}
+                title="切换为 文本 视图"
+                aria-label="切换为 文本 视图"
+                sx={{
+                  backgroundColor: detailHeaderControls.contentType === 'text'
+                    ? (isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.08)')
+                    : 'transparent',
+                  '&:hover': {
+                    backgroundColor: detailHeaderControls.contentType === 'text'
+                      ? (isActive ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.12)')
+                      : undefined,
+                  },
+                }}
+              >
+                <CodeIcon />
+              </WindowControlButton>
+            </WindowControlGroup>
+          )}
+
+          <WindowControlGroup>
+            <WindowControlButton
+              size="small"
+              onClick={onPrevDocument}
+              title="上一个笔记"
+              disabled={!canNavigateDocuments}
+              aria-label="切换到上一个已打开笔记"
+            >
+              <NavigateBeforeIcon />
+            </WindowControlButton>
+            <WindowControlButton
+              size="small"
+              onClick={onNextDocument}
+              title="下一个笔记"
+              disabled={!canNavigateDocuments}
+              aria-label="切换到下一个已打开笔记"
+            >
+              <NavigateNextIcon />
+            </WindowControlButton>
+          </WindowControlGroup>
+
+          <WindowControlGroup>
+            <WindowControlButton
+              size="small"
+              onClick={handleMaximize}
+              title={isMaximized ? "还原" : "最大化"}
+            >
+              {isMaximized ? <FilterNoneIcon /> : <CropSquareIcon />}
+            </WindowControlButton>
+            <WindowControlButton
+              size="small"
+              onClick={onMinimize}
+              title="最小化"
+            >
+              <MinimizeIcon />
+            </WindowControlButton>
+            <WindowControlButton
+              size="small"
+              onClick={onClose}
+              title="关闭"
+            >
+              <CloseIcon />
+            </WindowControlButton>
+          </WindowControlGroup>
         </WindowControls>
       </WindowHeader>
       
