@@ -19,6 +19,7 @@ import {
   FormControlLabel,
   Slider,
   Collapse,
+  Popover,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -69,24 +70,13 @@ const InputContainer = styled(Paper)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(2),
-  borderRadius: theme.spacing(2),
-  boxShadow: theme.shadows[2],
-}));
-
-// 样式化的控制面板
-const ControlPanel = styled(Paper)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  borderRadius: theme.spacing(2),
+  borderRadius: theme.spacing(3),
+  boxShadow: theme.shadows[10],
+  border: `1px solid ${theme.palette.divider}`,
 }));
 
 // 样式化的面板头部
-const PanelHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: theme.spacing(2),
-  borderBottom: `1px solid ${theme.palette.divider}`,
-}));
+
 
 const AIChatPanel = ({ onClose, injectionSource }) => {
   const theme = useTheme();
@@ -116,6 +106,9 @@ const AIChatPanel = ({ onClose, injectionSource }) => {
   
   // 高级设置展开状态
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
+
+  // 设置面板（收纳到 Popover）
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState(null);
   
   // AI功能启用状态
   const [aiEnabled, setAiEnabled] = useState(true);
@@ -499,6 +492,17 @@ ${content}
     setError(null);
   };
 
+  const handleOpenSettings = (event) => {
+    event?.stopPropagation?.();
+    setSettingsAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsAnchorEl(null);
+  };
+
+  const settingsOpen = Boolean(settingsAnchorEl);
+
   // 跳转到设置页面
   const handleGoToSettings = () => {
     navigate('/设置');
@@ -519,15 +523,11 @@ ${content}
   if (!aiEnabled) {
     return (
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <PanelHeader>
-          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <BotIcon />
-            AI 助手
-          </Typography>
-          <IconButton size="small" onClick={onClose}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+          <IconButton size="small" onClick={onClose} aria-label="关闭 AI 侧边栏">
             <CloseIcon />
           </IconButton>
-        </PanelHeader>
+        </Box>
         
         <Box sx={{ 
           flexGrow: 1, 
@@ -558,131 +558,6 @@ ${content}
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <PanelHeader>
-        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <BotIcon />
-          AI 助手
-        </Typography>
-        <IconButton size="small" onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </PanelHeader>
-
-      {/* 控制面板 */}
-      <ControlPanel>
-        {/* 角色选择 */}
-        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <InputLabel>AI 角色</InputLabel>
-          <Select
-            value={selectedRoleId}
-            label="AI 角色"
-            onChange={(e) => setSelectedRoleId(e.target.value)}
-            disabled={rolesLoading}
-          >
-            <MenuItem value="none">无系统提示词</MenuItem>
-            {roles.map((role) => (
-              <MenuItem key={role._id} value={role._id}>
-                {role.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* 模型选择 */}
-        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <InputLabel>模型</InputLabel>
-          <Select
-            value={selectedModel}
-            label="模型"
-            onChange={(e) => {
-              setSelectedModel(e.target.value);
-              setIsModelManuallySet(true);
-            }}
-          >
-            {models.map((model) => (
-              <MenuItem key={model.id} value={model.id}>
-                {model.id}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* 注入开关 - 仅在有可注入内容时显示 */}
-        {injectionSource && injectionSource.available && (
-          <FormControlLabel
-            control={
-              <Switch
-                checked={enableInjection}
-                onChange={(e) => setEnableInjection(e.target.checked)}
-                size="small"
-              />
-            }
-            label={`注入当前${injectionSource.type === 'document' ? '笔记' : '收藏夹'}`}
-            sx={{ mb: 2 }}
-          />
-        )}
-
-        {/* 高级设置切换 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Button
-            size="small"
-            startIcon={advancedSettingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            onClick={() => setAdvancedSettingsOpen(!advancedSettingsOpen)}
-          >
-            高级设置
-          </Button>
-          
-          {/* 新建聊天按钮 */}
-          <Button
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={handleNewChat}
-          >
-            新建聊天
-          </Button>
-        </Box>
-
-        {/* 高级设置 */}
-        <Collapse in={advancedSettingsOpen}>
-          <Box sx={{ mt: 2 }}>
-            {/* 温度控制 */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" gutterBottom>
-                温度: {temperature}
-              </Typography>
-              <Slider
-                value={temperature}
-                onChange={(_, value) => {
-                  setTemperature(value);
-                  setIsTempManuallySet(true);
-                }}
-                min={0}
-                max={2}
-                step={0.1}
-                marks={[
-                  { value: 0, label: '精确' },
-                  { value: 1, label: '平衡' },
-                  { value: 2, label: '创意' }
-                ]}
-                size="small"
-              />
-            </Box>
-
-            {/* 流式开关 */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isStreaming}
-                  onChange={(e) => setIsStreaming(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="流式输出"
-            />
-          </Box>
-        </Collapse>
-      </ControlPanel>
-
       {/* 错误提示 */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -690,109 +565,268 @@ ${content}
         </Alert>
       )}
 
-      {/* 消息列表 */}
-      <MessageContainer>
-        {messages.length === 0 && !currentResponse && (
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: '100%',
-            color: 'text.secondary'
-          }}>
-            <BotIcon sx={{ fontSize: 48, mb: 2 }} />
-            <Typography variant="body1">
-              开始与 AI 助手对话
-            </Typography>
-          </Box>
-        )}
-        
-        {messages.map((message) => (
-          <MessageCard key={message.id} isUser={message.role === 'user'}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <Avatar sx={{ width: 24, height: 24 }}>
-                {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
-              </Avatar>
-              <Box sx={{ flexGrow: 1 }}>
-                {/* 显示注入标记 */}
-                {message.injected && (
-                  <Chip
-                    label="内容已注入"
-                    size="small"
-                    color="info"
-                    sx={{ mb: 1 }}
-                  />
-                )}
-                {renderMessageContent(message.content)}
-                {message.incomplete && (
-                  <Chip
-                    label="响应被截断"
-                    size="small"
-                    color="warning"
-                    sx={{ mt: 1 }}
-                  />
-                )}
-              </Box>
+      <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* 消息列表 */}
+        <MessageContainer sx={{ pb: 18 }}>
+          {messages.length === 0 && !currentResponse && (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              color: 'text.secondary'
+            }}>
+              <BotIcon sx={{ fontSize: 48, mb: 2 }} />
+              <Typography variant="body1">
+                开始与 AI 助手对话
+              </Typography>
             </Box>
-          </MessageCard>
-        ))}
-        
-        {/* 当前流式响应 */}
-        {currentResponse && (
-          <MessageCard isUser={false}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <Avatar sx={{ width: 24, height: 24 }}>
-                <BotIcon />
-              </Avatar>
-              <Box sx={{ flexGrow: 1 }}>
-                {renderMessageContent(currentResponse)}
-                <CircularProgress size={16} sx={{ mt: 1 }} />
-              </Box>
-            </Box>
-          </MessageCard>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </MessageContainer>
-
-      {/* 输入区域 */}
-      <InputContainer>
-        <TextField
-          fullWidth
-          multiline
-          maxRows={4}
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="输入消息..."
-          disabled={isLoading}
-          inputRef={inputRef}
-          size="small"
-        />
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {isLoading ? (
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<StopIcon />}
-              onClick={handleStopGeneration}
-            >
-              停止生成
-            </Button>
-          ) : (
-            <Button
-              fullWidth
-              variant="contained"
-              endIcon={<SendIcon />}
-              onClick={handleSendMessage}
-              disabled={!inputText.trim() || !selectedRoleId}
-            >
-              发送
-            </Button>
           )}
+          
+          {messages.map((message) => (
+            <MessageCard key={message.id} isUser={message.role === 'user'}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Avatar sx={{ width: 24, height: 24 }}>
+                  {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
+                </Avatar>
+                <Box sx={{ flexGrow: 1 }}>
+                  {/* 显示注入标记 */}
+                  {message.injected && (
+                    <Chip
+                      label="内容已注入"
+                      size="small"
+                      color="info"
+                      sx={{ mb: 1 }}
+                    />
+                  )}
+                  {renderMessageContent(message.content)}
+                  {message.incomplete && (
+                    <Chip
+                      label="响应被截断"
+                      size="small"
+                      color="warning"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            </MessageCard>
+          ))}
+          
+          {/* 当前流式响应 */}
+          {currentResponse && (
+            <MessageCard isUser={false}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Avatar sx={{ width: 24, height: 24 }}>
+                  <BotIcon />
+                </Avatar>
+                <Box sx={{ flexGrow: 1 }}>
+                  {renderMessageContent(currentResponse)}
+                  <CircularProgress size={16} sx={{ mt: 1 }} />
+                </Box>
+              </Box>
+            </MessageCard>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </MessageContainer>
+
+        {/* 输入区（悬浮在消息之上） */}
+        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: 2, pointerEvents: 'none' }}>
+          <InputContainer sx={{ pointerEvents: 'auto' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+              <TextField
+                fullWidth
+                multiline
+                maxRows={4}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="输入消息..."
+                disabled={isLoading}
+                inputRef={inputRef}
+                size="small"
+                sx={{
+                  flexGrow: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                  }
+                }}
+              />
+
+              {isLoading ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<StopIcon />}
+                  onClick={handleStopGeneration}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  停止生成
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  endIcon={<SendIcon />}
+                  onClick={handleSendMessage}
+                  disabled={!inputText.trim() || !selectedRoleId}
+                  sx={{ whiteSpace: 'nowrap' }}
+                >
+                  发送
+                </Button>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  size="small"
+                  startIcon={<SettingsIcon />}
+                  onClick={handleOpenSettings}
+                  aria-label="打开聊天设置"
+                >
+                  设置
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    handleCloseSettings();
+                    handleNewChat();
+                  }}
+                  aria-label="新建会话"
+                >
+                  新建会话
+                </Button>
+              </Box>
+              {injectionSource && injectionSource.available && (
+                <Typography variant="caption" color="text.secondary">
+                  可注入：{injectionSource.type === 'document' ? '笔记' : '收藏夹'}
+                </Typography>
+              )}
+            </Box>
+          </InputContainer>
         </Box>
-      </InputContainer>
+      </Box>
+
+      {/* 设置面板：收纳进 Popover */}
+      <Popover
+        open={settingsOpen}
+        anchorEl={settingsAnchorEl}
+        onClose={handleCloseSettings}
+        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        slotProps={{ paper: { sx: { borderRadius: 2 } } }}
+      >
+        <Box sx={{ p: 2, width: 340, maxWidth: 'calc(100vw - 32px)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Typography variant="subtitle1">聊天设置</Typography>
+            <IconButton size="small" onClick={handleCloseSettings} aria-label="关闭聊天设置">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          {/* 角色选择 */}
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>AI 角色</InputLabel>
+            <Select
+              value={selectedRoleId}
+              label="AI 角色"
+              onChange={(e) => setSelectedRoleId(e.target.value)}
+              disabled={rolesLoading}
+            >
+              <MenuItem value="none">无系统提示词</MenuItem>
+              {roles.map((role) => (
+                <MenuItem key={role._id} value={role._id}>
+                  {role.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* 模型选择 */}
+          <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+            <InputLabel>模型</InputLabel>
+            <Select
+              value={selectedModel}
+              label="模型"
+              onChange={(e) => {
+                setSelectedModel(e.target.value);
+                setIsModelManuallySet(true);
+              }}
+            >
+              {models.map((model) => (
+                <MenuItem key={model.id} value={model.id}>
+                  {model.id}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* 注入开关 - 仅在有可注入内容时显示 */}
+          {injectionSource && injectionSource.available && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={enableInjection}
+                  onChange={(e) => setEnableInjection(e.target.checked)}
+                  size="small"
+                />
+              }
+              label={`注入当前${injectionSource.type === 'document' ? '笔记' : '收藏夹'}`}
+              sx={{ mb: 1.5 }}
+            />
+          )}
+
+          {/* 高级设置切换 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+            <Button
+              size="small"
+              startIcon={advancedSettingsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              onClick={() => setAdvancedSettingsOpen(!advancedSettingsOpen)}
+            >
+              高级设置
+            </Button>
+          </Box>
+
+          <Collapse in={advancedSettingsOpen}>
+            <Box sx={{ mt: 2 }}>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  温度: {temperature}
+                </Typography>
+                <Slider
+                  value={temperature}
+                  onChange={(_, value) => {
+                    setTemperature(value);
+                    setIsTempManuallySet(true);
+                  }}
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  marks={[
+                    { value: 0, label: '精确' },
+                    { value: 1, label: '平衡' },
+                    { value: 2, label: '创意' }
+                  ]}
+                  size="small"
+                />
+              </Box>
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isStreaming}
+                    onChange={(e) => setIsStreaming(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label="流式输出"
+              />
+            </Box>
+          </Collapse>
+        </Box>
+      </Popover>
     </Box>
   );
 };
