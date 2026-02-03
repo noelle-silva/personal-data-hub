@@ -5,6 +5,9 @@ import { createPage as createPageAction, deletePage as deletePageAction } from '
 const DEFAULT_STATE = {
   customPagesEnabled: true,
   customPagesVisibility: {},
+  autoExpandReferencesSidebar: true,
+  autoExpandAiSidebar: false,
+  aiSidebarDefaultWidth: 420,
 };
 
 // 从 localStorage 加载初始状态
@@ -19,6 +22,10 @@ const loadStateFromLocalStorage = () => {
     return {
       customPagesEnabled: parsed.customPagesEnabled ?? DEFAULT_STATE.customPagesEnabled,
       customPagesVisibility: parsed.customPagesVisibility || {},
+      autoExpandReferencesSidebar:
+        parsed.autoExpandReferencesSidebar ?? DEFAULT_STATE.autoExpandReferencesSidebar,
+      autoExpandAiSidebar: parsed.autoExpandAiSidebar ?? DEFAULT_STATE.autoExpandAiSidebar,
+      aiSidebarDefaultWidth: parsed.aiSidebarDefaultWidth ?? DEFAULT_STATE.aiSidebarDefaultWidth,
     };
   } catch (e) {
     console.warn('无法从 localStorage 加载设置，使用默认值', e);
@@ -78,6 +85,20 @@ const settingsSlice = createSlice({
       state.customPagesEnabled = action.payload;
       saveStateToLocalStorage(state);
     },
+    setAutoExpandReferencesSidebar: (state, action) => {
+      state.autoExpandReferencesSidebar = !!action.payload;
+      saveStateToLocalStorage(state);
+    },
+    setAutoExpandAiSidebar: (state, action) => {
+      state.autoExpandAiSidebar = !!action.payload;
+      saveStateToLocalStorage(state);
+    },
+    setAiSidebarDefaultWidth: (state, action) => {
+      const raw = Number(action.payload);
+      if (!Number.isFinite(raw)) return;
+      state.aiSidebarDefaultWidth = Math.max(320, Math.min(960, Math.round(raw)));
+      saveStateToLocalStorage(state);
+    },
   },
   extraReducers: (builder) => {
     // 监听自定义页面创建成功
@@ -117,6 +138,9 @@ export const {
   setCustomPageVisibility,
   setCustomPagesVisibilityBulk,
   setCustomPagesEnabled,
+  setAutoExpandReferencesSidebar,
+  setAutoExpandAiSidebar,
+  setAiSidebarDefaultWidth,
 } = settingsSlice.actions;
 
 // 导出 selectors
@@ -126,6 +150,13 @@ export const selectIsCustomPageEnabledById = (state, pageId) => {
   const visibility = state.settings.customPagesVisibility[pageId];
   return visibility !== false; // 未映射默认为 true
 };
+
+export const selectAutoExpandReferencesSidebar = (state) =>
+  state.settings.autoExpandReferencesSidebar ?? DEFAULT_STATE.autoExpandReferencesSidebar;
+export const selectAutoExpandAiSidebar = (state) =>
+  state.settings.autoExpandAiSidebar ?? DEFAULT_STATE.autoExpandAiSidebar;
+export const selectAiSidebarDefaultWidth = (state) =>
+  state.settings.aiSidebarDefaultWidth ?? DEFAULT_STATE.aiSidebarDefaultWidth;
 
 // 导出 reducer
 export default settingsSlice.reducer;

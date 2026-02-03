@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Paper,
   IconButton,
@@ -27,6 +27,11 @@ import DocumentDetailContent from './DocumentDetailContent';
 import AIChatSidebar from './AIChatSidebar';
 import { saveDocumentReferences, saveAttachmentReferences, saveDocumentQuoteReferences } from '../store/windowsSlice';
 import { getMaximizedWindowRect, getViewportSnapshot } from '../utils/windowSizing';
+import {
+  selectAiSidebarDefaultWidth,
+  selectAutoExpandAiSidebar,
+  selectAutoExpandReferencesSidebar,
+} from '../store/settingsSlice';
 
 // 窗口容器
 const WindowContainer = styled(Paper, {
@@ -195,8 +200,12 @@ const DocumentWindow = ({
   onViewDocument,
 }) => {
   const dispatch = useDispatch();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isAISidebarOpen, setIsAISidebarOpen] = useState(false);
+  const autoExpandReferencesSidebar = useSelector(selectAutoExpandReferencesSidebar);
+  const autoExpandAiSidebar = useSelector(selectAutoExpandAiSidebar);
+  const aiSidebarDefaultWidth = useSelector(selectAiSidebarDefaultWidth);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => !autoExpandReferencesSidebar);
+  const [isAISidebarOpen, setIsAISidebarOpen] = useState(() => !!autoExpandAiSidebar);
   const [isMaximized, setIsMaximized] = useState(false);
   const [restoreRect, setRestoreRect] = useState(null);
   const [detailHeaderControls, setDetailHeaderControls] = useState(null);
@@ -431,6 +440,7 @@ const DocumentWindow = ({
               isOpen={isAISidebarOpen}
               onClose={() => setIsAISidebarOpen(false)}
               injectionSource={injectionSource}
+              defaultWidth={aiSidebarDefaultWidth}
               // 完全无级调节：禁用叠加模式，移除所有宽度限制
               overlayThreshold={Infinity}
               overlayGap={0}

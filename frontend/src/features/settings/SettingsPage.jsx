@@ -12,6 +12,7 @@ import ThemePreviewCard from './sections/ThemePreviewCard';
 import WallpaperManagementCard from './sections/WallpaperManagementCard';
 import TransparencySettingsCard from './sections/TransparencySettingsCard';
 import ClipboardSettingsCard from './sections/ClipboardSettingsCard';
+import DetailSidebarSettingsCard from './sections/DetailSidebarSettingsCard';
 import AiSettingsSection from './sections/AiSettingsSection';
 import DataManagementCard from './sections/DataManagementCard';
 import AboutAppCard from './sections/AboutAppCard';
@@ -51,6 +52,7 @@ const SettingsPage = () => {
       <AppearanceSettingsCard />
       <ThemePreviewCard />
       <TransparencySettingsCard />
+      <DetailSidebarSettingsCard />
       <ShortcutSettingsPanel />
       <ClipboardSettingsCard />
 
