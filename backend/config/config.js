@@ -63,6 +63,7 @@ const config = Object.freeze({
     uri: process.env.MONGODB_URI,
     collections: Object.freeze({
       documents: process.env.DOCUMENT_COLLECTION || 'documents',
+      documentVersions: process.env.DOCUMENT_VERSION_COLLECTION || 'document-versions',
       quotes: process.env.QUOTE_COLLECTION || 'quotes',
       attachments: process.env.ATTACHMENT_COLLECTION || 'attachments',
       customPages: process.env.CUSTOM_PAGE_COLLECTION || 'custom-pages',

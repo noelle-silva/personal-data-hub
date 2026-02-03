@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const documentController = require('../controllers/documentController');
+const documentVersionController = require('../controllers/documentVersionController');
 
 /**
  * @route   GET /api/documents
@@ -71,6 +72,34 @@ router.get('/:id', documentController.getDocumentById);
  * @query   populate - 是否填充引用的文档信息 (title/full/none)
  */
 router.get('/:id/referencing-quotes', documentController.getReferencingQuotes);
+
+/**
+ * @route   GET /api/documents/:id/versions
+ * @desc    获取文档版本列表（按提交时间倒序）
+ * @access  Public
+ * @param   id - 文档ID
+ * @query   limit - 返回数量（默认50，最大200）
+ */
+router.get('/:id/versions', documentVersionController.listDocumentVersions);
+
+/**
+ * @route   GET /api/documents/:id/versions/:versionId
+ * @desc    获取单个文档版本详情（含快照）
+ * @access  Public
+ * @param   id - 文档ID
+ * @param   versionId - 版本ID
+ */
+router.get('/:id/versions/:versionId', documentVersionController.getDocumentVersionById);
+
+/**
+ * @route   POST /api/documents/:id/versions
+ * @desc    提交一个新版本（保存当前文档快照）
+ * @access  Private - 需要登录
+ * @param   id - 文档ID
+ * @body    versionName - 版本名称 (必填)
+ * @body    description - 版本描述 (可选)
+ */
+router.post('/:id/versions', documentVersionController.createDocumentVersion);
 
 /**
  * @route   POST /api/documents

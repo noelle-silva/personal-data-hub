@@ -68,6 +68,7 @@ import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import DocumentVersionsSection from './DocumentVersionsSection';
 import { openAttachmentWindowAndFetch, openQuoteWindowAndFetch } from '../store/windowsSlice';
 import { getAttachmentMetadata } from '../services/attachments';
 import QuoteFormModal from './QuoteFormModal';
@@ -2112,6 +2113,13 @@ const DocumentDetailContent = ({
               </Button>
             </SidebarMetaRow>
           )}
+
+          <DocumentVersionsSection
+            documentId={document._id}
+            isEditing={isEditing}
+            formatDate={formatDate}
+            onSuccessMessage={setSuccessMessage}
+          />
           </SidebarMetaInfoContainer>
         </RelationsBox>
 
