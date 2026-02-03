@@ -20,7 +20,6 @@ import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
 import HtmlIcon from '@mui/icons-material/Html';
 import CodeIcon from '@mui/icons-material/Code';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
@@ -579,24 +578,6 @@ const DocumentWindow = ({
           >
             <NavigateNextIcon />
           </WindowControlButton>
-
-          {detailHeaderControls && detailHeaderControls.canOpenActionsMenu && (
-            <WindowControlButton
-              size="small"
-              onClick={detailHeaderControls.onOpenActionsMenu}
-              title="更多操作"
-              aria-label="打开更多操作菜单"
-              aria-controls={detailHeaderControls.isActionsMenuOpen ? 'detail-actions-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={detailHeaderControls.isActionsMenuOpen ? 'true' : undefined}
-              sx={{
-                transition: 'transform 0.15s ease',
-                transform: detailHeaderControls.isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              <ExpandMoreIcon />
-            </WindowControlButton>
-          )}
           <WindowControlButton
             size="small"
             onClick={handleMaximize}

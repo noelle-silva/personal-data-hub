@@ -27,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import apiClient from '../services/apiClient';
 import ListItemText from '@mui/material/ListItemText';
@@ -2075,12 +2076,42 @@ const DocumentDetailContent = ({
               <Typography variant="caption">{formatDate(document.createdAt)}</Typography>
             </SidebarMetaRow>
 
+          <SidebarMetaRow>
+            <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+              更新时间:
+            </Typography>
+            <Typography variant="caption">{formatDate(document.updatedAt)}</Typography>
+          </SidebarMetaRow>
+
+          {!isEditing && (
             <SidebarMetaRow>
-              <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                更新时间:
-              </Typography>
-              <Typography variant="caption">{formatDate(document.updatedAt)}</Typography>
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleOpenActionsMenu}
+                aria-controls={isActionsMenuOpen ? 'detail-actions-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={isActionsMenuOpen ? 'true' : undefined}
+                endIcon={
+                  <ExpandMoreIcon
+                    sx={{
+                      transition: 'transform 0.15s ease',
+                      transform: isActionsMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                  />
+                }
+                sx={{
+                  width: '100%',
+                  justifyContent: 'space-between',
+                  borderRadius: 16,
+                  color: 'text.secondary',
+                  px: 1,
+                }}
+              >
+                更多操作
+              </Button>
             </SidebarMetaRow>
+          )}
           </SidebarMetaInfoContainer>
         </RelationsBox>
 
@@ -2090,11 +2121,8 @@ const DocumentDetailContent = ({
 
           {/* 内容 */}
           <Box sx={{ mt: 3, flexGrow: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1">
-                内容
-              </Typography>
-              
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
+
               {/* 编辑模式：Markdown/HTML 切换 */}
               {isEditing && (
                 <ToggleButtonGroup
