@@ -42,6 +42,34 @@ export const getGatewayUrl = async () => invoke('pdh_gateway_url');
 export const setGatewayBackendUrl = async (url) => invoke('pdh_gateway_set_backend_url', { url });
 export const setGatewayToken = async (token) => invoke('pdh_gateway_set_token', { token });
 
+let cachedListen = null;
+
+const getGlobalListen = () => {
+  if (typeof window === 'undefined') return null;
+  const candidates = [
+    window.__TAURI__?.event?.listen,
+    window.__TAURI_INTERNALS__?.event?.listen,
+  ];
+  for (const fn of candidates) {
+    if (typeof fn === 'function') return fn;
+  }
+  return null;
+};
+
+export const listen = async (eventName, handler) => {
+  const globalListen = getGlobalListen();
+  if (globalListen) return globalListen(eventName, handler);
+
+  if (cachedListen) return cachedListen(eventName, handler);
+
+  const mod = await import('@tauri-apps/api/event');
+  if (typeof mod.listen !== 'function') {
+    throw new Error('tauri event listen not available');
+  }
+  cachedListen = mod.listen;
+  return cachedListen(eventName, handler);
+};
+
 // 认证：refresh token 存在 Tauri 侧（OS 凭据库），前端不持有明文
 export const authLogin = async (username, password) => invoke('pdh_auth_login', { username, password });
 export const authRefresh = async () => invoke('pdh_auth_refresh');

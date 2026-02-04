@@ -4,6 +4,7 @@
  */
 
 import apiClient from './apiClient';
+import { invoke, isTauri } from './tauriBridge';
 
 /**
  * 获取附件列表
@@ -167,6 +168,27 @@ export const uploadDocument = async (file, onUploadProgress) => {
  */
 export const uploadScript = async (file, onUploadProgress) => {
   return uploadAttachment(file, 'script', onUploadProgress);
+};
+
+/**
+ * 桌面端：从本机路径上传附件（用于 Tauri file-drop）
+ * @param {string} path - 本机文件路径
+ * @param {string} category - 附件类别 (image/video/document/script)
+ * @returns {Promise<Object>} 上传结果（与后端返回结构保持一致）
+ */
+export const uploadAttachmentFromPath = async (path, category) => {
+  if (!isTauri()) {
+    throw new Error('uploadAttachmentFromPath 仅支持桌面端');
+  }
+  const trimmedPath = String(path || '').trim();
+  const trimmedCategory = String(category || '').trim();
+  if (!trimmedPath) throw new Error('path 为空');
+  if (!trimmedCategory) throw new Error('category 为空');
+
+  return invoke('pdh_upload_attachment_from_path', {
+    path: trimmedPath,
+    category: trimmedCategory
+  });
 };
 
 /**

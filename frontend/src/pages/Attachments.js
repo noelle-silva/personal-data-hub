@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -37,6 +37,31 @@ import { selectIsAuthenticated } from '../store/authSlice';
 import {
   openAttachmentWindowAndFetch
 } from '../store/windowsSlice';
+import { isTauri, listen } from '../services/tauriBridge';
+
+const getCategoryLabel = (category) => {
+  switch (category) {
+    case 'video': return '视频';
+    case 'document': return '文档';
+    case 'script': return '程序与脚本';
+    default: return '图片';
+  }
+};
+
+const extractFilesFromClipboard = (clipboardData) => {
+  const fileList = clipboardData?.files;
+  if (fileList && fileList.length > 0) {
+    return Array.from(fileList);
+  }
+
+  const items = Array.from(clipboardData?.items || []);
+  const files = items
+    .filter((item) => item.kind === 'file')
+    .map((item) => item.getAsFile())
+    .filter(Boolean);
+
+  return files;
+};
 
 // 样式化容器
 const StyledContainer = styled(Container)(({ theme }) => ({
@@ -82,9 +107,15 @@ const AttachmentsPage = () => {
   const configStatus = useSelector(selectAttachmentConfigStatus);
   const isAuthenticated = useSelector(selectIsAuthenticated);
   
+  const uploadButtonRef = useRef(null);
+  const currentCategoryRef = useRef('image');
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [currentTab, setCurrentTab] = useState(0); // 0: 图片, 1: 视频, 2: 文档, 3: 程序与脚本
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [hintSnackbarOpen, setHintSnackbarOpen] = useState(false);
+  const [hintSnackbarMessage, setHintSnackbarMessage] = useState('');
   
   // 获取当前选中的类别
   const getCurrentCategory = () => {
@@ -116,6 +147,20 @@ const AttachmentsPage = () => {
   const handleUploadError = (error) => {
     console.error('上传失败:', error);
   };
+
+  const uploadFilesToCurrentCategory = useCallback(async (files, source) => {
+    if (!files || files.length === 0) return;
+
+    const category = currentCategoryRef.current || 'image';
+    setHintSnackbarMessage(`${source}：已选择 ${files.length} 个文件，开始上传到「${getCategoryLabel(category)}」`);
+    setHintSnackbarOpen(true);
+
+    try {
+      await uploadButtonRef.current?.uploadFiles(files, category);
+    } catch (e) {
+      // 错误提示由 Redux error/snackbar 兜底
+    }
+  }, []);
 
   // 处理查看附件
   const handleViewAttachment = async (attachment) => {
@@ -167,6 +212,104 @@ const AttachmentsPage = () => {
       dispatch(fetchAttachmentConfig());
     }
   }, [dispatch, configStatus, isAuthenticated]);
+
+  useEffect(() => {
+    switch (currentTab) {
+      case 1:
+        currentCategoryRef.current = 'video';
+        break;
+      case 2:
+        currentCategoryRef.current = 'document';
+        break;
+      case 3:
+        currentCategoryRef.current = 'script';
+        break;
+      default:
+        currentCategoryRef.current = 'image';
+    }
+  }, [currentTab]);
+
+  // 支持 Ctrl+V 粘贴文件/截图到附件页进行上传
+  useEffect(() => {
+    const handlePaste = async (event) => {
+      const files = extractFilesFromClipboard(event.clipboardData);
+      if (!files || files.length === 0) return;
+
+      event.preventDefault();
+      await uploadFilesToCurrentCategory(files, '粘贴');
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [uploadFilesToCurrentCategory]);
+
+  const extractPathsFromTauriDragPayload = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (payload && Array.isArray(payload.paths)) return payload.paths;
+    return [];
+  };
+
+  // 桌面端拖拽：必须走 Tauri 的 drag-drop 事件（OS -> WebView 通常不会触发 DOM drag/drop）
+  useEffect(() => {
+    if (!isTauri()) return;
+
+    let unlistenEnter = null;
+    let unlistenOver = null;
+    let unlistenLeave = null;
+    let unlistenDrop = null;
+    let alive = true;
+
+    const setup = async () => {
+      try {
+        unlistenEnter = await listen('tauri://drag-enter', () => {
+          if (!alive) return;
+          setIsDragActive(true);
+        });
+
+        unlistenOver = await listen('tauri://drag-over', () => {
+          if (!alive) return;
+          setIsDragActive(true);
+        });
+
+        unlistenLeave = await listen('tauri://drag-leave', () => {
+          if (!alive) return;
+          setIsDragActive(false);
+        });
+
+        unlistenDrop = await listen('tauri://drag-drop', async (event) => {
+          if (!alive) return;
+          setIsDragActive(false);
+
+          const paths = extractPathsFromTauriDragPayload(event?.payload);
+          if (paths.length === 0) return;
+
+          const category = currentCategoryRef.current || 'image';
+          setHintSnackbarMessage(`拖拽：已选择 ${paths.length} 个文件，开始上传到「${getCategoryLabel(category)}」`);
+          setHintSnackbarOpen(true);
+
+          try {
+            await uploadButtonRef.current?.uploadPaths(paths, category);
+          } catch (e) {
+            const msg = String(e?.message || e || '上传失败');
+            setHintSnackbarMessage(`拖拽上传失败：${msg.slice(0, 160)}`);
+            setHintSnackbarOpen(true);
+          }
+        });
+      } catch (e) {
+        console.warn('Tauri drag-drop 监听失败：', e);
+      }
+    };
+
+    setup();
+
+    return () => {
+      alive = false;
+      try { unlistenDrop?.(); } catch (_) {}
+      try { unlistenEnter?.(); } catch (_) {}
+      try { unlistenOver?.(); } catch (_) {}
+      try { unlistenLeave?.(); } catch (_) {}
+    };
+  }, []);
 
   // 渲染统计信息
   const renderStats = () => {
@@ -312,15 +455,55 @@ const AttachmentsPage = () => {
           <Typography variant="body1" color="text.secondary">
             {isAuthenticated ? '已登录' : '未登录'}
           </Typography>
+          <Typography variant="body2" color="text.secondary">
+            支持拖拽文件或 Ctrl+V 粘贴到当前分类上传
+          </Typography>
         </LeftActions>
         <RightActions>
           <AttachmentUploadButton
+            ref={uploadButtonRef}
             category={getCurrentCategory()}
             onUploadSuccess={handleUploadSuccess}
             onUploadError={handleUploadError}
           />
         </RightActions>
       </ActionBar>
+
+      {isDragActive && (
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: (theme) => theme.zIndex.modal + 2,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          <Box
+            sx={{
+              px: 4,
+              py: 3,
+              borderRadius: 2,
+              border: '2px dashed',
+              borderColor: 'primary.main',
+              backgroundColor: 'background.paper',
+              boxShadow: 6,
+              maxWidth: 520,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              松开即可上传到「{getCategoryLabel(getCurrentCategory())}」
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              也支持 Ctrl+V 粘贴文件/截图
+            </Typography>
+          </Box>
+        </Box>
+      )}
 
       <AttachmentGrid
         category={getCurrentCategory()}
@@ -353,6 +536,14 @@ const AttachmentsPage = () => {
           附件上传成功
         </Alert>
       </Snackbar>
+
+      {/* 拖拽/粘贴提示 */}
+      <Snackbar
+        open={hintSnackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => setHintSnackbarOpen(false)}
+        message={hintSnackbarMessage}
+      />
 
     </StyledContainer>
   );

@@ -1,9 +1,11 @@
 mod gateway;
 
 use std::sync::{Arc, RwLock};
+use std::path::PathBuf;
 use tauri::Manager;
 use tauri::State;
 use serde_json::json;
+use tokio_util::io::ReaderStream;
 
 #[derive(Default)]
 struct GatewayState {
@@ -242,6 +244,80 @@ fn backend_base_url_from_state(state: &State<GatewayState>) -> Result<String, St
     .ok_or_else(|| "backend url not set".to_string())
 }
 
+fn normalize_attachment_category(category: &str) -> Result<&'static str, String> {
+  match category.trim() {
+    "image" => Ok("image"),
+    "video" => Ok("video"),
+    "document" => Ok("document"),
+    "script" => Ok("script"),
+    _ => Err("invalid attachment category".to_string()),
+  }
+}
+
+#[tauri::command]
+async fn pdh_upload_attachment_from_path(
+  state: State<'_, GatewayState>,
+  path: String,
+  category: String,
+) -> Result<serde_json::Value, String> {
+  let backend = backend_base_url_from_state(&state)?;
+  let category = normalize_attachment_category(&category)?;
+
+  let file_path = PathBuf::from(path.trim());
+  if file_path.as_os_str().is_empty() {
+    return Err("path is empty".to_string());
+  }
+
+  let file_name = file_path
+    .file_name()
+    .and_then(|s| s.to_str())
+    .unwrap_or("file")
+    .to_string();
+
+  let mime = mime_guess::from_path(&file_path)
+    .first_or_octet_stream()
+    .essence_str()
+    .to_string();
+
+  let file = tokio::fs::File::open(&file_path)
+    .await
+    .map_err(|e| format!("open file failed: {e}"))?;
+
+  let stream = ReaderStream::new(file);
+  let body = reqwest::Body::wrap_stream(stream);
+  let part = reqwest::multipart::Part::stream(body)
+    .file_name(file_name)
+    .mime_str(&mime)
+    .map_err(|e| e.to_string())?;
+  let form = reqwest::multipart::Form::new().part("file", part);
+
+  let token = {
+    let cfg = state
+      .config
+      .read()
+      .map_err(|_| "gateway state poisoned".to_string())?;
+    cfg.bearer_token.clone().unwrap_or_default()
+  };
+
+  let url = format!("{}/api/attachments/{}", backend, category);
+  let client = reqwest::Client::new();
+  let mut req = client.post(url).multipart(form);
+
+  if !token.trim().is_empty() {
+    req = req.bearer_auth(token.trim());
+  }
+
+  let resp = req.send().await.map_err(|e| e.to_string())?;
+  let status = resp.status();
+  let body = resp.text().await.map_err(|e| e.to_string())?;
+
+  if !status.is_success() {
+    return Err(format!("upload failed ({}): {}", status.as_u16(), body));
+  }
+
+  serde_json::from_str::<serde_json::Value>(&body).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 async fn pdh_auth_login(
   state: State<'_, GatewayState>,
@@ -414,6 +490,7 @@ pub fn run() {
       pdh_gateway_url,
       pdh_gateway_set_backend_url,
       pdh_gateway_set_token,
+      pdh_upload_attachment_from_path,
       pdh_auth_login,
       pdh_auth_refresh,
       pdh_auth_clear_refresh_token,

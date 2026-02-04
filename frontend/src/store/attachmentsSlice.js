@@ -10,6 +10,7 @@ import {
   uploadVideo,
   uploadDocument,
   uploadScript,
+  uploadAttachmentFromPath as uploadAttachmentFromPathService,
   deleteAttachment,
   getAttachmentMetadata,
   getAttachmentConfig,
@@ -58,6 +59,15 @@ export const uploadAttachmentScript = createAsyncThunk(
   'attachments/uploadAttachmentScript',
   async ({ file, onUploadProgress }) => {
     const response = await uploadScript(file, onUploadProgress);
+    return response;
+  }
+);
+
+// 异步 thunk：桌面端从路径上传（Tauri file-drop）
+export const uploadAttachmentFromPath = createAsyncThunk(
+  'attachments/uploadAttachmentFromPath',
+  async ({ path, category }) => {
+    const response = await uploadAttachmentFromPathService(path, category);
     return response;
   }
 );
@@ -403,6 +413,26 @@ const attachmentsSlice = createSlice({
         state.pagination.total += 1;
       })
       .addCase(uploadAttachmentScript.rejected, (state, action) => {
+        state.uploadStatus = 'failed';
+        state.uploadError = action.error.message;
+      });
+
+    // 桌面端：从路径上传
+    builder
+      .addCase(uploadAttachmentFromPath.pending, (state) => {
+        state.uploadStatus = 'uploading';
+        state.uploadProgress = 0;
+        state.uploadError = null;
+      })
+      .addCase(uploadAttachmentFromPath.fulfilled, (state, action) => {
+        state.uploadStatus = 'succeeded';
+        const attachment = action.payload.data;
+
+        state.itemsById[attachment._id] = attachment;
+        state.items.unshift(attachment._id);
+        state.pagination.total += 1;
+      })
+      .addCase(uploadAttachmentFromPath.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
       });

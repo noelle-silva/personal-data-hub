@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useImperativeHandle } from 'react';
 import {
   Button,
   Box,
@@ -22,6 +22,7 @@ import {
   uploadAttachmentVideo,
   uploadAttachmentDocument,
   uploadAttachmentScript,
+  uploadAttachmentFromPath,
   selectUploadStatus,
   resetUploadStatus,
   selectAttachmentConfig,
@@ -44,7 +45,8 @@ const UploadButton = styled(Button)(({ theme }) => ({
  * @param {Function} props.onUploadSuccess - 上传成功回调
  * @param {Function} props.onUploadError - 上传错误回调
  */
-const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadError }) => {
+const AttachmentUploadButton = React.forwardRef(
+  ({ category = 'image', onUploadSuccess, onUploadError }, ref) => {
   const dispatch = useDispatch();
   const uploadStatus = useSelector(selectUploadStatus);
   const attachmentConfig = useSelector(selectAttachmentConfig);
@@ -63,6 +65,11 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
     }
   }, [configStatus, dispatch]);
 
+  // category prop 变化时，同步选中的类别（附件页切换 tab 时会触发）
+  useEffect(() => {
+    setSelectedCategory(category);
+  }, [category]);
+
   // 获取当前类别的最大文件数
   const getMaxFilesForCategory = (category) => {
     if (attachmentConfig && attachmentConfig[category]) {
@@ -79,9 +86,10 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
   };
 
   // 处理文件选择
-  const handleFileSelect = async (files) => {
+  const handleFileSelect = async (files, categoryOverride) => {
     if (files && files.length > 0) {
-      const maxFiles = getMaxFilesForCategory(selectedCategory);
+      const effectiveCategory = categoryOverride || selectedCategory;
+      const maxFiles = getMaxFilesForCategory(effectiveCategory);
       const filesArray = Array.from(files);
       
       // 如果选择的文件数量超过限制，只取前 maxFiles 个
@@ -95,7 +103,7 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
       // 串行上传文件
       for (const file of filesToUpload) {
         try {
-          await handleUpload(file, selectedCategory);
+          await handleUpload(file, effectiveCategory);
         } catch (error) {
           console.error('上传文件失败:', error);
           // 可以在这里添加错误提示
@@ -105,7 +113,7 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
   };
 
   // 处理上传
-  const handleUpload = (file, fileCategory) => {
+  const handleUpload = async (file, fileCategory) => {
     // 确定有效的文件类别
     const effectiveCategory =
       fileCategory ||
@@ -128,25 +136,31 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
         uploadAction = uploadAttachmentImage;
     }
 
-    dispatch(uploadAction({ file }))
-      .unwrap()
-      .then((result) => {
-        if (onUploadSuccess) {
-          onUploadSuccess(result);
-        }
-        // 重置上传状态
-        dispatch(resetUploadStatus());
-      })
-      .catch((error) => {
-        if (onUploadError) {
-          onUploadError(error);
-        }
-      });
+    try {
+      const result = await dispatch(uploadAction({ file })).unwrap();
+      if (onUploadSuccess) {
+        onUploadSuccess(result);
+      }
+      return result;
+    } catch (error) {
+      if (onUploadError) {
+        onUploadError(error);
+      }
+      throw error;
+    } finally {
+      // 无论成功/失败都重置状态，避免卡在 uploading
+      dispatch(resetUploadStatus());
+    }
+  };
+
+  const handleUploadPath = async (path, categoryOverride) => {
+    const effectiveCategory = categoryOverride || selectedCategory || 'image';
+    return dispatch(uploadAttachmentFromPath({ path, category: effectiveCategory })).unwrap();
   };
 
   // 处理文件输入变化
   const handleFileInputChange = (event) => {
-    handleFileSelect(event.target.files);
+    handleFileSelect(event.target.files, selectedCategory);
     // 清空文件输入，允许重复选择同一文件
     event.target.value = '';
   };
@@ -191,6 +205,59 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
     }, 100);
   };
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      uploadFiles: async (files, categoryOverride) => {
+        if (uploadStatus === 'uploading') {
+          setSnackbarMessage('正在上传中，请稍后再试');
+          setSnackbarOpen(true);
+          return;
+        }
+
+        if (categoryOverride && categoryOverride !== selectedCategory) {
+          setSelectedCategory(categoryOverride);
+        }
+
+        await handleFileSelect(files, categoryOverride);
+      },
+      uploadPaths: async (paths, categoryOverride) => {
+        if (uploadStatus === 'uploading') {
+          setSnackbarMessage('正在上传中，请稍后再试');
+          setSnackbarOpen(true);
+          return;
+        }
+
+        const effectiveCategory = categoryOverride || selectedCategory;
+        const maxFiles = getMaxFilesForCategory(effectiveCategory);
+        const pathsArray = Array.from(paths || []).map((p) => String(p || '').trim()).filter(Boolean);
+
+        if (pathsArray.length === 0) return;
+
+        if (pathsArray.length > maxFiles) {
+          setSnackbarMessage(`一次最多只能上传 ${maxFiles} 个文件，已自动选择前 ${maxFiles} 个`);
+          setSnackbarOpen(true);
+        }
+
+        if (categoryOverride && categoryOverride !== selectedCategory) {
+          setSelectedCategory(categoryOverride);
+        }
+
+        const pathsToUpload = pathsArray.slice(0, maxFiles);
+        for (const path of pathsToUpload) {
+          try {
+            const result = await handleUploadPath(path, effectiveCategory);
+            if (onUploadSuccess) onUploadSuccess(result);
+          } catch (error) {
+            if (onUploadError) onUploadError(error);
+            throw error;
+          } finally {
+            dispatch(resetUploadStatus());
+          }
+        }
+      },
+    }),
+  );
 
   // 获取类别显示文本
   const getCategoryText = () => {
@@ -303,6 +370,9 @@ const AttachmentUploadButton = ({ category = 'image', onUploadSuccess, onUploadE
       />
     </Box>
   );
-};
+  }
+);
+
+AttachmentUploadButton.displayName = 'AttachmentUploadButton';
 
 export default AttachmentUploadButton;
