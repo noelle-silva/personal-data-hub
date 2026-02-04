@@ -331,9 +331,11 @@ const attachmentsSlice = createSlice({
         state.uploadStatus = 'uploading';
         state.uploadProgress = 0;
         state.uploadError = null;
+        state.error = null;
       })
       .addCase(uploadAttachmentImage.fulfilled, (state, action) => {
         state.uploadStatus = 'succeeded';
+        state.error = null;
         const attachment = action.payload.data;
         
         // 添加到列表开头
@@ -346,6 +348,7 @@ const attachmentsSlice = createSlice({
       .addCase(uploadAttachmentImage.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
+        state.error = action.error.message;
       });
     
     // 上传视频
@@ -354,9 +357,11 @@ const attachmentsSlice = createSlice({
         state.uploadStatus = 'uploading';
         state.uploadProgress = 0;
         state.uploadError = null;
+        state.error = null;
       })
       .addCase(uploadAttachmentVideo.fulfilled, (state, action) => {
         state.uploadStatus = 'succeeded';
+        state.error = null;
         const attachment = action.payload.data;
         
         // 添加到列表开头
@@ -369,6 +374,7 @@ const attachmentsSlice = createSlice({
       .addCase(uploadAttachmentVideo.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
+        state.error = action.error.message;
       });
     
     // 上传文档
@@ -377,9 +383,11 @@ const attachmentsSlice = createSlice({
         state.uploadStatus = 'uploading';
         state.uploadProgress = 0;
         state.uploadError = null;
+        state.error = null;
       })
       .addCase(uploadAttachmentDocument.fulfilled, (state, action) => {
         state.uploadStatus = 'succeeded';
+        state.error = null;
         const attachment = action.payload.data;
         
         // 添加到列表开头
@@ -392,6 +400,7 @@ const attachmentsSlice = createSlice({
       .addCase(uploadAttachmentDocument.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
+        state.error = action.error.message;
       });
     
     // 上传程序与脚本
@@ -400,9 +409,11 @@ const attachmentsSlice = createSlice({
         state.uploadStatus = 'uploading';
         state.uploadProgress = 0;
         state.uploadError = null;
+        state.error = null;
       })
       .addCase(uploadAttachmentScript.fulfilled, (state, action) => {
         state.uploadStatus = 'succeeded';
+        state.error = null;
         const attachment = action.payload.data;
         
         // 添加到列表开头
@@ -415,6 +426,7 @@ const attachmentsSlice = createSlice({
       .addCase(uploadAttachmentScript.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
+        state.error = action.error.message;
       });
 
     // 桌面端：从路径上传
@@ -423,9 +435,11 @@ const attachmentsSlice = createSlice({
         state.uploadStatus = 'uploading';
         state.uploadProgress = 0;
         state.uploadError = null;
+        state.error = null;
       })
       .addCase(uploadAttachmentFromPath.fulfilled, (state, action) => {
         state.uploadStatus = 'succeeded';
+        state.error = null;
         const attachment = action.payload.data;
 
         state.itemsById[attachment._id] = attachment;
@@ -435,6 +449,7 @@ const attachmentsSlice = createSlice({
       .addCase(uploadAttachmentFromPath.rejected, (state, action) => {
         state.uploadStatus = 'failed';
         state.uploadError = action.error.message;
+        state.error = action.error.message;
       });
     
     // 删除附件

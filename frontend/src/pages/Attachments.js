@@ -114,8 +114,6 @@ const AttachmentsPage = () => {
   const [showStats, setShowStats] = useState(false);
   const [currentTab, setCurrentTab] = useState(0); // 0: 图片, 1: 视频, 2: 文档, 3: 程序与脚本
   const [isDragActive, setIsDragActive] = useState(false);
-  const [hintSnackbarOpen, setHintSnackbarOpen] = useState(false);
-  const [hintSnackbarMessage, setHintSnackbarMessage] = useState('');
   
   // 获取当前选中的类别
   const getCurrentCategory = () => {
@@ -152,8 +150,6 @@ const AttachmentsPage = () => {
     if (!files || files.length === 0) return;
 
     const category = currentCategoryRef.current || 'image';
-    setHintSnackbarMessage(`${source}：已选择 ${files.length} 个文件，开始上传到「${getCategoryLabel(category)}」`);
-    setHintSnackbarOpen(true);
 
     try {
       await uploadButtonRef.current?.uploadFiles(files, category);
@@ -284,15 +280,11 @@ const AttachmentsPage = () => {
           if (paths.length === 0) return;
 
           const category = currentCategoryRef.current || 'image';
-          setHintSnackbarMessage(`拖拽：已选择 ${paths.length} 个文件，开始上传到「${getCategoryLabel(category)}」`);
-          setHintSnackbarOpen(true);
 
           try {
             await uploadButtonRef.current?.uploadPaths(paths, category);
           } catch (e) {
-            const msg = String(e?.message || e || '上传失败');
-            setHintSnackbarMessage(`拖拽上传失败：${msg.slice(0, 160)}`);
-            setHintSnackbarOpen(true);
+            // 错误提示由 Redux error/snackbar 兜底
           }
         });
       } catch (e) {
@@ -536,14 +528,6 @@ const AttachmentsPage = () => {
           附件上传成功
         </Alert>
       </Snackbar>
-
-      {/* 拖拽/粘贴提示 */}
-      <Snackbar
-        open={hintSnackbarOpen}
-        autoHideDuration={2000}
-        onClose={() => setHintSnackbarOpen(false)}
-        message={hintSnackbarMessage}
-      />
 
     </StyledContainer>
   );
