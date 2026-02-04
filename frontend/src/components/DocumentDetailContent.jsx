@@ -67,7 +67,7 @@ import DocumentPickerDialog from './DocumentPickerDialog';
 import AttachmentPickerDialog from './AttachmentPickerDialog';
 import QuotePickerDialog from './QuotePickerDialog';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import HtmlInlineRenderer from './HtmlInlineRenderer';
 import DocumentVersionsSection from './DocumentVersionsSection';
 import { openAttachmentWindowAndFetch, openQuoteWindowAndFetch } from '../store/windowsSlice';
 import { getAttachmentMetadata } from '../services/attachments';
@@ -2245,7 +2245,7 @@ const DocumentDetailContent = ({
                     {editorType === 'markdown' ? (
                       <MarkdownInlineRenderer content={previewContent} />
                     ) : (
-                      <HtmlSandboxRenderer content={previewContent} />
+                      <HtmlInlineRenderer content={previewContent} />
                     )}
                   </PreviewContent>
                 </EditorRightColumn>
@@ -2263,7 +2263,7 @@ const DocumentDetailContent = ({
                   <>
                     {/* 显示HTML内容 */}
                     {contentType === 'html' && document.htmlContent && (
-                      <HtmlSandboxRenderer
+                      <HtmlInlineRenderer
                         content={document.htmlContent}
                         cacheKey={document._id && document.updatedAt ? `${document._id}|html|${document.updatedAt}` : null}
                       />

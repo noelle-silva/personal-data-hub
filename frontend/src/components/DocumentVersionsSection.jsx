@@ -24,7 +24,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import HtmlInlineRenderer from './HtmlInlineRenderer';
 import {
   createDocumentVersion,
   getDocumentVersion,
@@ -327,7 +327,7 @@ const DocumentVersionPreviewDialog = ({
               <Box sx={{ overflowY: 'auto', minHeight: 0, flexGrow: 1 }}>
                 {mode === 'html' ? (
                   snapshot?.htmlContent ? (
-                    <HtmlSandboxRenderer
+                    <HtmlInlineRenderer
                       content={snapshot.htmlContent}
                       cacheKey={version?._id && version?.createdAt ? `${version._id}|html|${version.createdAt}` : null}
                     />

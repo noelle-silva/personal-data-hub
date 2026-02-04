@@ -62,7 +62,7 @@ import { CSS } from '@dnd-kit/utilities';
 import DocumentPickerDialog from './DocumentPickerDialog';
 import QuoteDetailModal from './legacy/QuoteDetailModal';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import HtmlInlineRenderer from './HtmlInlineRenderer';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -1308,7 +1308,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                           HTML预览
                         </Typography>
                         <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                          <HtmlSandboxRenderer
+                          <HtmlInlineRenderer
                             content={formData.htmlContent}
                             cacheKey={`preview-${Date.now()}`}
                           />
@@ -1329,7 +1329,7 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                       <>
                         {/* 显示HTML内容 */}
                         {contentType === 'html' && document.htmlContent && (
-                          <HtmlSandboxRenderer
+                          <HtmlInlineRenderer
                             content={document.htmlContent}
                             cacheKey={document._id && document.updatedAt ? `${document._id}|html|${document.updatedAt}` : null}
                           />

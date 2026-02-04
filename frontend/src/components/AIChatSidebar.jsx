@@ -15,6 +15,8 @@ const SidebarContainer = styled(Box, {
   bottom: (isMobile || isOverlay) ? 0 : 'auto',
   left: isMobile ? 0 : 'auto',
   width: isMobile ? '100%' : `${width}px`,
+  // 作为 flex 子项时禁止被压缩：主内容加载/布局抖动不应挤压 AI 侧边栏宽度
+  flexShrink: 0,
   height: isMobile ? '100vh' : '100%',
   backgroundColor: theme.palette.background.paper,
   borderLeft: isMobile ? 'none' : `1px solid ${theme.palette.divider}`,

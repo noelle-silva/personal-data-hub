@@ -23,7 +23,7 @@ import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
-import HtmlSandboxRenderer from './HtmlSandboxRenderer';
+import HtmlInlineRenderer from './HtmlInlineRenderer';
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -618,7 +618,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
               {editorType === 'markdown' ? (
                 <MarkdownInlineRenderer content={previewContent} />
               ) : (
-                <HtmlSandboxRenderer content={previewContent} />
+                <HtmlInlineRenderer content={previewContent} />
               )}
             </PreviewContent>
           </RightColumn>
