@@ -34,6 +34,7 @@ import { buildAttachmentImageHtml, buildAttachmentVideoHtml } from '../utils/att
 
 // 样式化卡片
 const StyledCard = styled(Card)(({ theme }) => ({
+  width: '100%',
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -79,6 +80,7 @@ const FileInfo = styled(Box)(({ theme }) => ({
   flexDirection: 'column',
   gap: 4,
   flexGrow: 1,
+  minWidth: 0,
 }));
 
 // 样式化文件名
@@ -116,6 +118,8 @@ const DocumentPlaceholder = styled(Box)(({ theme }) => ({
 const FileDetails = styled(Typography)(({ theme }) => ({
   fontSize: '0.75rem',
   color: theme.palette.text.secondary,
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 }));
 
 /**
@@ -569,7 +573,7 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     <StyledCard ref={cardRef}>
       {renderCardMedia()}
       
-      <CardContent onClick={handleCardClick} sx={{ flexGrow: 1, pb: 2 }}>
+      <CardContent onClick={handleCardClick} sx={{ flexGrow: 1, pb: 2, minWidth: 0 }}>
         <FileInfo>
           <FileName variant="body2" title={attachment.originalName}>
             {attachment.originalName}

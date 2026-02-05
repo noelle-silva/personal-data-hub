@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
-  Grid,
   Box,
   Typography,
   CircularProgress,
@@ -53,6 +52,19 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
 const LoadMoreButton = styled(Button)(({ theme }) => ({
   marginTop: theme.spacing(2),
   marginBottom: theme.spacing(4),
+}));
+
+// 样式化附件卡片网格：固定列宽，避免“最后一行拉伸/内容撑开”导致的宽度不一致
+const CardsGrid = styled(Box)(({ theme }) => ({
+  display: 'grid',
+  gap: theme.spacing(3),
+  gridTemplateColumns: '1fr',
+  alignItems: 'stretch',
+  width: '100%',
+  [theme.breakpoints.up('sm')]: {
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 280px))',
+    justifyContent: 'start',
+  },
 }));
 
 /**
@@ -251,17 +263,17 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
       {renderError()}
       
       {attachments.length > 0 && (
-        <Grid container spacing={3}>
+        <CardsGrid>
           {attachments.map((attachment) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={attachment._id}>
+            <Box key={attachment._id} sx={{ minWidth: 0 }}>
               <AttachmentCard
                 attachment={attachment}
                 onView={handleViewAttachment}
                 onDelete={handleDeleteAttachment}
               />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </CardsGrid>
       )}
       
       {renderLoading()}
