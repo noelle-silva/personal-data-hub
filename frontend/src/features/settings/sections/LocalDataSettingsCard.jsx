@@ -178,9 +178,17 @@ const LocalDataSettingsCard = () => {
               <Divider />
               <ListItem>
                 <ListItemText
-                  primary="配置文件"
-                  secondary={info?.configPath || (loading ? '读取中...' : '未知')}
-                  secondaryTypographyProps={{ sx: { wordBreak: 'break-all' } }}
+                  primary="本地数据配置文件（固定位置）"
+                  secondary={
+                    <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box component="span" sx={{ wordBreak: 'break-all' }}>
+                        {info?.configPath || (loading ? '读取中...' : '未知')}
+                      </Box>
+                      <Box component="span" sx={{ color: 'text.secondary' }}>
+                        说明：迁移“数据目录”时，这个文件的路径不会变化；只会更新它里面的 `dataDir`，让客户端改为从新目录读写。
+                      </Box>
+                    </Box>
+                  }
                 />
                 <Button
                   variant="text"
@@ -194,7 +202,7 @@ const LocalDataSettingsCard = () => {
               </ListItem>
             </List>
             <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-              说明：这里的“本地数据目录”用于保存客户端本地文件（例如：已保存的配色预设）。迁移会复制一份到新位置，旧目录不会被删除。
+              说明：这里的“本地数据目录”用于保存客户端本地文件（例如：已保存的配色预设）。迁移会复制一份到新位置，旧目录不会被删除；配置文件仍保留在系统的 App 配置目录中作为指针。
             </Typography>
           </>
         ) : null}
