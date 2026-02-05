@@ -47,6 +47,8 @@ const SettingsPage = () => {
     () => [
       { key: 'server', label: '服务器管理' },
       { key: 'ui', label: '界面' },
+      { key: 'shortcuts', label: '快捷键' },
+      { key: 'ai', label: 'AI 设置' },
       { key: 'productivity', label: '效率' },
       { key: 'features', label: '功能' },
       { key: 'data', label: '数据' },
@@ -165,27 +167,37 @@ const SettingsPage = () => {
       </TabPanel>
 
       <TabPanel activeKey={normalizedActiveTabKey} tabKey="ui">
+        {isAuthenticated ? <WallpaperManagementCard /> : null}
         <AppearanceSettingsCard />
         <ThemePreviewCard />
         <TransparencySettingsCard />
         <DetailSidebarSettingsCard />
-        {isAuthenticated ? <WallpaperManagementCard /> : null}
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="shortcuts">
+        <ShortcutSettingsPanel />
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="ai">
+        {isAuthenticated ? (
+          <AiSettingsSection />
+        ) : (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            登录后可使用 AI 相关设置。
+          </Alert>
+        )}
       </TabPanel>
 
       <TabPanel activeKey={normalizedActiveTabKey} tabKey="productivity">
-        <ShortcutSettingsPanel />
         <ClipboardSettingsCard />
       </TabPanel>
 
       <TabPanel activeKey={normalizedActiveTabKey} tabKey="features">
         {isAuthenticated ? (
-          <>
-            <CustomPagesSettingsCard />
-            <AiSettingsSection />
-          </>
+          <CustomPagesSettingsCard />
         ) : (
           <Alert severity="info" sx={{ mb: 2 }}>
-            登录后可使用“自定义页面 / AI”等需要后端权限的功能项。
+            登录后可使用“自定义页面”等需要后端权限的功能项。
           </Alert>
         )}
       </TabPanel>

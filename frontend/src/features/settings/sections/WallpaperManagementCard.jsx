@@ -11,12 +11,11 @@ const WallpaperManagementCard = () => {
         <Typography variant="h6" gutterBottom>
           壁纸管理
         </Typography>
-        <WallpaperUpload />
         <WallpaperList />
+        <WallpaperUpload />
       </CardContent>
     </SettingsCard>
   );
 };
 
 export default WallpaperManagementCard;
-
