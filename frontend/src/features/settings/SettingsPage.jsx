@@ -15,6 +15,7 @@ import ClipboardSettingsCard from './sections/ClipboardSettingsCard';
 import DetailSidebarSettingsCard from './sections/DetailSidebarSettingsCard';
 import AiSettingsSection from './sections/AiSettingsSection';
 import DataManagementCard from './sections/DataManagementCard';
+import LocalDataSettingsCard from './sections/LocalDataSettingsCard';
 import AboutAppCard from './sections/AboutAppCard';
 import AccountManagementCard from './sections/AccountManagementCard';
 import DeveloperInfoCard from './sections/DeveloperInfoCard';
@@ -203,11 +204,12 @@ const SettingsPage = () => {
       </TabPanel>
 
       <TabPanel activeKey={normalizedActiveTabKey} tabKey="data">
+        <LocalDataSettingsCard />
         {isAuthenticated ? (
           <DataManagementCard />
         ) : (
           <Alert severity="info" sx={{ mb: 2 }}>
-            登录后可访问数据管理相关设置。
+            登录后可访问服务端数据管理相关设置。
           </Alert>
         )}
       </TabPanel>

@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentWallpaper, fetchCurrentWallpaper, resetWallpaperState } from '../store/wallpaperSlice';
 import { selectIsAuthenticated } from '../store/authSlice';
 import themesService from '../services/themes';
+import { getThemePresetById } from '../services/themePresets';
 import { mdToMuiPalette } from '../utils/mdToMuiPalette';
 import { buildComponentsOverrides, buildCustomColors } from '../themeOverrides';
 
@@ -13,6 +14,7 @@ import { buildComponentsOverrides, buildCustomColors } from '../themeOverrides';
 const ThemeContext = createContext();
 
 const SCROLLBARS_VISIBLE_CLASS = 'pdh-scrollbars-visible';
+const APPLIED_THEME_PRESET_ID_KEY = 'pdh_applied_theme_preset_id';
 
 const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => {
   const thumbColor = alpha(theme.palette.primary.main, 0.55);
@@ -198,9 +200,44 @@ export const ThemeProvider = ({ children }) => {
     return saved || 'tonalSpot';
   });
 
+  // 本地配色预设（可脱离后端使用）
+  const [appliedThemePresetId, setAppliedThemePresetId] = useState(() => {
+    try {
+      return (localStorage.getItem(APPLIED_THEME_PRESET_ID_KEY) || '').trim();
+    } catch {
+      return '';
+    }
+  });
+  const [appliedThemePreset, setAppliedThemePreset] = useState(null);
+
   // 当前主题颜色数据
   const [themeColors, setThemeColors] = useState(null);
   const [themeLoading, setThemeLoading] = useState(false);
+
+  const clearThemePreset = useCallback(() => {
+    setAppliedThemePresetId('');
+    setAppliedThemePreset(null);
+    try {
+      localStorage.removeItem(APPLIED_THEME_PRESET_ID_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const applyThemePreset = useCallback((preset) => {
+    const id = typeof preset?.id === 'string' ? preset.id.trim() : '';
+    const payload = preset?.payload;
+    if (!id || !payload?.themeColors) return;
+
+    setAppliedThemePresetId(id);
+    setAppliedThemePreset(preset);
+
+    try {
+      localStorage.setItem(APPLIED_THEME_PRESET_ID_KEY, id);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // 根据模式选择主题
   const theme = useMemo(() => {
@@ -254,6 +291,10 @@ export const ThemeProvider = ({ children }) => {
       return;
     }
 
+    if (appliedThemePresetId) {
+      return;
+    }
+
     try {
       setThemeLoading(true);
       const colors = await themesService.getCurrentColors();
@@ -272,10 +313,11 @@ export const ThemeProvider = ({ children }) => {
     } finally {
       setThemeLoading(false);
     }
-  }, [dynamicColorsEnabled]);
+  }, [dynamicColorsEnabled, appliedThemePresetId]);
 
   // 重新生成主题颜色
   const regenerateThemeColors = async (wallpaperId) => {
+    clearThemePreset();
     try {
       setThemeLoading(true);
       console.log('开始重新生成主题颜色，壁纸ID:', wallpaperId);
@@ -315,12 +357,18 @@ export const ThemeProvider = ({ children }) => {
     const newEnabled = !dynamicColorsEnabled;
     setDynamicColorsEnabled(newEnabled);
     localStorage.setItem('dynamicColorsEnabled', JSON.stringify(newEnabled));
+    if (!newEnabled) {
+      clearThemePreset();
+    }
   };
 
   // 设置动态主题开关
   const setDynamicColors = (enabled) => {
     setDynamicColorsEnabled(enabled);
     localStorage.setItem('dynamicColorsEnabled', JSON.stringify(enabled));
+    if (!enabled) {
+      clearThemePreset();
+    }
   };
 
   // 设置主题变体
@@ -334,20 +382,85 @@ export const ThemeProvider = ({ children }) => {
     if (isAuthenticated) {
       dispatch(fetchCurrentWallpaper());
     } else {
-      // 未认证时清空主题颜色，避免使用旧会话数据
-      setThemeColors(null);
+      // 未认证时：如果没有应用本地配色预设，则清空主题颜色，避免使用旧会话数据
+      if (!appliedThemePresetId) {
+        setThemeColors(null);
+      }
     }
-  }, [dispatch, isAuthenticated]);
+  }, [dispatch, isAuthenticated, appliedThemePresetId]);
 
   // 当动态主题开关或当前壁纸变化时，重新加载主题颜色（仅在已认证时）
   useEffect(() => {
+    if (appliedThemePresetId) return;
     if (isAuthenticated && currentWallpaper) {
       loadThemeColors();
     } else if (!isAuthenticated) {
       // 未认证时清空主题颜色
       setThemeColors(null);
     }
-  }, [dynamicColorsEnabled, currentWallpaper, isAuthenticated, loadThemeColors]);
+  }, [dynamicColorsEnabled, currentWallpaper, isAuthenticated, loadThemeColors, appliedThemePresetId]);
+
+  // 应用本地配色预设：加载 preset 并覆盖当前动态主题颜色
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      const id = (appliedThemePresetId || '').trim();
+      if (!id) {
+        setAppliedThemePreset(null);
+        return;
+      }
+
+      if (appliedThemePreset?.id === id) return;
+
+      try {
+        const preset = await getThemePresetById(id);
+        if (cancelled) return;
+
+        if (!preset) {
+          clearThemePreset();
+          return;
+        }
+
+        setAppliedThemePreset(preset);
+      } catch (e) {
+        console.warn('加载本地配色预设失败：', e);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedThemePresetId, appliedThemePreset, clearThemePreset]);
+
+  useEffect(() => {
+    if (!appliedThemePresetId) return;
+
+    const payload = appliedThemePreset?.payload;
+    const presetColors = payload?.themeColors;
+    if (!presetColors) return;
+
+    // 确保动态主题开启，且变体保持一致
+    setDynamicColorsEnabled(true);
+    try {
+      localStorage.setItem('dynamicColorsEnabled', JSON.stringify(true));
+    } catch {
+      // ignore
+    }
+
+    const presetVariant = typeof payload.selectedVariant === 'string' ? payload.selectedVariant : '';
+    if (presetVariant) {
+      setSelectedVariant(presetVariant);
+      try {
+        localStorage.setItem('selectedVariant', presetVariant);
+      } catch {
+        // ignore
+      }
+    }
+
+    setThemeColors(presetColors);
+  }, [appliedThemePresetId, appliedThemePreset]);
 
   // 监控认证状态变化，从已认证变为未认证时重置壁纸状态
   useEffect(() => {
@@ -377,7 +490,11 @@ export const ThemeProvider = ({ children }) => {
     regenerateThemeColors,
     loadThemeColors,
     availableVariants: themesService.getAvailableVariants(),
-    getVariantDisplayName: themesService.getVariantDisplayName
+    getVariantDisplayName: themesService.getVariantDisplayName,
+    // 本地配色预设
+    appliedThemePresetId,
+    applyThemePreset,
+    clearThemePreset,
   };
 
   return (

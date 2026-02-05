@@ -1,4 +1,5 @@
 mod gateway;
+mod local_data;
 
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
@@ -231,6 +232,19 @@ fn pdh_auth_clear_refresh_token(state: State<'_, GatewayState>) -> Result<(), St
   let legacy = refresh_token_entry(KEYRING_ACCOUNT_REFRESH_LEGACY)?;
   let _ = legacy.delete_password();
   Ok(())
+}
+
+#[tauri::command]
+async fn pdh_pick_directory() -> Result<Option<String>, String> {
+  let picked = tauri::async_runtime::spawn_blocking(|| {
+    rfd::FileDialog::new()
+      .set_title("选择新的本地数据存放位置（会在其中创建 personal-data-hub-data）")
+      .pick_folder()
+  })
+  .await
+  .map_err(|e| format!("pick_folder join failed: {e}"))?;
+
+  Ok(picked.map(|p| p.to_string_lossy().to_string()))
 }
 
 fn backend_base_url_from_state(state: &State<GatewayState>) -> Result<String, String> {
@@ -496,7 +510,13 @@ pub fn run() {
       pdh_auth_clear_refresh_token,
       pdh_secret_set_password,
       pdh_secret_get_password,
-      pdh_secret_delete_password
+      pdh_secret_delete_password,
+      local_data::pdh_local_data_info,
+      local_data::pdh_local_data_migrate,
+      local_data::pdh_theme_presets_list,
+      local_data::pdh_theme_presets_save,
+      local_data::pdh_theme_presets_delete,
+      pdh_pick_directory
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
