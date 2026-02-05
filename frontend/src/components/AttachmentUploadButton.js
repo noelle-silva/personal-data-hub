@@ -46,11 +46,12 @@ const UploadButton = styled(Button)(({ theme }) => ({
  * @param {Function} props.onUploadError - 上传错误回调
  */
 const AttachmentUploadButton = React.forwardRef(
-  ({ category = 'image', onUploadSuccess, onUploadError }, ref) => {
+  ({ category = 'image', onUploadSuccess, onUploadError, onQueueFiles, onQueuePaths, disabled }, ref) => {
   const dispatch = useDispatch();
   const uploadStatus = useSelector(selectUploadStatus);
   const attachmentConfig = useSelector(selectAttachmentConfig);
   const configStatus = useSelector(selectAttachmentConfigStatus);
+  const managedMode = typeof onQueueFiles === 'function' || typeof onQueuePaths === 'function';
   
   const fileInputRef = useRef(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState(null);
@@ -99,6 +100,12 @@ const AttachmentUploadButton = React.forwardRef(
       }
       
       const filesToUpload = filesArray.slice(0, maxFiles);
+
+      // 任务队列模式：只负责把文件交给上层管理器
+      if (managedMode && typeof onQueueFiles === 'function') {
+        await onQueueFiles(filesToUpload, effectiveCategory);
+        return;
+      }
       
       // 串行上传文件
       for (const file of filesToUpload) {
@@ -209,7 +216,7 @@ const AttachmentUploadButton = React.forwardRef(
     ref,
     () => ({
       uploadFiles: async (files, categoryOverride) => {
-        if (uploadStatus === 'uploading') {
+        if (!managedMode && uploadStatus === 'uploading') {
           setSnackbarMessage('正在上传中，请稍后再试');
           setSnackbarOpen(true);
           return;
@@ -219,10 +226,15 @@ const AttachmentUploadButton = React.forwardRef(
           setSelectedCategory(categoryOverride);
         }
 
+        if (managedMode && typeof onQueueFiles === 'function') {
+          await onQueueFiles(Array.from(files || []), categoryOverride || selectedCategory);
+          return;
+        }
+
         await handleFileSelect(files, categoryOverride);
       },
       uploadPaths: async (paths, categoryOverride) => {
-        if (uploadStatus === 'uploading') {
+        if (!managedMode && uploadStatus === 'uploading') {
           setSnackbarMessage('正在上传中，请稍后再试');
           setSnackbarOpen(true);
           return;
@@ -244,6 +256,12 @@ const AttachmentUploadButton = React.forwardRef(
         }
 
         const pathsToUpload = pathsArray.slice(0, maxFiles);
+
+        if (managedMode && typeof onQueuePaths === 'function') {
+          await onQueuePaths(pathsToUpload, effectiveCategory);
+          return;
+        }
+
         for (const path of pathsToUpload) {
           try {
             const result = await handleUploadPath(path, effectiveCategory);
@@ -313,9 +331,9 @@ const AttachmentUploadButton = React.forwardRef(
         startIcon={getCategoryIcon()}
         endIcon={<ArrowDropDownIcon />}
         onClick={handleButtonClick}
-        disabled={uploadStatus === 'uploading'}
+        disabled={Boolean(disabled) || (!managedMode && uploadStatus === 'uploading')}
       >
-        {uploadStatus === 'uploading' ? '上传中...' : getCategoryText()}
+        {!managedMode && uploadStatus === 'uploading' ? '上传中...' : getCategoryText()}
       </UploadButton>
       
       {/* 类别选择菜单 */}
@@ -358,7 +376,7 @@ const AttachmentUploadButton = React.forwardRef(
         accept={getAcceptByCategory(selectedCategory)}
         multiple
         style={{ display: 'none' }}
-        disabled={uploadStatus === 'uploading'}
+        disabled={Boolean(disabled) || (!managedMode && uploadStatus === 'uploading')}
       />
       
       {/* 提示消息 */}

@@ -217,6 +217,23 @@ const attachmentsSlice = createSlice({
   name: 'attachments',
   initialState,
   reducers: {
+    // 插入/更新附件（用于上传完成后即时刷新列表）
+    upsertAttachment: (state, action) => {
+      const attachment = action.payload;
+      const id = attachment?._id;
+      if (!id) return;
+
+      state.itemsById[id] = attachment;
+
+      // 新附件插入到开头；已存在则保持原顺序
+      if (!state.items.includes(id)) {
+        state.items.unshift(id);
+        if (state.pagination && typeof state.pagination.total === 'number') {
+          state.pagination.total += 1;
+        }
+      }
+    },
+
     // 设置附件数据
     setAttachmentData: (state, action) => {
       const { id, data } = action.payload;
@@ -586,6 +603,7 @@ const attachmentsSlice = createSlice({
 
 // 导出 actions
 export const {
+  upsertAttachment,
   setAttachmentData,
   setSelectedAttachment,
   setModalOpen,

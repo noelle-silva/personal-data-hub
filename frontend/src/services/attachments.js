@@ -129,6 +129,96 @@ export const uploadAttachment = async (file, category, onUploadProgress) => {
   }
 };
 
+/**
+ * 断点续传：初始化上传会话
+ * @param {Object} payload
+ * @param {string} payload.category
+ * @param {string} payload.originalName
+ * @param {string} payload.mimeType
+ * @param {number} payload.size
+ */
+export const initResumableUpload = async (payload, options = {}) => {
+  try {
+    const response = await apiClient.post('/attachments/uploads/init', payload, {
+      signal: options?.signal,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+/**
+ * 断点续传：查询会话状态
+ */
+export const getResumableUploadStatus = async (uploadId, options = {}) => {
+  try {
+    const response = await apiClient.get(`/attachments/uploads/${encodeURIComponent(uploadId)}`, {
+      signal: options?.signal,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+/**
+ * 断点续传：上传一个 chunk（按 offset 顺序追加）
+ * @param {Object} params
+ * @param {string} params.uploadId
+ * @param {Blob} params.chunk
+ * @param {number} params.offset
+ * @param {Function} params.onUploadProgress
+ * @param {AbortSignal} params.signal
+ */
+export const uploadResumableChunk = async ({ uploadId, chunk, offset, onUploadProgress, signal }) => {
+  const formData = new FormData();
+  formData.append('chunk', chunk, 'chunk');
+
+  try {
+    const response = await apiClient.post(
+      `/attachments/uploads/${encodeURIComponent(uploadId)}/chunk?offset=${encodeURIComponent(String(offset))}`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress,
+        signal,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+/**
+ * 断点续传：完成上传
+ */
+export const completeResumableUpload = async (uploadId, options = {}) => {
+  try {
+    const response = await apiClient.post(
+      `/attachments/uploads/${encodeURIComponent(uploadId)}/complete`,
+      {},
+      { signal: options?.signal }
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+/**
+ * 断点续传：取消上传并清理临时文件
+ */
+export const abortResumableUpload = async (uploadId) => {
+  try {
+    const response = await apiClient.delete(`/attachments/uploads/${encodeURIComponent(uploadId)}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
 // 为了向后兼容，保留旧的API方法，但内部调用新的通用方法
 /**
  * 上传图片文件
@@ -256,6 +346,13 @@ export const updateAttachmentMetadata = async (id, payload) => {
  * @returns {Error} 处理后的错误
  */
 const handleApiError = (error) => {
+  // axios v1：AbortController 取消请求
+  if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') {
+    const err = new Error('请求已取消');
+    err.code = 'ERR_CANCELED';
+    return err;
+  }
+
   if (error.response) {
     // 服务器返回了错误状态码
     const { status, data } = error.response;

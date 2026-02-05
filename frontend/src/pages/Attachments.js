@@ -24,12 +24,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import AttachmentGrid from '../components/AttachmentGrid';
 import AttachmentDetailModal from '../components/legacy/AttachmentDetailModal';
 import AttachmentUploadButton from '../components/AttachmentUploadButton';
+import AttachmentUploadTasksPanel from '../components/AttachmentUploadTasksPanel';
 import {
   selectAttachmentsError,
   clearError,
   selectAttachmentsStats,
   setSelectedAttachment,
   setModalOpen,
+  upsertAttachment,
   fetchAttachmentConfig,
   selectAttachmentConfigStatus
 } from '../store/attachmentsSlice';
@@ -38,6 +40,7 @@ import {
   openAttachmentWindowAndFetch
 } from '../store/windowsSlice';
 import { isTauri, listen } from '../services/tauriBridge';
+import { useAttachmentUploadManager } from '../hooks/useAttachmentUploadManager';
 
 const getCategoryLabel = (category) => {
   switch (category) {
@@ -114,6 +117,13 @@ const AttachmentsPage = () => {
   const [showStats, setShowStats] = useState(false);
   const [currentTab, setCurrentTab] = useState(0); // 0: 图片, 1: 视频, 2: 文档, 3: 程序与脚本
   const [isDragActive, setIsDragActive] = useState(false);
+
+  const uploadManager = useAttachmentUploadManager({
+    onUploaded: (attachment) => {
+      dispatch(upsertAttachment(attachment));
+      setSnackbarOpen(true);
+    }
+  });
   
   // 获取当前选中的类别
   const getCurrentCategory = () => {
@@ -245,6 +255,32 @@ const AttachmentsPage = () => {
     return [];
   };
 
+  const inferCategoryFromPath = (path) => {
+    const raw = String(path || '').trim();
+    if (!raw) return '';
+
+    const normalized = raw.replace(/\\/g, '/');
+    const name = normalized.split('/').pop() || '';
+    const ext = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+    if (!ext) return '';
+
+    const imageExts = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ico', 'tiff', 'tif']);
+    const videoExts = new Set(['mp4', 'webm', 'ogg', 'mov', 'mkv', 'avi', 'flv', 'm4v']);
+    const documentExts = new Set([
+      'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx',
+      'txt', 'md', 'markdown', 'html', 'htm', 'csv', 'json',
+    ]);
+    const scriptExts = new Set([
+      'js', 'ts', 'jsx', 'tsx', 'py', 'sh', 'bat', 'ps1', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'hpp',
+    ]);
+
+    if (imageExts.has(ext)) return 'image';
+    if (videoExts.has(ext)) return 'video';
+    if (documentExts.has(ext)) return 'document';
+    if (scriptExts.has(ext)) return 'script';
+    return '';
+  };
+
   // 桌面端拖拽：必须走 Tauri 的 drag-drop 事件（OS -> WebView 通常不会触发 DOM drag/drop）
   useEffect(() => {
     if (!isTauri()) return;
@@ -279,10 +315,23 @@ const AttachmentsPage = () => {
           const paths = extractPathsFromTauriDragPayload(event?.payload);
           if (paths.length === 0) return;
 
-          const category = currentCategoryRef.current || 'image';
-
           try {
-            await uploadButtonRef.current?.uploadPaths(paths, category);
+            const fallbackCategory = currentCategoryRef.current || 'image';
+            const groups = new Map();
+
+            for (const p of paths) {
+              const trimmed = String(p || '').trim();
+              if (!trimmed) continue;
+              const inferred = inferCategoryFromPath(trimmed) || fallbackCategory;
+              const arr = groups.get(inferred) || [];
+              arr.push(trimmed);
+              groups.set(inferred, arr);
+            }
+
+            for (const [cat, groupPaths] of groups.entries()) {
+              if (!groupPaths || groupPaths.length === 0) continue;
+              await uploadButtonRef.current?.uploadPaths(groupPaths, cat);
+            }
           } catch (e) {
             // 错误提示由 Redux error/snackbar 兜底
           }
@@ -457,9 +506,20 @@ const AttachmentsPage = () => {
             category={getCurrentCategory()}
             onUploadSuccess={handleUploadSuccess}
             onUploadError={handleUploadError}
+            onQueueFiles={uploadManager.enqueueFiles}
+            onQueuePaths={uploadManager.enqueuePaths}
           />
         </RightActions>
       </ActionBar>
+
+      <AttachmentUploadTasksPanel
+        tasks={uploadManager.tasks}
+        stats={uploadManager.stats}
+        onPause={uploadManager.pauseTask}
+        onResume={uploadManager.resumeTask}
+        onCancel={uploadManager.cancelTask}
+        onClearFinished={uploadManager.clearFinished}
+      />
 
       {isDragActive && (
         <Box

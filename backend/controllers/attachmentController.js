@@ -57,6 +57,159 @@ class AttachmentController {
   }
 
   /**
+   * 初始化断点续传上传会话
+   * @param {Object} req
+   * @param {Object} res
+   * @param {Function} next
+   */
+  async initResumableUpload(req, res, next) {
+    try {
+      const { category, originalName, mimeType, size } = req.body || {};
+
+      const session = await attachmentService.createResumableUploadSession({
+        category,
+        originalName,
+        mimeType,
+        size
+      });
+
+      res.status(201).json({
+        success: true,
+        data: {
+          uploadId: session.uploadId,
+          bytesReceived: session.bytesReceived,
+          size: session.size,
+          category: session.category,
+          originalName: session.originalName,
+          mimeType: session.mimeType,
+          extension: session.extension,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt
+        },
+        message: '初始化上传会话成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取上传会话状态（用于断点续传）
+   */
+  async getResumableUploadStatus(req, res, next) {
+    try {
+      const { uploadId } = req.params;
+      const session = await attachmentService.getResumableUploadSession(uploadId);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          uploadId: session.uploadId,
+          bytesReceived: session.bytesReceived,
+          size: session.size,
+          category: session.category,
+          originalName: session.originalName,
+          mimeType: session.mimeType,
+          extension: session.extension,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt
+        },
+        message: '获取上传会话成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 上传分片（按 offset 追加）
+   */
+  async uploadResumableChunk(req, res, next) {
+    try {
+      const { uploadId } = req.params;
+      const offset = Number.parseInt(String(req.query?.offset ?? ''), 10);
+
+      if (!Number.isFinite(offset) || offset < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'offset 非法（必须为非负整数）'
+        });
+      }
+
+      if (!req.file || !req.file.buffer) {
+        return res.status(400).json({
+          success: false,
+          message: 'chunk 不能为空'
+        });
+      }
+
+      const session = await attachmentService.appendResumableUploadChunk(
+        uploadId,
+        req.file.buffer,
+        offset
+      );
+
+      res.status(200).json({
+        success: true,
+        data: {
+          uploadId: session.uploadId,
+          bytesReceived: session.bytesReceived,
+          size: session.size
+        },
+        message: '分片上传成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 完成断点续传上传
+   */
+  async completeResumableUpload(req, res, next) {
+    try {
+      const { uploadId } = req.params;
+      const attachment = await attachmentService.completeResumableUploadSession(uploadId);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          _id: attachment._id,
+          category: attachment.category,
+          originalName: attachment.originalName,
+          mimeType: attachment.mimeType,
+          extension: attachment.extension,
+          size: attachment.size,
+          hash: attachment.hash,
+          url: attachment.url,
+          createdAt: attachment.createdAt
+        },
+        message: '附件上传成功'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 取消上传并清理临时文件
+   */
+  async abortResumableUpload(req, res, next) {
+    try {
+      const { uploadId } = req.params;
+      const result = await attachmentService.abortResumableUploadSession(uploadId);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: '已取消上传'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 获取附件文件
    * @param {Object} req - Express请求对象
    * @param {Object} res - Express响应对象

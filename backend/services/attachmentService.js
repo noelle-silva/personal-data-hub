@@ -18,6 +18,26 @@ const Quote = require('../models/Quote');
  */
 class AttachmentService {
   /**
+   * 类别 -> 相对目录映射（相对于 attachments.baseDir）
+   * @param {String} category
+   * @returns {String}
+   */
+  getRelativeDirForCategory(category) {
+    switch (category) {
+      case 'image':
+        return 'images';
+      case 'video':
+        return 'videos';
+      case 'document':
+        return 'document-file';
+      case 'script':
+        return 'scripts';
+      default:
+        return 'images';
+    }
+  }
+
+  /**
    * 获取项目根目录
    * @returns {String} 项目根目录路径
    */
@@ -277,24 +297,7 @@ class AttachmentService {
         }
       }
       
-      // 统一相对目录映射
-      let relativeDir;
-      switch (category) {
-        case 'image':
-          relativeDir = 'images';
-          break;
-        case 'video':
-          relativeDir = 'videos';
-          break;
-        case 'document':
-          relativeDir = 'document-file';
-          break;
-        case 'script':
-          relativeDir = 'scripts';
-          break;
-        default:
-          relativeDir = 'images';
-      }
+      const relativeDir = this.getRelativeDirForCategory(category);
       
       // 创建附件元数据
       const attachmentData = {
@@ -317,6 +320,260 @@ class AttachmentService {
     } catch (error) {
       throw new Error(`保存附件失败: ${error.message}`);
     }
+  }
+
+  /**
+   * 断点续传：校验 uploadId（避免路径穿越）
+   * @param {String} uploadId
+   */
+  validateResumableUploadId(uploadId) {
+    const id = String(uploadId || '').trim();
+    if (!/^[0-9a-fA-F-]{16,64}$/.test(id)) {
+      const err = new Error('uploadId 非法');
+      err.statusCode = 400;
+      throw err;
+    }
+    return id;
+  }
+
+  /**
+   * 断点续传：会话工作目录
+   */
+  async getResumableUploadWorkDir() {
+    const baseTmp = this.resolveStoragePath(config.attachments.tmpDir);
+    const dir = path.join(baseTmp, 'resumable-uploads');
+    await this.ensureDirectoryExists(dir);
+    return dir;
+  }
+
+  async getResumableMetaPath(uploadId) {
+    const id = this.validateResumableUploadId(uploadId);
+    const dir = await this.getResumableUploadWorkDir();
+    return path.join(dir, `${id}.json`);
+  }
+
+  async getResumableDataPath(uploadId) {
+    const id = this.validateResumableUploadId(uploadId);
+    const dir = await this.getResumableUploadWorkDir();
+    return path.join(dir, `${id}.bin`);
+  }
+
+  /**
+   * 创建断点续传上传会话
+   */
+  async createResumableUploadSession({ category, originalName, mimeType, size }) {
+    const normalizedCategory = String(category || '').trim();
+    const normalizedName = this.sanitizeFilename(String(originalName || '').trim());
+    const normalizedMime = String(mimeType || '').trim();
+    const normalizedSize = Number.parseInt(String(size ?? ''), 10);
+
+    if (!normalizedCategory) {
+      const err = new Error('category 不能为空');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!normalizedName) {
+      const err = new Error('originalName 不能为空');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!Number.isFinite(normalizedSize) || normalizedSize <= 0) {
+      const err = new Error('size 非法');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const extension = path.extname(normalizedName).substring(1).toLowerCase();
+    if (!extension) {
+      const err = new Error('文件扩展名为空');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!this.isAllowedFileType(normalizedMime, extension, normalizedCategory)) {
+      const err = new Error(`不支持的文件类型: ${normalizedMime}`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const maxSize = this.getMaxFileSize(normalizedCategory);
+    if (normalizedSize > maxSize) {
+      const err = new Error(`文件大小超过限制: ${normalizedSize} > ${maxSize}`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const uploadId = uuidv4();
+    const metaPath = await this.getResumableMetaPath(uploadId);
+    const dataPath = await this.getResumableDataPath(uploadId);
+
+    // 初始化空文件与元数据（幂等：若极端情况下碰撞，直接拒绝）
+    try {
+      await fs.access(metaPath);
+      const err = new Error('uploadId 冲突');
+      err.statusCode = 409;
+      throw err;
+    } catch (error) {
+      // meta 不存在：继续；其他错误直接抛出
+      if (error && error.statusCode === 409) throw error;
+      if (error && error.code && error.code !== 'ENOENT') throw error;
+    }
+
+    await fs.writeFile(dataPath, Buffer.alloc(0));
+
+    const now = new Date().toISOString();
+    const meta = {
+      version: 1,
+      uploadId,
+      category: normalizedCategory,
+      originalName: normalizedName,
+      mimeType: normalizedMime,
+      extension,
+      size: normalizedSize,
+      bytesReceived: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+    return meta;
+  }
+
+  async getResumableUploadSession(uploadId) {
+    const id = this.validateResumableUploadId(uploadId);
+    const metaPath = await this.getResumableMetaPath(id);
+    try {
+      const raw = await fs.readFile(metaPath, 'utf8');
+      const meta = JSON.parse(raw);
+      if (!meta || meta.uploadId !== id) {
+        const err = new Error('上传会话损坏');
+        err.statusCode = 500;
+        throw err;
+      }
+      return meta;
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        const err = new Error('上传会话不存在或已过期');
+        err.statusCode = 404;
+        throw err;
+      }
+      throw error;
+    }
+  }
+
+  async writeResumableUploadSession(meta) {
+    const metaPath = await this.getResumableMetaPath(meta.uploadId);
+    await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+  }
+
+  async appendResumableUploadChunk(uploadId, chunkBuffer, offset) {
+    const id = this.validateResumableUploadId(uploadId);
+    const meta = await this.getResumableUploadSession(id);
+
+    const expectedOffset = Number(meta.bytesReceived || 0);
+    const chunkSize = chunkBuffer?.length || 0;
+
+    if (!Number.isFinite(offset) || offset < 0) {
+      const err = new Error('offset 非法');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (offset !== expectedOffset) {
+      const err = new Error(`offset 不匹配：expected=${expectedOffset}, got=${offset}`);
+      err.statusCode = 409;
+      err.expectedOffset = expectedOffset;
+      throw err;
+    }
+
+    if (!chunkSize) {
+      const err = new Error('chunk 为空');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (expectedOffset + chunkSize > meta.size) {
+      const err = new Error('chunk 超出文件大小');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const dataPath = await this.getResumableDataPath(id);
+    await fs.appendFile(dataPath, chunkBuffer);
+
+    meta.bytesReceived = expectedOffset + chunkSize;
+    meta.updatedAt = new Date().toISOString();
+    await this.writeResumableUploadSession(meta);
+
+    return meta;
+  }
+
+  async abortResumableUploadSession(uploadId) {
+    const id = this.validateResumableUploadId(uploadId);
+    const metaPath = await this.getResumableMetaPath(id);
+    const dataPath = await this.getResumableDataPath(id);
+
+    // 幂等删除
+    try { await fs.unlink(metaPath); } catch (_) {}
+    try { await fs.unlink(dataPath); } catch (_) {}
+
+    return { uploadId: id };
+  }
+
+  async completeResumableUploadSession(uploadId) {
+    const id = this.validateResumableUploadId(uploadId);
+    const meta = await this.getResumableUploadSession(id);
+
+    if (Number(meta.bytesReceived || 0) !== Number(meta.size || 0)) {
+      const err = new Error('上传未完成');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const dataPath = await this.getResumableDataPath(id);
+
+    // 计算哈希（用于去重）
+    const hash = await this.calculateFileHash(dataPath);
+
+    if (config.attachments.enableDeduplication) {
+      const existingAttachment = await Attachment.findByHash(hash);
+      if (existingAttachment) {
+        await this.abortResumableUploadSession(id);
+        return existingAttachment;
+      }
+    }
+
+    const storageDir = this.getCategoryStorageDir(meta.category);
+    await this.ensureDirectoryExists(storageDir);
+
+    const diskFilename = this.generateDiskFilename(meta.extension);
+    const finalPath = path.join(storageDir, diskFilename);
+
+    await fs.rename(dataPath, finalPath);
+
+    const relativeDir = this.getRelativeDirForCategory(meta.category);
+    const attachmentData = {
+      category: meta.category,
+      originalName: meta.originalName,
+      mimeType: meta.mimeType,
+      extension: meta.extension,
+      size: meta.size,
+      diskFilename,
+      relativeDir,
+      hash
+    };
+
+    const attachment = new Attachment(attachmentData);
+    const savedAttachment = await attachment.save();
+
+    // 清理元数据文件
+    try {
+      const metaPath = await this.getResumableMetaPath(id);
+      await fs.unlink(metaPath);
+    } catch (_) {}
+
+    console.log(`断点续传保存附件成功: ${savedAttachment._id}`);
+    return savedAttachment;
   }
 
   /**

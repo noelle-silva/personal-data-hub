@@ -138,6 +138,18 @@ const scriptUpload = multer({
 });
 
 /**
+ * 分片/断点续传：chunk 上传（内存存储，服务层负责落盘）
+ */
+const resumableChunkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    // 单个 chunk 上限：8MB（避免占用过多内存；客户端会按更小 chunk 分片）
+    fileSize: 8 * 1024 * 1024,
+    files: 1
+  }
+});
+
+/**
  * 动态Multer中间件，根据URL中的category参数选择相应的multer配置
  * @param {Object} req - Express请求对象
  * @param {Object} res - Express响应对象
@@ -164,6 +176,48 @@ const dynamicMulterMiddleware = (req, res, next) => {
   
   uploader.single('file')(req, res, next);
 };
+
+/**
+ * @route   POST /api/attachments/uploads/init
+ * @desc    初始化断点续传上传会话
+ * @access  Private (需要登录态鉴权)
+ * @body    category/originalName/mimeType/size
+ */
+router.post('/uploads/init', attachmentController.initResumableUpload);
+
+/**
+ * @route   GET /api/attachments/uploads/:uploadId
+ * @desc    查询上传会话状态（用于断点续传）
+ * @access  Private
+ */
+router.get('/uploads/:uploadId', attachmentController.getResumableUploadStatus);
+
+/**
+ * @route   POST /api/attachments/uploads/:uploadId/chunk
+ * @desc    上传一个分片（按 offset 顺序追加）
+ * @access  Private
+ * @query   offset - 分片起始偏移（字节）
+ * @form    chunk - 分片二进制
+ */
+router.post(
+  '/uploads/:uploadId/chunk',
+  resumableChunkUpload.single('chunk'),
+  attachmentController.uploadResumableChunk
+);
+
+/**
+ * @route   POST /api/attachments/uploads/:uploadId/complete
+ * @desc    完成上传（合并/落盘/写元数据/去重）
+ * @access  Private
+ */
+router.post('/uploads/:uploadId/complete', attachmentController.completeResumableUpload);
+
+/**
+ * @route   DELETE /api/attachments/uploads/:uploadId
+ * @desc    取消上传并清理临时文件
+ * @access  Private
+ */
+router.delete('/uploads/:uploadId', attachmentController.abortResumableUpload);
 
 /**
  * @route   GET /api/attachments

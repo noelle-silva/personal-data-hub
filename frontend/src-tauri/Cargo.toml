@@ -28,7 +28,7 @@ axum = { version = "0.7", default-features = false, features = ["http1", "tokio"
 bytes = "1"
 futures-util = "0.3"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json", "multipart"] }
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "fs", "io-util"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "fs", "io-util", "sync"] }
 tokio-util = { version = "0.7", features = ["io"] }
 tower-http = { version = "0.6", features = ["cors"] }
 mime_guess = "2"
