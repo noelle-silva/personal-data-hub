@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { Alert, Container } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Container, Tab, Tabs } from '@mui/material';
 import { useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import ShortcutSettingsPanel from '../../components/ShortcutSettingsPanel';
 import { PageTitle } from './components/SettingsShell';
 import BackendServerSettingsCard from './sections/BackendServerSettingsCard';
@@ -20,10 +20,57 @@ import AccountManagementCard from './sections/AccountManagementCard';
 import DeveloperInfoCard from './sections/DeveloperInfoCard';
 import { selectIsAuthenticated } from '../../store/authSlice';
 
+const SETTINGS_TAB_STORAGE_KEY = 'pdh-settings-tab';
+
+const TabPanel = ({ activeKey, tabKey, children }) => {
+  const hidden = activeKey !== tabKey;
+  return (
+    <Box
+      role="tabpanel"
+      hidden={hidden}
+      id={`settings-tabpanel-${tabKey}`}
+      aria-labelledby={`settings-tab-${tabKey}`}
+      sx={{ pt: 2 }}
+    >
+      {hidden ? null : children}
+    </Box>
+  );
+};
+
 const SettingsPage = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabs = useMemo(
+    () => [
+      { key: 'server', label: '服务器管理' },
+      { key: 'ui', label: '界面' },
+      { key: 'productivity', label: '效率' },
+      { key: 'features', label: '功能' },
+      { key: 'data', label: '数据' },
+      { key: 'about', label: '关于' },
+    ],
+    []
+  );
+
+  const [activeTabKey, setActiveTabKey] = useState(() => {
+    const fromUrl = searchParams.get('tab');
+    if (fromUrl) return fromUrl;
+    const fromStorage = localStorage.getItem(SETTINGS_TAB_STORAGE_KEY);
+    return fromStorage || 'server';
+  });
+
+  const normalizedActiveTabKey = useMemo(() => {
+    if (tabs.some((t) => t.key === activeTabKey)) return activeTabKey;
+    return tabs[0]?.key || 'server';
+  }, [activeTabKey, tabs]);
+
+  const activeTabIndex = useMemo(() => {
+    const idx = tabs.findIndex((t) => t.key === normalizedActiveTabKey);
+    return idx >= 0 ? idx : 0;
+  }, [normalizedActiveTabKey, tabs]);
 
   useEffect(() => {
     const from = location?.state?.from;
@@ -34,14 +81,33 @@ const SettingsPage = () => {
     navigate(from.pathname || '/', { replace: true });
   }, [isAuthenticated, location?.state, navigate]);
 
+  useEffect(() => {
+    const fromUrl = searchParams.get('tab');
+    if (!fromUrl) return;
+
+    const nextKey = tabs.some((t) => t.key === fromUrl) ? fromUrl : (tabs[0]?.key || 'server');
+    setActiveTabKey((prev) => (prev === nextKey ? prev : nextKey));
+  }, [searchParams, tabs]);
+
+  useEffect(() => {
+    if (normalizedActiveTabKey !== activeTabKey) {
+      setActiveTabKey(normalizedActiveTabKey);
+      return;
+    }
+
+    localStorage.setItem(SETTINGS_TAB_STORAGE_KEY, normalizedActiveTabKey);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextParams.get('tab') === normalizedActiveTabKey) return;
+    nextParams.set('tab', normalizedActiveTabKey);
+    setSearchParams(nextParams, { replace: true });
+  }, [activeTabKey, normalizedActiveTabKey, searchParams, setSearchParams]);
+
   return (
     <Container maxWidth="md">
       <PageTitle variant="h3" component="h1">
         系统设置
       </PageTitle>
-
-      <BackendServerSettingsCard />
-      <AccountManagementCard />
 
       {!isAuthenticated && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -49,25 +115,95 @@ const SettingsPage = () => {
         </Alert>
       )}
 
-      <AppearanceSettingsCard />
-      <ThemePreviewCard />
-      <TransparencySettingsCard />
-      <DetailSidebarSettingsCard />
-      <ShortcutSettingsPanel />
-      <ClipboardSettingsCard />
+      <Box
+        sx={(theme) => ({
+          position: 'sticky',
+          top: 0,
+          zIndex: theme.zIndex.appBar,
+          pt: 1,
+          pb: 1,
+        })}
+      >
+        <Box
+          sx={(theme) => ({
+            borderRadius: 999,
+            border: `1px solid ${theme.palette.divider}`,
+            bgcolor: theme.palette.background.paper,
+            overflow: 'hidden',
+          })}
+        >
+          <Tabs
+            value={activeTabIndex}
+            onChange={(_, nextIndex) => setActiveTabKey(tabs[nextIndex]?.key || 'server')}
+            variant="scrollable"
+            allowScrollButtonsMobile
+            aria-label="设置栏目切换"
+            sx={{
+              minHeight: 44,
+              '& .MuiTab-root': { minHeight: 44 },
+            }}
+            TabIndicatorProps={{
+              sx: { height: 3, borderRadius: 999 },
+            }}
+          >
+            {tabs.map((t) => (
+              <Tab
+                key={t.key}
+                label={t.label}
+                id={`settings-tab-${t.key}`}
+                aria-controls={`settings-tabpanel-${t.key}`}
+              />
+            ))}
+          </Tabs>
+        </Box>
+      </Box>
 
-      {isAuthenticated && (
-        <>
-          <AttachmentServerSettingsCard />
-          <CustomPagesSettingsCard />
-          <WallpaperManagementCard />
-          <AiSettingsSection />
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="server">
+        <BackendServerSettingsCard />
+        <AccountManagementCard />
+        {isAuthenticated ? <AttachmentServerSettingsCard /> : null}
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="ui">
+        <AppearanceSettingsCard />
+        <ThemePreviewCard />
+        <TransparencySettingsCard />
+        <DetailSidebarSettingsCard />
+        {isAuthenticated ? <WallpaperManagementCard /> : null}
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="productivity">
+        <ShortcutSettingsPanel />
+        <ClipboardSettingsCard />
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="features">
+        {isAuthenticated ? (
+          <>
+            <CustomPagesSettingsCard />
+            <AiSettingsSection />
+          </>
+        ) : (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            登录后可使用“自定义页面 / AI”等需要后端权限的功能项。
+          </Alert>
+        )}
+      </TabPanel>
+
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="data">
+        {isAuthenticated ? (
           <DataManagementCard />
-        </>
-      )}
+        ) : (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            登录后可访问数据管理相关设置。
+          </Alert>
+        )}
+      </TabPanel>
 
-      <AboutAppCard />
-      <DeveloperInfoCard />
+      <TabPanel activeKey={normalizedActiveTabKey} tabKey="about">
+        <AboutAppCard />
+        <DeveloperInfoCard />
+      </TabPanel>
     </Container>
   );
 };
