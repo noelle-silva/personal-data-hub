@@ -151,7 +151,18 @@ const LocalDataSettingsCard = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="本地数据目录"
-                  secondary={info?.dataDir || (loading ? '读取中...' : '未知')}
+                  secondary={
+                    <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Box component="span" sx={{ wordBreak: 'break-all' }}>
+                        {info?.dataDir || (loading ? '读取中...' : '未知')}
+                      </Box>
+                      {info?.dataDir ? (
+                        <Box component="span" sx={{ color: 'text.secondary' }}>
+                          当前使用：{info?.usingCustomDir ? '自定义目录' : '默认目录'}
+                        </Box>
+                      ) : null}
+                    </Box>
+                  }
                   secondaryTypographyProps={{ sx: { wordBreak: 'break-all' } }}
                 />
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -174,6 +185,23 @@ const LocalDataSettingsCard = () => {
                     迁移路径
                   </Button>
                 </Box>
+              </ListItem>
+              <Divider />
+              <ListItem>
+                <ListItemText
+                  primary="默认数据目录（参考）"
+                  secondary={info?.defaultDataDir || (loading ? '读取中...' : '未知')}
+                  secondaryTypographyProps={{ sx: { wordBreak: 'break-all' } }}
+                />
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<ContentCopyIcon />}
+                  onClick={() => copyText(info?.defaultDataDir)}
+                  disabled={!info?.defaultDataDir}
+                >
+                  复制
+                </Button>
               </ListItem>
               <Divider />
               <ListItem>
