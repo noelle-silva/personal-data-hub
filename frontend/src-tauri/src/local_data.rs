@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 
 #[derive(Debug, Serialize)]
@@ -32,6 +33,103 @@ struct LocalDataConfig {
 struct ThemePresetsFile {
   version: u32,
   presets: Vec<ThemePreset>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalWallpaper {
+  #[serde(rename = "_id")]
+  pub id: String,
+  pub original_name: String,
+  pub url: String,
+  pub mime_type: String,
+  pub size: u64,
+  pub description: String,
+  pub created_at: String,
+  pub updated_at: String,
+  pub is_current: bool,
+  pub source: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WallpapersFile {
+  version: u32,
+  current_wallpaper_id: Option<String>,
+  wallpapers: Vec<LocalWallpaper>,
+}
+
+impl Default for WallpapersFile {
+  fn default() -> Self {
+    Self {
+      version: 1,
+      current_wallpaper_id: None,
+      wallpapers: Vec::new(),
+    }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransparencyValue {
+  pub cards: u8,
+  pub sidebar: u8,
+  pub app_bar: u8,
+}
+
+impl Default for TransparencyValue {
+  fn default() -> Self {
+    Self {
+      cards: 100,
+      sidebar: 100,
+      app_bar: 100,
+    }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransparencyConfigRecord {
+  pub name: String,
+  pub description: String,
+  pub transparency: TransparencyValue,
+  pub created_at: String,
+  pub updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TransparencyFile {
+  version: u32,
+  current: Option<TransparencyValue>,
+  configs: Vec<TransparencyConfigRecord>,
+}
+
+impl Default for TransparencyFile {
+  fn default() -> Self {
+    Self {
+      version: 1,
+      current: None,
+      configs: Vec::new(),
+    }
+  }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WallpaperDeleteResult {
+  pub deleted_id: String,
+  pub current_wallpaper: Option<LocalWallpaper>,
+  pub total: usize,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WallpaperStats {
+  pub total_wallpapers: usize,
+  pub total_size: u64,
+  pub avg_size: u64,
+  pub current_wallpaper: u8,
 }
 
 impl Default for ThemePresetsFile {
@@ -144,6 +242,399 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 fn presets_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
   let (data_dir, _default, _cfg_path, _custom) = resolve_data_dir(app)?;
   Ok(data_dir.join("themes").join("presets.json"))
+}
+
+fn wallpapers_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+  let (data_dir, _default, _cfg_path, _custom) = resolve_data_dir(app)?;
+  Ok(data_dir.join("themes").join("wallpapers.json"))
+}
+
+fn transparency_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+  let (data_dir, _default, _cfg_path, _custom) = resolve_data_dir(app)?;
+  Ok(data_dir.join("themes").join("transparency.json"))
+}
+
+fn generate_local_id(prefix: &str) -> String {
+  let millis = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map(|d| d.as_millis())
+    .unwrap_or(0);
+  format!("{}_{}", prefix, millis)
+}
+
+fn normalize_transparency_value(value: TransparencyValue) -> TransparencyValue {
+  TransparencyValue {
+    cards: value.cards.min(100),
+    sidebar: value.sidebar.min(100),
+    app_bar: value.app_bar.min(100),
+  }
+}
+
+fn load_wallpapers(app: &tauri::AppHandle) -> Result<WallpapersFile, String> {
+  let path = wallpapers_file_path(app)?;
+  let raw = match fs::read_to_string(&path) {
+    Ok(s) => s,
+    Err(_) => return Ok(WallpapersFile::default()),
+  };
+  let parsed = serde_json::from_str::<WallpapersFile>(&raw).unwrap_or_default();
+  Ok(parsed)
+}
+
+fn save_wallpapers(app: &tauri::AppHandle, file: &WallpapersFile) -> Result<(), String> {
+  let path = wallpapers_file_path(app)?;
+  if let Some(parent) = path.parent() {
+    ensure_dir(parent)?;
+  }
+  let raw = serde_json::to_string_pretty(file).map_err(|e| format!("serialize wallpapers failed: {e}"))?;
+  fs::write(path, raw).map_err(|e| format!("write wallpapers failed: {e}"))?;
+  Ok(())
+}
+
+fn sort_wallpapers_desc(wallpapers: &mut Vec<LocalWallpaper>) {
+  wallpapers.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+}
+
+fn normalize_wallpapers_file(file: &mut WallpapersFile) {
+  sort_wallpapers_desc(&mut file.wallpapers);
+
+  if file.wallpapers.is_empty() {
+    file.current_wallpaper_id = None;
+    return;
+  }
+
+  let mut current_id = file.current_wallpaper_id.clone().unwrap_or_default();
+  if current_id.trim().is_empty() {
+    if let Some(current) = file.wallpapers.iter().find(|w| w.is_current) {
+      current_id = current.id.clone();
+    } else if let Some(first) = file.wallpapers.first() {
+      current_id = first.id.clone();
+    }
+  }
+
+  if !file.wallpapers.iter().any(|w| w.id == current_id) {
+    if let Some(first) = file.wallpapers.first() {
+      current_id = first.id.clone();
+    }
+  }
+
+  for wallpaper in file.wallpapers.iter_mut() {
+    wallpaper.is_current = wallpaper.id == current_id;
+    if wallpaper.source.trim().is_empty() {
+      wallpaper.source = "local".to_string();
+    }
+  }
+
+  file.current_wallpaper_id = Some(current_id);
+}
+
+fn load_transparency(app: &tauri::AppHandle) -> Result<TransparencyFile, String> {
+  let path = transparency_file_path(app)?;
+  let raw = match fs::read_to_string(&path) {
+    Ok(s) => s,
+    Err(_) => return Ok(TransparencyFile::default()),
+  };
+  let mut parsed = serde_json::from_str::<TransparencyFile>(&raw).unwrap_or_default();
+  if let Some(current) = parsed.current.take() {
+    parsed.current = Some(normalize_transparency_value(current));
+  }
+  parsed.configs = parsed
+    .configs
+    .into_iter()
+    .map(|mut item| {
+      item.transparency = normalize_transparency_value(item.transparency);
+      item
+    })
+    .collect();
+  Ok(parsed)
+}
+
+fn save_transparency(app: &tauri::AppHandle, file: &TransparencyFile) -> Result<(), String> {
+  let path = transparency_file_path(app)?;
+  if let Some(parent) = path.parent() {
+    ensure_dir(parent)?;
+  }
+  let raw = serde_json::to_string_pretty(file).map_err(|e| format!("serialize transparency failed: {e}"))?;
+  fs::write(path, raw).map_err(|e| format!("write transparency failed: {e}"))?;
+  Ok(())
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_list(app: tauri::AppHandle) -> Result<Vec<LocalWallpaper>, String> {
+  let mut file = load_wallpapers(&app)?;
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+  Ok(file.wallpapers)
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_get_current(app: tauri::AppHandle) -> Result<Option<LocalWallpaper>, String> {
+  let mut file = load_wallpapers(&app)?;
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+  Ok(file.wallpapers.into_iter().find(|item| item.is_current))
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_create(
+  app: tauri::AppHandle,
+  original_name: String,
+  data_url: String,
+  mime_type: String,
+  size: u64,
+  description: String,
+  created_at: String,
+  updated_at: String,
+) -> Result<LocalWallpaper, String> {
+  let mut file = load_wallpapers(&app)?;
+
+  let mut next = LocalWallpaper {
+    id: generate_local_id("local"),
+    original_name: original_name.trim().to_string(),
+    url: data_url,
+    mime_type,
+    size,
+    description: description.trim().to_string(),
+    created_at,
+    updated_at,
+    is_current: false,
+    source: "local".to_string(),
+  };
+
+  if file.wallpapers.is_empty() {
+    next.is_current = true;
+    file.current_wallpaper_id = Some(next.id.clone());
+  }
+
+  file.wallpapers.insert(0, next.clone());
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+
+  let created = file
+    .wallpapers
+    .iter()
+    .find(|item| item.id == next.id)
+    .cloned()
+    .ok_or_else(|| "create wallpaper failed".to_string())?;
+
+  Ok(created)
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_set_current(app: tauri::AppHandle, id: String) -> Result<LocalWallpaper, String> {
+  let target = id.trim();
+  if target.is_empty() {
+    return Err("wallpaper id is empty".to_string());
+  }
+
+  let mut file = load_wallpapers(&app)?;
+  if !file.wallpapers.iter().any(|item| item.id == target) {
+    return Err("wallpaper not found".to_string());
+  }
+
+  file.current_wallpaper_id = Some(target.to_string());
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+
+  file
+    .wallpapers
+    .into_iter()
+    .find(|item| item.id == target)
+    .ok_or_else(|| "wallpaper not found".to_string())
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_delete(app: tauri::AppHandle, id: String) -> Result<WallpaperDeleteResult, String> {
+  let target = id.trim();
+  if target.is_empty() {
+    return Err("wallpaper id is empty".to_string());
+  }
+
+  let mut file = load_wallpapers(&app)?;
+  let before = file.wallpapers.len();
+  file.wallpapers.retain(|item| item.id != target);
+
+  if file.wallpapers.len() == before {
+    return Err("wallpaper not found".to_string());
+  }
+
+  if file.current_wallpaper_id.as_deref() == Some(target) {
+    file.current_wallpaper_id = file.wallpapers.first().map(|item| item.id.clone());
+  }
+
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+
+  let current_wallpaper = file.wallpapers.iter().find(|item| item.is_current).cloned();
+
+  Ok(WallpaperDeleteResult {
+    deleted_id: target.to_string(),
+    current_wallpaper,
+    total: file.wallpapers.len(),
+  })
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_update_description(
+  app: tauri::AppHandle,
+  id: String,
+  description: String,
+  updated_at: String,
+) -> Result<LocalWallpaper, String> {
+  let target = id.trim();
+  if target.is_empty() {
+    return Err("wallpaper id is empty".to_string());
+  }
+
+  let mut file = load_wallpapers(&app)?;
+  let mut found = false;
+
+  for wallpaper in file.wallpapers.iter_mut() {
+    if wallpaper.id == target {
+      wallpaper.description = description.trim().to_string();
+      wallpaper.updated_at = updated_at.clone();
+      found = true;
+      break;
+    }
+  }
+
+  if !found {
+    return Err("wallpaper not found".to_string());
+  }
+
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+
+  file
+    .wallpapers
+    .into_iter()
+    .find(|item| item.id == target)
+    .ok_or_else(|| "wallpaper not found".to_string())
+}
+
+#[tauri::command]
+pub fn pdh_wallpapers_stats(app: tauri::AppHandle) -> Result<WallpaperStats, String> {
+  let mut file = load_wallpapers(&app)?;
+  normalize_wallpapers_file(&mut file);
+  save_wallpapers(&app, &file)?;
+
+  let total_wallpapers = file.wallpapers.len();
+  let total_size = file.wallpapers.iter().map(|item| item.size).sum::<u64>();
+  let avg_size = if total_wallpapers > 0 {
+    total_size / total_wallpapers as u64
+  } else {
+    0
+  };
+  let current_wallpaper = if file.wallpapers.iter().any(|item| item.is_current) {
+    1
+  } else {
+    0
+  };
+
+  Ok(WallpaperStats {
+    total_wallpapers,
+    total_size,
+    avg_size,
+    current_wallpaper,
+  })
+}
+
+#[tauri::command]
+pub fn pdh_transparency_get_current(app: tauri::AppHandle) -> Result<Option<TransparencyValue>, String> {
+  let file = load_transparency(&app)?;
+  Ok(file.current)
+}
+
+#[tauri::command]
+pub fn pdh_transparency_set_current(
+  app: tauri::AppHandle,
+  transparency: TransparencyValue,
+) -> Result<TransparencyValue, String> {
+  let mut file = load_transparency(&app)?;
+  let normalized = normalize_transparency_value(transparency);
+  file.current = Some(normalized.clone());
+  save_transparency(&app, &file)?;
+  Ok(normalized)
+}
+
+#[tauri::command]
+pub fn pdh_transparency_clear_current(app: tauri::AppHandle) -> Result<(), String> {
+  let mut file = load_transparency(&app)?;
+  file.current = None;
+  save_transparency(&app, &file)?;
+  Ok(())
+}
+
+#[tauri::command]
+pub fn pdh_transparency_list_configs(app: tauri::AppHandle) -> Result<Vec<TransparencyConfigRecord>, String> {
+  let file = load_transparency(&app)?;
+  Ok(file.configs)
+}
+
+#[tauri::command]
+pub fn pdh_transparency_get_config(
+  app: tauri::AppHandle,
+  name: String,
+) -> Result<Option<TransparencyConfigRecord>, String> {
+  let target = name.trim();
+  if target.is_empty() {
+    return Ok(None);
+  }
+
+  let file = load_transparency(&app)?;
+  Ok(file.configs.into_iter().find(|item| item.name == target))
+}
+
+#[tauri::command]
+pub fn pdh_transparency_save_config(
+  app: tauri::AppHandle,
+  name: String,
+  description: String,
+  transparency: TransparencyValue,
+  created_at: String,
+  updated_at: String,
+) -> Result<TransparencyConfigRecord, String> {
+  let target = name.trim();
+  if target.is_empty() {
+    return Err("config name is empty".to_string());
+  }
+
+  let mut file = load_transparency(&app)?;
+  let normalized = normalize_transparency_value(transparency);
+
+  if let Some(item) = file.configs.iter_mut().find(|item| item.name == target) {
+    item.description = description.trim().to_string();
+    item.transparency = normalized;
+    item.updated_at = updated_at;
+  } else {
+    file.configs.push(TransparencyConfigRecord {
+      name: target.to_string(),
+      description: description.trim().to_string(),
+      transparency: normalized,
+      created_at,
+      updated_at,
+    });
+  }
+
+  save_transparency(&app, &file)?;
+
+  file
+    .configs
+    .into_iter()
+    .find(|item| item.name == target)
+    .ok_or_else(|| "save transparency config failed".to_string())
+}
+
+#[tauri::command]
+pub fn pdh_transparency_delete_config(app: tauri::AppHandle, name: String) -> Result<(), String> {
+  let target = name.trim();
+  if target.is_empty() {
+    return Ok(());
+  }
+
+  let mut file = load_transparency(&app)?;
+  file.configs.retain(|item| item.name != target);
+  save_transparency(&app, &file)?;
+  Ok(())
 }
 
 fn load_presets(app: &tauri::AppHandle) -> Result<ThemePresetsFile, String> {

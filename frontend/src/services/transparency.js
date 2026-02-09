@@ -1,107 +1,144 @@
-import apiClient from './apiClient';
+import { invoke, isTauri } from './tauriBridge';
 
-/**
- * 透明度配置服务
- */
+const CURRENT_TRANSPARENCY_KEY = 'currentTransparency';
+
+const normalizeTransparency = (value = {}) => ({
+  cards: Number.isFinite(Number(value.cards)) ? Math.max(0, Math.min(100, Number(value.cards))) : 100,
+  sidebar: Number.isFinite(Number(value.sidebar)) ? Math.max(0, Math.min(100, Number(value.sidebar))) : 100,
+  appBar: Number.isFinite(Number(value.appBar)) ? Math.max(0, Math.min(100, Number(value.appBar))) : 100
+});
+
+const readJson = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+};
+
+const writeJson = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+const readCurrentFromLocalStorage = () => {
+  const value = readJson(CURRENT_TRANSPARENCY_KEY, null);
+  return value ? normalizeTransparency(value) : null;
+};
+
+const ensureDesktop = () => {
+  if (!isTauri()) {
+    throw new Error('当前仅支持桌面端本地数据目录');
+  }
+};
+
+const nowIso = () => new Date().toISOString();
+
+const toTauriTransparency = (value) => {
+  const normalized = normalizeTransparency(value);
+  return {
+    cards: normalized.cards,
+    sidebar: normalized.sidebar,
+    appBar: normalized.appBar
+  };
+};
+
+const fromTauriConfig = (value) => {
+  if (!value || typeof value !== 'object') return null;
+  return {
+    name: String(value.name || '').trim(),
+    description: String(value.description || ''),
+    transparency: normalizeTransparency(value.transparency),
+    createdAt: String(value.createdAt || ''),
+    updatedAt: String(value.updatedAt || '')
+  };
+};
+
 const transparencyService = {
-  /**
-   * 获取所有透明度配置
-   * @returns {Promise} 返回所有透明度配置列表
-   */
-  getAllConfigs: async () => {
-    const response = await apiClient.get('/transparency');
-    return response.data;
-  },
-
-  /**
-   * 获取特定透明度配置
-   * @param {string} configName - 配置名称
-   * @returns {Promise} 返回指定的透明度配置
-   */
-  getConfigByName: async (configName) => {
-    const response = await apiClient.get(`/transparency/${configName}`);
-    return response.data;
-  },
-
-  /**
-   * 保存透明度配置
-   * @param {string} configName - 配置名称
-   * @param {Object} configData - 配置数据
-   * @param {string} configData.name - 配置显示名称
-   * @param {string} configData.description - 配置描述
-   * @param {Object} configData.transparency - 透明度配置
-   * @param {number} configData.transparency.cards - 卡片透明度 (0-100)
-   * @param {number} configData.transparency.sidebar - 侧边栏透明度 (0-100)
-   * @param {number} configData.transparency.appBar - 顶部导航栏透明度 (0-100)
-   * @returns {Promise} 返回保存结果
-   */
-  saveConfig: async (configName, configData) => {
-    const response = await apiClient.put(`/transparency/${configName}`, configData);
-    return response.data;
-  },
-
-  /**
-   * 删除透明度配置
-   * @param {string} configName - 配置名称
-   * @returns {Promise} 返回删除结果
-   */
-  deleteConfig: async (configName) => {
-    const response = await apiClient.delete(`/transparency/${configName}`);
-    return response.data;
-  },
-
-  /**
-   * 应用透明度配置到当前会话
-   * @param {Object} transparencyConfig - 透明度配置对象
-   * @param {number} transparencyConfig.cards - 卡片透明度 (0-100)
-   * @param {number} transparencyConfig.sidebar - 侧边栏透明度 (0-100)
-   * @param {number} transparencyConfig.appBar - 顶部导航栏透明度 (0-100)
-   */
-  applyTransparency: (transparencyConfig) => {
-    // 将百分比透明度转换为CSS opacity值
-    const convertToOpacity = (value) => {
-      return value !== undefined ? value / 100 : 1;
+  async getAllConfigs() {
+    ensureDesktop();
+    const configs = await invoke('pdh_transparency_list_configs');
+    return {
+      data: (Array.isArray(configs) ? configs : []).map(fromTauriConfig).filter(Boolean)
     };
+  },
 
-    // 应用到CSS变量
+  async getConfigByName(configName) {
+    ensureDesktop();
+    const name = String(configName || '').trim();
+    const config = await invoke('pdh_transparency_get_config', { name });
+    const normalized = fromTauriConfig(config);
+
+    if (!normalized) {
+      throw new Error('未找到透明度配置');
+    }
+
+    return {
+      data: normalized
+    };
+  },
+
+  async saveConfig(configName, configData) {
+    ensureDesktop();
+    const name = String(configName || configData?.name || '').trim();
+    if (!name) {
+      throw new Error('配置名称不能为空');
+    }
+
+    const saved = await invoke('pdh_transparency_save_config', {
+      name,
+      description: String(configData?.description || '').trim(),
+      transparency: toTauriTransparency(configData?.transparency),
+      createdAt: String(configData?.createdAt || nowIso()),
+      updatedAt: nowIso()
+    });
+
+    return {
+      data: fromTauriConfig(saved)
+    };
+  },
+
+  async deleteConfig(configName) {
+    ensureDesktop();
+    const name = String(configName || '').trim();
+    await invoke('pdh_transparency_delete_config', { name });
+    return {
+      message: '删除透明度配置成功'
+    };
+  },
+
+  applyTransparency: (transparencyConfig) => {
+    const normalized = normalizeTransparency(transparencyConfig);
+    const convertToOpacity = (value) => value / 100;
+
     const root = document.documentElement;
-    if (transparencyConfig.cards !== undefined) {
-      root.style.setProperty('--transparency-cards', convertToOpacity(transparencyConfig.cards));
-    }
-    if (transparencyConfig.sidebar !== undefined) {
-      root.style.setProperty('--transparency-sidebar', convertToOpacity(transparencyConfig.sidebar));
-    }
-    if (transparencyConfig.appBar !== undefined) {
-      root.style.setProperty('--transparency-app-bar', convertToOpacity(transparencyConfig.appBar));
-    }
+    root.style.setProperty('--transparency-cards', convertToOpacity(normalized.cards));
+    root.style.setProperty('--transparency-sidebar', convertToOpacity(normalized.sidebar));
+    root.style.setProperty('--transparency-app-bar', convertToOpacity(normalized.appBar));
 
-    // 保存到localStorage以便页面刷新后恢复
-    localStorage.setItem('currentTransparency', JSON.stringify(transparencyConfig));
+    writeJson(CURRENT_TRANSPARENCY_KEY, normalized);
+
+    invoke('pdh_transparency_set_current', {
+      transparency: toTauriTransparency(normalized)
+    }).catch(() => {
+      // ignore
+    });
   },
 
-  /**
-   * 从localStorage恢复透明度配置
-   * @returns {Object|null} 返回保存的透明度配置或null
-   */
-  getStoredTransparency: () => {
-    try {
-      const stored = localStorage.getItem('currentTransparency');
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error('恢复透明度配置失败:', error);
-      return null;
-    }
-  },
+  getStoredTransparency: () => readCurrentFromLocalStorage(),
 
-  /**
-   * 清除当前应用的透明度配置
-   */
   clearTransparency: () => {
     const root = document.documentElement;
     root.style.removeProperty('--transparency-cards');
     root.style.removeProperty('--transparency-sidebar');
     root.style.removeProperty('--transparency-app-bar');
-    localStorage.removeItem('currentTransparency');
+
+    localStorage.removeItem(CURRENT_TRANSPARENCY_KEY);
+
+    invoke('pdh_transparency_clear_current').catch(() => {
+      // ignore
+    });
   }
 };
 

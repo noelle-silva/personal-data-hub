@@ -1043,6 +1043,20 @@ pub fn run() {
       local_data::pdh_theme_presets_list,
       local_data::pdh_theme_presets_save,
       local_data::pdh_theme_presets_delete,
+      local_data::pdh_wallpapers_list,
+      local_data::pdh_wallpapers_get_current,
+      local_data::pdh_wallpapers_create,
+      local_data::pdh_wallpapers_set_current,
+      local_data::pdh_wallpapers_delete,
+      local_data::pdh_wallpapers_update_description,
+      local_data::pdh_wallpapers_stats,
+      local_data::pdh_transparency_get_current,
+      local_data::pdh_transparency_set_current,
+      local_data::pdh_transparency_clear_current,
+      local_data::pdh_transparency_list_configs,
+      local_data::pdh_transparency_get_config,
+      local_data::pdh_transparency_save_config,
+      local_data::pdh_transparency_delete_config,
       pdh_pick_directory
     ])
     .run(tauri::generate_context!())

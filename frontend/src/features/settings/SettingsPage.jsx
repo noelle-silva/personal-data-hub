@@ -168,7 +168,7 @@ const SettingsPage = () => {
       </TabPanel>
 
       <TabPanel activeKey={normalizedActiveTabKey} tabKey="ui">
-        {isAuthenticated ? <WallpaperManagementCard /> : null}
+        <WallpaperManagementCard />
         <AppearanceSettingsCard />
         <ThemePreviewCard />
         <TransparencySettingsCard />
