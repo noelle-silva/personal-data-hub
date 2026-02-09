@@ -242,7 +242,9 @@ export const ThemeProvider = ({ children }) => {
   // 根据模式选择主题
   const theme = useMemo(() => {
     // 如果启用了动态主题且有主题颜色数据，使用动态主题
-    if (dynamicColorsEnabled && themeColors && themeColors.schemes && themeColors.schemes[selectedVariant]) {
+    const hasDynamicThemeData = themeColors && themeColors.schemes && themeColors.schemes[selectedVariant];
+    const shouldUseDynamicTheme = hasDynamicThemeData && (dynamicColorsEnabled || !!appliedThemePresetId);
+    if (shouldUseDynamicTheme) {
       try {
         const mdTokens = themeColors.schemes[selectedVariant][mode];
         
@@ -282,7 +284,7 @@ export const ThemeProvider = ({ children }) => {
       // 确保自定义颜色也正确设置
       customColors: buildCustomColors(baseTheme)
     });
-  }, [mode, dynamicColorsEnabled, themeColors, selectedVariant]);
+  }, [mode, dynamicColorsEnabled, themeColors, selectedVariant, appliedThemePresetId]);
 
   // 加载主题颜色数据
   const loadThemeColors = useCallback(async () => {
@@ -357,18 +359,12 @@ export const ThemeProvider = ({ children }) => {
     const newEnabled = !dynamicColorsEnabled;
     setDynamicColorsEnabled(newEnabled);
     localStorage.setItem('dynamicColorsEnabled', JSON.stringify(newEnabled));
-    if (!newEnabled) {
-      clearThemePreset();
-    }
   };
 
   // 设置动态主题开关
   const setDynamicColors = (enabled) => {
     setDynamicColorsEnabled(enabled);
     localStorage.setItem('dynamicColorsEnabled', JSON.stringify(enabled));
-    if (!enabled) {
-      clearThemePreset();
-    }
   };
 
   // 设置主题变体
@@ -442,13 +438,6 @@ export const ThemeProvider = ({ children }) => {
     if (!presetColors) return;
 
     // 确保动态主题开启，且变体保持一致
-    setDynamicColorsEnabled(true);
-    try {
-      localStorage.setItem('dynamicColorsEnabled', JSON.stringify(true));
-    } catch {
-      // ignore
-    }
-
     const presetVariant = typeof payload.selectedVariant === 'string' ? payload.selectedVariant : '';
     if (presetVariant) {
       setSelectedVariant(presetVariant);
