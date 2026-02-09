@@ -130,7 +130,6 @@ const SettingsPage = () => {
         <Box
           sx={(theme) => ({
             borderRadius: 999,
-            border: `1px solid ${theme.palette.divider}`,
             bgcolor: theme.palette.background.paper,
             overflow: 'hidden',
           })}
