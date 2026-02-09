@@ -14,8 +14,6 @@ const quoteRoutes = require('./routes/quotes');
 const attachmentRoutes = require('./routes/attachments');
 const customPageRoutes = require('./routes/customPages');
 const aiRoutes = require('./routes/ai');
-const themeRoutes = require('./routes/themes');
-const transparencyRoutes = require('./routes/transparency');
 const serverSettingsRoutes = require('./routes/serverSettings');
 const connectDB = require('./config/database');
 const requireAuth = require('./middlewares/requireAuth');
@@ -80,19 +78,6 @@ app.use(express.urlencoded({ extended: true, limit: maxRequestBodySize }));
 // 静态文件服务（用于提供静态资源）
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 壁纸文件静态服务
-app.use('/api/themes/wallpapers/file', express.static(path.join(__dirname, 'assets/themes/wallpapers'), {
-  maxAge: '1d', // 缓存1天
-  etag: true,
-  lastModified: true,
-  setHeaders: (res, filePath) => {
-    // 对图片文件设置更积极的缓存策略
-    if (/\.(jpg|jpeg|png|webp)$/i.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
-    }
-  }
-}));
-
 /**
  * 请求日志中间件
  */
@@ -145,13 +130,9 @@ app.get('/api', (req, res) => {
       customPages: '/api/custom-pages',
       customPagesSearch: '/api/custom-pages/search',
       customPagesByName: '/api/custom-pages/by-name/:name',
-      themes: '/api/themes',
-      wallpapers: '/api/themes/wallpapers',
-      currentWallpaper: '/api/themes/wallpapers/current',
       ai: '/api/ai/v1',
       aiChatCompletions: '/api/ai/v1/chat/completions',
-      aiModels: '/api/ai/v1/models',
-      transparency: '/api/transparency'
+      aiModels: '/api/ai/v1/models'
     }
   });
 });
@@ -176,12 +157,6 @@ app.use('/api/custom-pages', customPageRoutes);
 
 // AI相关路由（需要JWT认证）
 app.use('/api/ai', aiRoutes);
-
-// 主题相关路由（需要JWT认证）
-app.use('/api/themes', themeRoutes);
-
-// 透明度配置相关路由（需要JWT认证）
-app.use('/api/transparency', transparencyRoutes);
 
 // 服务器运行时设置（需要JWT认证）
 app.use('/api/server-settings', serverSettingsRoutes);
