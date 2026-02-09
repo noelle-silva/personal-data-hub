@@ -18,12 +18,13 @@ import {
   useTheme,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import MarkdownInlineRenderer from './MarkdownInlineRenderer';
 import HtmlInlineRenderer from './HtmlInlineRenderer';
+
+const INPUT_BORDER_RADIUS = 10;
 
 // 样式化的模态框容器
 const ModalContainer = styled(Paper)(({ theme }) => ({
@@ -138,22 +139,11 @@ const TagsInputContainer = styled(Box)(({ theme }) => ({
   minHeight: 40,
   padding: theme.spacing(1),
   border: `1px solid ${theme.palette.border}`,
-  borderRadius: 16, // 设置为 16px 圆角，与其他交互元素保持一致
+  borderRadius: INPUT_BORDER_RADIUS,
   backgroundColor: theme.palette.background.default,
   '&:focus-within': {
     borderColor: theme.palette.primary.main,
   },
-}));
-
-// 按钮区域
-const ActionsBox = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderTop: `1px solid ${theme.palette.border}`,
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: theme.spacing(2),
-  backgroundColor: theme.palette.surfaceVariant,
-  transition: 'background-color 0.3s ease',
 }));
 
 // 小屏预览切换按钮
@@ -379,22 +369,22 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
           >
             {mode === 'create' ? '创建新笔记' : '编辑笔记'}
           </Typography>
-          <IconButton
-            onClick={handleClose}
-            aria-label="关闭"
-            sx={(theme) => ({
-              color: theme.palette.text.secondary,
-              borderRadius: 16, // 设置为 16px 圆角，与其他按钮保持一致
-              backgroundColor: 'transparent',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'light'
-                  ? 'rgba(0, 0, 0, 0.04)'
-                  : 'rgba(255, 255, 255, 0.08)',
-              },
-            })}
-          >
-            <CloseIcon />
-          </IconButton>
+          <Stack direction="row" spacing={1}>
+            <Button
+              onClick={handleClose}
+              variant="outlined"
+              sx={{ borderRadius: 12 }}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              sx={{ borderRadius: 12 }}
+            >
+              {mode === 'create' ? '创建' : '保存'}
+            </Button>
+          </Stack>
         </HeaderBox>
 
         {/* 三栏布局容器 */}
@@ -415,7 +405,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                 required
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 16, // 设置为 16px 圆角
+                    borderRadius: INPUT_BORDER_RADIUS,
                   },
                 }}
               />
@@ -431,7 +421,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                 placeholder="例如：书籍、文章、视频等"
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 16, // 设置为 16px 圆角
+                    borderRadius: INPUT_BORDER_RADIUS,
                   },
                 }}
               />
@@ -545,7 +535,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                     maxRows={30}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 16,
+                        borderRadius: INPUT_BORDER_RADIUS,
                         fontFamily: 'monospace',
                         fontSize: '14px',
                         lineHeight: 1.5,
@@ -576,7 +566,7 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
                     maxRows={30}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: 16,
+                        borderRadius: INPUT_BORDER_RADIUS,
                         fontFamily: 'monospace',
                         fontSize: '14px',
                         lineHeight: 1.5,
@@ -641,27 +631,6 @@ const DocumentFormModal = ({ open, handleClose, document, onSave, mode = 'create
           </PreviewToggleContainer>
         )}
 
-        {/* 按钮区域 */}
-        <ActionsBox>
-          <Button
-            onClick={handleClose}
-            variant="outlined"
-            sx={{
-              borderRadius: 16, // 设置为 16px 圆角
-            }}
-          >
-            取消
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            sx={{
-              borderRadius: 16, // 设置为 16px 圆角
-            }}
-          >
-            {mode === 'create' ? '创建' : '保存'}
-          </Button>
-        </ActionsBox>
       </ModalContainer>
     </Modal>
   );
