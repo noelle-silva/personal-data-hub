@@ -3,10 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Backdrop,
-  Fab,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import AddIcon from '@mui/icons-material/Add';
 import DocumentWindow from './DocumentWindow';
 import QuoteWindow from './QuoteWindow';
 import AttachmentWindow from './AttachmentWindow';
@@ -49,22 +47,6 @@ const WindowsContainer = styled(Box)(({ theme }) => ({
   pointerEvents: 'none',
   zIndex: theme.zIndex.modal,
 }));
-
-// 添加新窗口浮动按钮
-const AddWindowFab = styled(Fab)(({ theme }) => ({
-  position: 'fixed',
-  bottom: 20,
-  right: 20,
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  borderRadius: 16,
-  zIndex: theme.zIndex.modal + 101,
-  '&:hover': {
-    backgroundColor: theme.palette.primary.dark,
-  },
-}));
-
-
 
 const DocumentWindowsContainer = () => {
   const dispatch = useDispatch();
@@ -528,20 +510,6 @@ const DocumentWindowsContainer = () => {
       <WindowsContainer>
         {renderWindows()}
       </WindowsContainer>
-      
-      {!activeDocumentWindowId && !activeQuoteWindowId && !activeAttachmentWindowId && (
-        <AddWindowFab
-          color="primary"
-          aria-label="添加新窗口"
-          onClick={() => {
-            // 这里可以添加打开文档选择器的逻辑
-            // 暂时使用原有的模态框作为示例
-            dispatch(openDocumentModal());
-          }}
-        >
-          <AddIcon />
-        </AddWindowFab>
-      )}
       
       <WindowsLimitPrompt
         open={isLimitPromptOpen}

@@ -11,13 +11,11 @@ import {
   Chip,
   styled,
   Alert,
-  Snackbar,
-  Fab
+  Snackbar
 } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
-import { Add as AddIcon } from '@mui/icons-material';
 import TagMultiSelect from '../components/TagMultiSelect';
 import apiClient from '../services/apiClient';
 import DocumentGrid from '../components/DocumentGrid';
@@ -226,11 +224,6 @@ const TagFilter = () => {
     setShowError(false);
   };
 
-  // 处理打开创建模态框
-  const handleOpenCreateModal = () => {
-    setCreateModalOpen(true);
-  };
-
   // 处理关闭创建模态框
   const handleCloseCreateModal = () => {
     setCreateModalOpen(false);
@@ -329,18 +322,6 @@ const TagFilter = () => {
           </Button>
         </ControlsContainer>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleOpenCreateModal}
-          sx={{
-            borderRadius: 16,
-            px: 3,
-            py: 1,
-          }}
-        >
-          新建笔记
-        </Button>
       </Toolbar>
       
       {/* 标签选择器 */}
@@ -390,22 +371,6 @@ const TagFilter = () => {
         mode="create"
       />
 
-      {/* 浮动创建按钮（移动端友好） */}
-      <Fab
-        color="primary"
-        aria-label="添加笔记"
-        onClick={handleOpenCreateModal}
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', md: 'none' },
-          borderRadius: 16,
-          zIndex: 1000,
-        }}
-      >
-        <AddIcon />
-      </Fab>
     </Container>
   );
 };

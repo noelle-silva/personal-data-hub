@@ -12,8 +12,7 @@ import {
   Alert,
   Snackbar,
   TextField,
-  InputAdornment,
-  Fab
+  InputAdornment
 } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import { styled as muiStyled } from '@mui/material/styles';
@@ -445,22 +444,6 @@ const Quotes = () => {
         onSave={handleCreateQuote}
       />
       
-      {/* 浮动创建按钮（移动端友好） */}
-      <Fab
-        color="primary"
-        aria-label="添加收藏夹"
-        onClick={handleOpenCreateModal}
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', md: 'none' },
-          borderRadius: 16,
-          zIndex: 1000,
-        }}
-      >
-        <AddIcon />
-      </Fab>
     </Container>
   );
 };

@@ -14,12 +14,10 @@ import {
   ListItemText,
   ListItemIcon,
   Avatar,
-  Fab,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import apiClient from '../services/apiClient';
 import {
-  Add as AddIcon,
   TrendingUp as TrendingUpIcon,
   Note as NoteIcon,
   Tag as TagIcon,
@@ -208,11 +206,6 @@ const Home = () => {
     });
   };
 
-  // 处理打开创建模态框
-  const handleOpenCreateModal = () => {
-    setCreateModalOpen(true);
-  };
-
   // 处理关闭创建模态框
   const handleCloseCreateModal = () => {
     setCreateModalOpen(false);
@@ -367,25 +360,6 @@ const Home = () => {
             <Typography variant="h6" sx={{ mb: 3, opacity: 0.9 }}>
               开始管理您的学习笔记
             </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateModal}
-              sx={{
-                borderRadius: 16,
-                px: 4,
-                py: 1.5,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'inherit',
-                backdropFilter: 'blur(4px)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                },
-              }}
-            >
-              创建新笔记
-            </Button>
           </WelcomeCard>
         </Grid>
         
@@ -435,7 +409,7 @@ const Home = () => {
       </Grid>
 
       {/* 快捷操作条 */}
-      <QuickActionsBar onCreateDocument={handleOpenCreateModal} />
+      <QuickActionsBar />
 
       {/* 标签云 */}
       <TagCloud />
@@ -624,22 +598,6 @@ const Home = () => {
         onSaveReferences={handleSaveReferences}
       />
 
-      {/* 浮动创建按钮（移动端友好） */}
-      <Fab
-        color="primary"
-        aria-label="添加笔记"
-        onClick={handleOpenCreateModal}
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', md: 'none' },
-          borderRadius: 16,
-          zIndex: 1000,
-        }}
-      >
-        <AddIcon />
-      </Fab>
     </Container>
   );
 };

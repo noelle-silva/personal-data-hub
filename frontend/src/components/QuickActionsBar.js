@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Box, Button, Typography, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
-  Add as AddIcon,
   FormatQuote as QuoteIcon,
   AttachFile as AttachFileIcon,
   Settings as SettingsIcon,
@@ -56,7 +55,7 @@ const IconContainer = styled(Box)(({ theme }) => ({
   justifyContent: 'center',
 }));
 
-const QuickActionsBar = ({ onCreateDocument }) => {
+const QuickActionsBar = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
@@ -72,12 +71,6 @@ const QuickActionsBar = ({ onCreateDocument }) => {
   };
 
   const actions = [
-    {
-      icon: <AddIcon />,
-      label: '新建笔记',
-      onClick: onCreateDocument,
-      color: theme.palette?.primary?.main || '#1976d2',
-    },
     {
       icon: <QuoteIcon />,
       label: '新建收藏夹',

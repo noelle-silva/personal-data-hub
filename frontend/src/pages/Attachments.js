@@ -10,14 +10,18 @@ import {
   Alert,
   Button,
   Tabs,
-  Tab
+  Tab,
+  Fab,
+  Badge
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
   Image as ImageIcon,
   VideoLibrary as VideoIcon,
   Description as DocumentIcon,
-  Code as CodeIcon
+  Code as CodeIcon,
+  CloudUpload as UploadIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
@@ -66,20 +70,19 @@ const extractFilesFromClipboard = (clipboardData) => {
   return files;
 };
 
-// 样式化容器
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(2),
   paddingBottom: theme.spacing(2),
   minHeight: '100vh',
 }));
 
-// 样式化页面标题
+// 鏍峰紡鍖栭〉闈㈡爣棰?
 const PageTitle = styled(Typography)(({ theme }) => ({
   fontWeight: 600,
   marginBottom: theme.spacing(3),
 }));
 
-// 样式化操作栏
+// 鏍峰紡鍖栨搷浣滄爮
 const ActionBar = styled(Box)(({ theme }) => ({
   display: 'flex',
   justifyContent: 'space-between',
@@ -87,21 +90,21 @@ const ActionBar = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(3),
 }));
 
-// 样式化左侧操作
+// 鏍峰紡鍖栧乏渚ф搷浣?
 const LeftActions = styled(Box)(({ theme }) => ({
   display: 'flex',
   gap: theme.spacing(2),
   alignItems: 'center',
 }));
 
-// 样式化右侧操作
+// 鏍峰紡鍖栧彸渚ф搷浣?
 const RightActions = styled(Box)(({ theme }) => ({
   display: 'flex',
   gap: theme.spacing(1),
 }));
 
 /**
- * 附件管理页面
+ * 闄勪欢绠＄悊椤甸潰
  */
 const AttachmentsPage = () => {
   const dispatch = useDispatch();
@@ -112,11 +115,14 @@ const AttachmentsPage = () => {
   
   const uploadButtonRef = useRef(null);
   const currentCategoryRef = useRef('image');
+  const uploadPanelRef = useRef(null);
+  const uploadFabRef = useRef(null);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [showStats, setShowStats] = useState(false);
-  const [currentTab, setCurrentTab] = useState(0); // 0: 图片, 1: 视频, 2: 文档, 3: 程序与脚本
+  const [currentTab, setCurrentTab] = useState(0); // 0:image, 1:video, 2:document, 3:script
   const [isDragActive, setIsDragActive] = useState(false);
+  const [uploadPanelOpen, setUploadPanelOpen] = useState(false);
 
   const uploadManager = useAttachmentUploadManager({
     onUploaded: (attachment) => {
@@ -125,7 +131,7 @@ const AttachmentsPage = () => {
     }
   });
   
-  // 获取当前选中的类别
+  // 获取当前选中的分类
   const getCurrentCategory = () => {
     switch (currentTab) {
       case 0: return 'image';
@@ -136,22 +142,22 @@ const AttachmentsPage = () => {
     }
   };
 
-  // 处理关闭错误提示
+  // 澶勭悊鍏抽棴閿欒鎻愮ず
   const handleCloseError = () => {
     dispatch(clearError());
   };
 
-  // 处理关闭Snackbar
+  // 澶勭悊鍏抽棴Snackbar
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
   };
 
-  // 处理上传成功
+  // 澶勭悊涓婁紶鎴愬姛
   const handleUploadSuccess = (result) => {
     setSnackbarOpen(true);
   };
 
-  // 处理上传错误
+  // 澶勭悊涓婁紶閿欒
   const handleUploadError = (error) => {
     console.error('上传失败:', error);
   };
@@ -164,14 +170,14 @@ const AttachmentsPage = () => {
     try {
       await uploadButtonRef.current?.uploadFiles(files, category);
     } catch (e) {
-      // 错误提示由 Redux error/snackbar 兜底
+      // 閿欒鎻愮ず鐢?Redux error/snackbar 鍏滃簳
     }
   }, []);
 
-  // 处理查看附件
+  // 澶勭悊鏌ョ湅闄勪欢
   const handleViewAttachment = async (attachment) => {
     try {
-      // 使用新的附件窗口系统
+      // 浣跨敤鏂扮殑闄勪欢绐楀彛绯荤粺
       await dispatch(openAttachmentWindowAndFetch({
         attachmentId: attachment._id,
         label: attachment.originalName || '查看详情',
@@ -181,38 +187,44 @@ const AttachmentsPage = () => {
     } catch (error) {
       console.error('打开附件窗口失败:', error);
       
-      // 如果是401错误（未授权），提示用户登录
       if (error.message?.includes('401') || error.message?.includes('未授权')) {
         alert('访问附件需要登录，请先登录系统');
         return;
       }
       
-      // 其他错误情况，使用旧的模态框作为兜底
       console.log('新窗口系统失败，回退使用旧的模态框');
       dispatch(setSelectedAttachment(attachment));
       dispatch(setModalOpen(true));
     }
   };
 
-  // 处理删除附件
+  // 澶勭悊鍒犻櫎闄勪欢
   const handleDeleteAttachment = (attachmentId) => {
-    // 通过Redux状态管理来处理删除
-    // 这里不需要额外处理，因为AttachmentCard已经处理了
+    // 閫氳繃Redux鐘舵€佺鐞嗘潵澶勭悊鍒犻櫎
+    // 杩欓噷涓嶉渶瑕侀澶栧鐞嗭紝鍥犱负AttachmentCard宸茬粡澶勭悊浜?
   };
 
-  // 格式化文件大小
+  // 鏍煎紡鍖栨枃浠跺ぇ灏?
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
   
-  // 处理标签页切换
+  // 澶勭悊鏍囩椤靛垏鎹?
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
 
-  // 获取附件配置
+  const handleToggleUploadPanel = () => {
+    setUploadPanelOpen((prev) => !prev);
+  };
+
+  const handleCloseUploadPanel = () => {
+    setUploadPanelOpen(false);
+  };
+
+  // 鑾峰彇闄勪欢閰嶇疆
   useEffect(() => {
     if (isAuthenticated && configStatus === 'idle') {
       dispatch(fetchAttachmentConfig());
@@ -235,7 +247,37 @@ const AttachmentsPage = () => {
     }
   }, [currentTab]);
 
-  // 支持 Ctrl+V 粘贴文件/截图到附件页进行上传
+  useEffect(() => {
+    if (!uploadPanelOpen) {
+      return undefined;
+    }
+
+    const handleOutsidePointerDown = (event) => {
+      const panelElement = uploadPanelRef.current;
+      const fabElement = uploadFabRef.current;
+      const target = event.target;
+
+      if (panelElement && panelElement.contains(target)) {
+        return;
+      }
+
+      if (fabElement && fabElement.contains(target)) {
+        return;
+      }
+
+      setUploadPanelOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleOutsidePointerDown);
+    document.addEventListener('touchstart', handleOutsidePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsidePointerDown);
+      document.removeEventListener('touchstart', handleOutsidePointerDown);
+    };
+  }, [uploadPanelOpen]);
+
+  // 鏀寔 Ctrl+V 绮樿创鏂囦欢/鎴浘鍒伴檮浠堕〉杩涜涓婁紶
   useEffect(() => {
     const handlePaste = async (event) => {
       const files = extractFilesFromClipboard(event.clipboardData);
@@ -281,7 +323,7 @@ const AttachmentsPage = () => {
     return '';
   };
 
-  // 桌面端拖拽：必须走 Tauri 的 drag-drop 事件（OS -> WebView 通常不会触发 DOM drag/drop）
+  // 桌面端拖拽：使用 Tauri 的 drag-drop 事件
   useEffect(() => {
     if (!isTauri()) return;
 
@@ -333,11 +375,11 @@ const AttachmentsPage = () => {
               await uploadButtonRef.current?.uploadPaths(groupPaths, cat);
             }
           } catch (e) {
-            // 错误提示由 Redux error/snackbar 兜底
+            // 閿欒鎻愮ず鐢?Redux error/snackbar 鍏滃簳
           }
         });
       } catch (e) {
-        console.warn('Tauri drag-drop 监听失败：', e);
+        console.warn('Tauri drag-drop 监听失败:', e);
       }
     };
 
@@ -352,7 +394,7 @@ const AttachmentsPage = () => {
     };
   }, []);
 
-  // 渲染统计信息
+  // 娓叉煋缁熻淇℃伅
   const renderStats = () => {
     if (!showStats || !stats) return null;
 
@@ -512,15 +554,6 @@ const AttachmentsPage = () => {
         </RightActions>
       </ActionBar>
 
-      <AttachmentUploadTasksPanel
-        tasks={uploadManager.tasks}
-        stats={uploadManager.stats}
-        onPause={uploadManager.pauseTask}
-        onResume={uploadManager.resumeTask}
-        onCancel={uploadManager.cancelTask}
-        onClearFinished={uploadManager.clearFinished}
-      />
-
       {isDragActive && (
         <Box
           sx={{
@@ -563,9 +596,94 @@ const AttachmentsPage = () => {
         onDeleteAttachment={handleDeleteAttachment}
       />
 
+      <Fab
+        ref={uploadFabRef}
+        color="primary"
+        aria-label="上传进度"
+        onClick={handleToggleUploadPanel}
+        sx={{
+          position: 'fixed',
+          right: 24,
+          bottom: 24,
+          zIndex: (theme) => theme.zIndex.drawer + 1,
+        }}
+      >
+        <Badge
+          color="error"
+          badgeContent={uploadManager.tasks.length}
+          max={99}
+        >
+          <UploadIcon />
+        </Badge>
+      </Fab>
+
+      {uploadPanelOpen && (
+        <Box
+          ref={uploadPanelRef}
+          sx={{
+            position: 'fixed',
+            right: 24,
+            bottom: 96,
+            width: { xs: 'calc(100vw - 32px)', sm: 440 },
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+          }}
+        >
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              backgroundColor: 'background.paper',
+              boxShadow: 8,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                上传进度
+              </Typography>
+              <IconButton size="small" onClick={handleCloseUploadPanel} aria-label="关闭上传进度面板">
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {uploadManager.tasks.length > 0 ? (
+              <Box sx={{ '& .MuiPaper-root': { mb: 0 } }}>
+                <AttachmentUploadTasksPanel
+                  tasks={uploadManager.tasks}
+                  stats={uploadManager.stats}
+                  onPause={uploadManager.pauseTask}
+                  onResume={uploadManager.resumeTask}
+                  onCancel={uploadManager.cancelTask}
+                  onClearFinished={uploadManager.clearFinished}
+                />
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  p: 3,
+                  borderRadius: 2,
+                  backgroundColor: 'background.paper',
+                  boxShadow: 1,
+                  textAlign: 'center',
+                  color: 'text.secondary',
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  暂无上传任务
+                </Typography>
+                <Typography variant="body2">
+                  开始上传后，这里会显示任务进度。
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      )}
+
       <AttachmentDetailModal />
 
-      {/* 错误提示 */}
+      {/* 閿欒鎻愮ず */}
       {error && (
         <Snackbar
           open={!!error}
@@ -578,7 +696,7 @@ const AttachmentsPage = () => {
         </Snackbar>
       )}
 
-      {/* 上传成功提示 */}
+      {/* 涓婁紶鎴愬姛鎻愮ず */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
@@ -594,3 +712,4 @@ const AttachmentsPage = () => {
 };
 
 export default AttachmentsPage;
+
