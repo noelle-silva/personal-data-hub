@@ -5,11 +5,11 @@ import {
   Button,
   CardContent,
   CircularProgress,
-  Divider,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   IconButton,
   List,
@@ -23,14 +23,13 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  Check as CheckIcon,
+  Colorize as ColorizeIcon,
   DarkMode as DarkModeIcon,
+  Delete as DeleteIcon,
   LightMode as LightModeIcon,
   Palette as PaletteIcon,
-  Refresh as RefreshIcon,
-  Colorize as ColorizeIcon,
   Save as SaveIcon,
-  Delete as DeleteIcon,
-  Check as CheckIcon,
 } from '@mui/icons-material';
 import { useThemeContext } from '../../../contexts/ThemeContext';
 import { deleteThemePreset, listThemePresets, saveThemePreset } from '../../../services/themePresets';
@@ -44,11 +43,8 @@ const AppearanceSettingsCard = () => {
     toggleDynamicColors,
     selectedVariant,
     setThemeVariant,
-    themeLoading,
-    regenerateThemeColors,
     availableVariants,
     getVariantDisplayName,
-    currentWallpaper,
     themeColors,
     appliedThemePresetId,
     applyThemePreset,
@@ -58,7 +54,6 @@ const AppearanceSettingsCard = () => {
   const [presets, setPresets] = useState([]);
   const [presetsLoading, setPresetsLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState('');
 
@@ -80,7 +75,7 @@ const AppearanceSettingsCard = () => {
   }, []);
 
   const activePreset = useMemo(
-    () => presets.find((p) => p.id === appliedThemePresetId) || null,
+    () => presets.find((item) => item.id === appliedThemePresetId) || null,
     [presets, appliedThemePresetId]
   );
 
@@ -99,14 +94,13 @@ const AppearanceSettingsCard = () => {
 
   const handleSavePreset = async () => {
     if (!canSaveCurrent) {
-      setError('当前没有可保存的动态配色（请先开启莫奈取色并生成主题）');
+      setError('当前没有可保存的动态配色，请先应用一个动态主题预设');
       return;
     }
 
     try {
       setPresetsLoading(true);
       setError('');
-
       await saveThemePreset({
         name: presetName,
         payload: {
@@ -114,7 +108,6 @@ const AppearanceSettingsCard = () => {
           themeColors,
         },
       });
-
       await reloadPresets();
       closeSaveDialog();
     } catch (e) {
@@ -149,34 +142,38 @@ const AppearanceSettingsCard = () => {
         <Typography variant="h6" gutterBottom>
           外观设置
         </Typography>
+
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}
           </Alert>
         ) : null}
+
         <List sx={{ p: 0 }}>
           <ListItem>
             <ListItemIcon>{mode === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}</ListItemIcon>
-            <ListItemText primary="深色模式" secondary="切换应用的主题颜色模式" />
+            <ListItemText primary="深色模式" secondary="切换应用主题明暗模式" />
             <Switch checked={mode === 'dark'} onChange={toggleColorMode} color="primary" />
           </ListItem>
+
           <Divider />
+
           <ListItem>
             <ListItemIcon>
               <PaletteIcon />
             </ListItemIcon>
-            <ListItemText primary="莫奈取色" secondary="根据当前壁纸自动生成动态主题颜色" />
+            <ListItemText primary="动态主题" secondary="开启后可应用本地配色预设" />
             <Switch checked={dynamicColorsEnabled} onChange={toggleDynamicColors} color="primary" />
           </ListItem>
 
-          {dynamicColorsEnabled && (
+          {dynamicColorsEnabled ? (
             <>
               <Divider />
               <ListItem>
                 <ListItemIcon>
                   <ColorizeIcon />
                 </ListItemIcon>
-                <ListItemText primary="主题变体" secondary="选择动态主题的颜色风格" />
+                <ListItemText primary="主题变体" secondary="选择动态主题色风格" />
                 <FormControl sx={{ minWidth: 150 }} size="small">
                   <Select
                     value={selectedVariant}
@@ -194,33 +191,15 @@ const AppearanceSettingsCard = () => {
               <Divider />
               <ListItem>
                 <ListItemIcon>
-                  <RefreshIcon />
+                  <ColorizeIcon />
                 </ListItemIcon>
-                <ListItemText
-                  primary="重新生成主题"
-                  secondary={
-                    currentWallpaper ? `基于 "${currentWallpaper.originalName}" 重新生成` : '请先设置壁纸'
-                  }
-                  secondaryTypographyProps={{
-                    component: 'div',
-                    sx: { display: 'flex', flexDirection: 'column', gap: 0.5 },
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={themeLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
-                  onClick={() => regenerateThemeColors(currentWallpaper?._id)}
-                  disabled={!currentWallpaper || themeLoading}
-                  sx={{ minWidth: 120 }}
-                >
-                  {themeLoading ? '生成中...' : '重新生成'}
-                </Button>
+                <ListItemText primary="主题说明" secondary="服务器主题色已移除，请使用下方本地配色预设" />
               </ListItem>
             </>
-          )}
+          ) : null}
 
           <Divider />
+
           <ListItem>
             <ListItemIcon>
               <SaveIcon />
@@ -232,7 +211,7 @@ const AppearanceSettingsCard = () => {
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {appliedThemePresetId ? (
                 <Button variant="text" size="small" onClick={clearThemePreset} disabled={presetsLoading}>
-                  切回当前主题
+                  切回默认主题
                 </Button>
               ) : null}
               <Button
@@ -250,17 +229,15 @@ const AppearanceSettingsCard = () => {
 
           {!canSaveCurrent ? (
             <ListItem sx={{ pt: 0 }}>
-              <ListItemText
-                secondary="提示：需要先开启“莫奈取色”，并生成过动态主题（有主题颜色数据）后才能保存。"
-              />
+              <ListItemText secondary="提示：先应用一个本地配色预设后，才能保存当前配色快照。" />
             </ListItem>
           ) : null}
 
           {presets.length ? (
-            presets.map((p) => {
-              const isActive = p.id === appliedThemePresetId;
+            presets.map((preset) => {
+              const isActive = preset.id === appliedThemePresetId;
               return (
-                <React.Fragment key={p.id}>
+                <React.Fragment key={preset.id}>
                   <Divider />
                   <ListItem
                     secondaryAction={
@@ -269,7 +246,7 @@ const AppearanceSettingsCard = () => {
                           variant={isActive ? 'contained' : 'outlined'}
                           size="small"
                           startIcon={isActive ? <CheckIcon /> : null}
-                          onClick={() => applyThemePreset(p)}
+                          onClick={() => applyThemePreset(preset)}
                           disabled={isActive || presetsLoading}
                         >
                           {isActive ? '已应用' : '应用'}
@@ -278,7 +255,7 @@ const AppearanceSettingsCard = () => {
                           size="small"
                           aria-label="删除配色预设"
                           title="删除"
-                          onClick={() => handleDeletePreset(p.id)}
+                          onClick={() => handleDeletePreset(preset.id)}
                           disabled={presetsLoading}
                         >
                           <DeleteIcon fontSize="small" />
@@ -290,8 +267,8 @@ const AppearanceSettingsCard = () => {
                       <PaletteIcon />
                     </ListItemIcon>
                     <ListItemText
-                      primary={p.name}
-                      secondary={p.createdAt ? `创建于：${p.createdAt}` : ''}
+                      primary={preset.name}
+                      secondary={preset.createdAt ? `创建于：${preset.createdAt}` : ''}
                     />
                   </ListItem>
                 </React.Fragment>
@@ -317,7 +294,7 @@ const AppearanceSettingsCard = () => {
               fullWidth
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
-              placeholder="例如：柔和蓝 / 低饱和灰 / 夜间阅读"
+              placeholder="例如：柔和蓝 / 夜间阅读"
               inputProps={{ maxLength: 48 }}
             />
           </DialogContent>

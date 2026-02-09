@@ -27,7 +27,7 @@ const TransparencyContext = createContext();
  * 之前 TransparencyProvider 中的方法（如 loadAllConfigs）没有使用 useCallback 稳定化引用，
  * 导致每次 Provider 重渲染都会创建新的函数引用。TransparencyConfigPanel 中的 useEffect
  * 依赖 loadAllConfigs，当函数引用变化时会重复执行，造成短时间内大量重复的
- * GET /api/transparency 请求，影响后端性能。
+ * 透明度配置请求，影响渲染与存储性能。
  *
  * 修复方案：
  * 1. 使用 useCallback 稳定所有暴露给 Context 的方法引用

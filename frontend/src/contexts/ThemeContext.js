@@ -4,7 +4,6 @@ import { GlobalStyles } from '@mui/material';
 import { lightTheme, darkTheme } from '../theme';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectCurrentWallpaper, fetchCurrentWallpaper } from '../store/wallpaperSlice';
-import themesService from '../services/themes';
 import { getThemePresetById } from '../services/themePresets';
 import { mdToMuiPalette } from '../utils/mdToMuiPalette';
 import { buildComponentsOverrides, buildCustomColors } from '../themeOverrides';
@@ -14,6 +13,18 @@ const ThemeContext = createContext();
 
 const SCROLLBARS_VISIBLE_CLASS = 'pdh-scrollbars-visible';
 const APPLIED_THEME_PRESET_ID_KEY = 'pdh_applied_theme_preset_id';
+const THEME_VARIANTS = ['tonalSpot', 'vibrant', 'expressive', 'fidelity', 'muted'];
+
+const getVariantDisplayName = (variant) => {
+  const variantNames = {
+    tonalSpot: '柔和色调',
+    vibrant: '鲜艳活力',
+    expressive: '表现力强',
+    fidelity: '忠实原色',
+    muted: '低饱和柔和'
+  };
+  return variantNames[variant] || variant;
+};
 
 const GlobalScrollbarStyles = ({ theme, currentWallpaper }) => {
   const thumbColor = alpha(theme.palette.primary.main, 0.55);
@@ -210,11 +221,11 @@ export const ThemeProvider = ({ children }) => {
 
   // 当前主题颜色数据
   const [themeColors, setThemeColors] = useState(null);
-  const [themeLoading, setThemeLoading] = useState(false);
 
   const clearThemePreset = useCallback(() => {
     setAppliedThemePresetId('');
     setAppliedThemePreset(null);
+    setThemeColors(null);
     try {
       localStorage.removeItem(APPLIED_THEME_PRESET_ID_KEY);
     } catch {
@@ -284,59 +295,6 @@ export const ThemeProvider = ({ children }) => {
     });
   }, [mode, dynamicColorsEnabled, themeColors, selectedVariant, appliedThemePresetId]);
 
-  // 加载主题颜色数据
-  const loadThemeColors = useCallback(async () => {
-    if (!dynamicColorsEnabled) {
-      setThemeColors(null);
-      return;
-    }
-
-    if (appliedThemePresetId) {
-      return;
-    }
-
-    try {
-      setThemeLoading(true);
-      const colors = await themesService.getCurrentColors();
-      console.log('加载到的主题颜色数据:', colors);
-      
-      if (themesService.isValidThemeData(colors)) {
-        setThemeColors(colors);
-        console.log('主题颜色数据验证通过，已应用');
-      } else {
-        console.warn('主题颜色数据无效:', colors);
-        setThemeColors(null);
-      }
-    } catch (error) {
-      console.error('加载主题颜色失败:', error);
-      setThemeColors(null);
-    } finally {
-      setThemeLoading(false);
-    }
-  }, [dynamicColorsEnabled, appliedThemePresetId]);
-
-  // 重新生成主题颜色
-  const regenerateThemeColors = async (wallpaperId) => {
-    clearThemePreset();
-    try {
-      setThemeLoading(true);
-      console.log('开始重新生成主题颜色，壁纸ID:', wallpaperId);
-      const colors = await themesService.regenerateColors(wallpaperId);
-      console.log('重新生成的主题颜色数据:', colors);
-      
-      if (themesService.isValidThemeData(colors)) {
-        setThemeColors(colors);
-        console.log('重新生成的主题颜色数据验证通过，已应用');
-      } else {
-        console.warn('重新生成的主题颜色数据无效:', colors);
-      }
-    } catch (error) {
-      console.error('重新生成主题颜色失败:', error);
-    } finally {
-      setThemeLoading(false);
-    }
-  };
-
   // 切换主题模式
   const toggleColorMode = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';
@@ -375,14 +333,6 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     dispatch(fetchCurrentWallpaper());
   }, [dispatch]);
-
-  // 当动态主题开关或当前壁纸变化时，重新加载主题颜色（仅在已认证时）
-  useEffect(() => {
-    if (appliedThemePresetId) return;
-    if (currentWallpaper) {
-      loadThemeColors();
-    }
-  }, [dynamicColorsEnabled, currentWallpaper, loadThemeColors, appliedThemePresetId]);
 
   // 应用本地配色预设：加载 preset 并覆盖当前动态主题颜色
   useEffect(() => {
@@ -454,11 +404,8 @@ export const ThemeProvider = ({ children }) => {
     selectedVariant,
     setThemeVariant,
     themeColors,
-    themeLoading,
-    regenerateThemeColors,
-    loadThemeColors,
-    availableVariants: themesService.getAvailableVariants(),
-    getVariantDisplayName: themesService.getVariantDisplayName,
+    availableVariants: THEME_VARIANTS,
+    getVariantDisplayName,
     // 本地配色预设
     appliedThemePresetId,
     applyThemePreset,
