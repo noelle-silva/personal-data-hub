@@ -84,6 +84,12 @@ const DocumentWindowsContainer = () => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [windows]);
 
+  const attachmentWindows = useMemo(() => {
+    return windows
+      .filter(w => w.contentType === 'attachment')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [windows]);
+
   const activeDocumentWindowId = useMemo(() => {
     const active = windows.find((w) => w.id === activeWindowId);
     if (!active) return null;
@@ -100,6 +106,14 @@ const DocumentWindowsContainer = () => {
     return active.id;
   }, [activeWindowId, windows]);
 
+  const activeAttachmentWindowId = useMemo(() => {
+    const active = windows.find((w) => w.id === activeWindowId);
+    if (!active) return null;
+    if (active.contentType !== 'attachment') return null;
+    if (active.minimized) return null;
+    return active.id;
+  }, [activeWindowId, windows]);
+
   const minimizeAllDocumentWindows = () => {
     documentWindows.forEach((w) => {
       if (w.minimized) return;
@@ -109,6 +123,13 @@ const DocumentWindowsContainer = () => {
 
   const minimizeAllQuoteWindows = () => {
     quoteWindows.forEach((w) => {
+      if (w.minimized) return;
+      dispatch(minimizeWindow(w.id));
+    });
+  };
+
+  const minimizeAllAttachmentWindows = () => {
+    attachmentWindows.forEach((w) => {
       if (w.minimized) return;
       dispatch(minimizeWindow(w.id));
     });
@@ -391,13 +412,14 @@ const DocumentWindowsContainer = () => {
           );
         case 'attachment':
           if (activeDocumentWindowId || activeQuoteWindowId) return null;
+          if (!activeAttachmentWindowId || window.id !== activeAttachmentWindowId) return null;
           return (
             <AttachmentWindow
               key={window.id}
               windowData={window}
               isActive={window.id === activeWindowId}
               onClose={() => dispatch(closeWindow(window.id))}
-              onMinimize={() => dispatch(minimizeWindow(window.id))}
+              onMinimize={minimizeAllAttachmentWindows}
               onActivate={() => dispatch(activateWindow(window.id))}
               onUpdatePosition={(position) => dispatch(setWindowPosition({ windowId: window.id, position }))}
               onUpdateSize={(size) => dispatch(setWindowSize({ windowId: window.id, size }))}
@@ -479,7 +501,7 @@ const DocumentWindowsContainer = () => {
   return (
     <>
       <Backdrop
-        open={!!activeDocumentWindowId || !!activeQuoteWindowId}
+        open={!!activeDocumentWindowId || !!activeQuoteWindowId || !!activeAttachmentWindowId}
         sx={(theme) => ({
           // Backdrop 只遮内容区，不允许遮挡顶部栏
           zIndex: theme.zIndex.drawer,
@@ -495,6 +517,10 @@ const DocumentWindowsContainer = () => {
             minimizeAllQuoteWindows();
             return;
           }
+          if (activeAttachmentWindowId) {
+            minimizeAllAttachmentWindows();
+            return;
+          }
           minimizeAllDocumentWindows();
         }}
       />
@@ -503,7 +529,7 @@ const DocumentWindowsContainer = () => {
         {renderWindows()}
       </WindowsContainer>
       
-      {!activeDocumentWindowId && !activeQuoteWindowId && (
+      {!activeDocumentWindowId && !activeQuoteWindowId && !activeAttachmentWindowId && (
         <AddWindowFab
           color="primary"
           aria-label="添加新窗口"
