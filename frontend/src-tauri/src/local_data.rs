@@ -1,5 +1,8 @@
+use base64::engine::general_purpose;
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Component;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
@@ -249,6 +252,120 @@ fn wallpapers_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
   Ok(data_dir.join("themes").join("wallpapers.json"))
 }
 
+fn wallpapers_images_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+  let (data_dir, _default, _cfg_path, _custom) = resolve_data_dir(app)?;
+  Ok(data_dir.join("themes").join("wallpapers"))
+}
+
+fn sanitize_extension(ext: &str) -> Option<String> {
+  let trimmed = ext.trim().trim_start_matches('.').to_lowercase();
+  if trimmed.is_empty() || trimmed.len() > 12 {
+    return None;
+  }
+  if !trimmed.chars().all(|c| c.is_ascii_alphanumeric()) {
+    return None;
+  }
+  Some(trimmed)
+}
+
+fn ext_from_original_name(original_name: &str) -> Option<String> {
+  Path::new(original_name)
+    .extension()
+    .and_then(|s| s.to_str())
+    .and_then(sanitize_extension)
+    .map(|ext| if ext == "jpeg" { "jpg".to_string() } else { ext })
+}
+
+fn ext_from_mime_type(mime_type: &str) -> Option<String> {
+  let mt = mime_type.trim().to_lowercase();
+  match mt.as_str() {
+    "image/jpeg" => Some("jpg".to_string()),
+    "image/png" => Some("png".to_string()),
+    "image/webp" => Some("webp".to_string()),
+    "image/gif" => Some("gif".to_string()),
+    "image/bmp" => Some("bmp".to_string()),
+    "image/avif" => Some("avif".to_string()),
+    _ => None,
+  }
+}
+
+fn data_url_decode(data_url: &str) -> Option<(String, Vec<u8>)> {
+  let input = data_url.trim();
+  if !input.starts_with("data:") {
+    return None;
+  }
+  let comma = input.find(',')?;
+  let (meta, payload) = input.split_at(comma);
+  let payload = payload.trim_start_matches(',').trim();
+  let meta = meta.trim_start_matches("data:").trim();
+  let mut parts = meta.split(';');
+  let mime_type = parts.next().unwrap_or("").trim().to_string();
+  let is_base64 = parts.any(|p| p.trim().eq_ignore_ascii_case("base64"));
+  if !is_base64 {
+    return None;
+  }
+  let bytes = general_purpose::STANDARD.decode(payload.as_bytes()).ok()?;
+  Some((mime_type, bytes))
+}
+
+fn ensure_relative_path_no_escape(path: &Path) -> bool {
+  !path.components().any(|c| matches!(c, Component::ParentDir | Component::RootDir | Component::Prefix(_)))
+}
+
+fn write_wallpaper_bytes(
+  app: &tauri::AppHandle,
+  id: &str,
+  original_name: &str,
+  mime_type: &str,
+  bytes: &[u8],
+) -> Result<PathBuf, String> {
+  if id.trim().is_empty() {
+    return Err("wallpaper id is empty".to_string());
+  }
+
+  let dir = wallpapers_images_dir(app)?;
+  ensure_dir(&dir)?;
+
+  let ext = ext_from_original_name(original_name)
+    .or_else(|| ext_from_mime_type(mime_type))
+    .unwrap_or_else(|| "img".to_string());
+
+  let file_name = format!("{id}.{ext}");
+  let rel = Path::new(&file_name);
+  if !ensure_relative_path_no_escape(rel) {
+    return Err("invalid wallpaper file name".to_string());
+  }
+
+  let path = dir.join(rel);
+  fs::write(&path, bytes).map_err(|e| format!("write wallpaper file failed: {e}"))?;
+  Ok(path)
+}
+
+fn maybe_delete_wallpaper_file(app: &tauri::AppHandle, url: &str) -> Result<(), String> {
+  let raw = url.trim();
+  if raw.is_empty() || raw.starts_with("data:") {
+    return Ok(());
+  }
+
+  let images_dir = wallpapers_images_dir(app)?;
+  let images_dir_canon = fs::canonicalize(&images_dir).unwrap_or(images_dir);
+  let file_path = PathBuf::from(raw);
+  let file_canon = match fs::canonicalize(&file_path) {
+    Ok(p) => p,
+    Err(_) => return Ok(()),
+  };
+
+  // 永不破坏用户空间：只删除 wallpapers 目录内的文件
+  if !file_canon.starts_with(&images_dir_canon) {
+    return Ok(());
+  }
+
+  if file_canon.is_file() {
+    let _ = fs::remove_file(file_canon);
+  }
+  Ok(())
+}
+
 fn transparency_file_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
   let (data_dir, _default, _cfg_path, _custom) = resolve_data_dir(app)?;
   Ok(data_dir.join("themes").join("transparency.json"))
@@ -294,12 +411,43 @@ fn sort_wallpapers_desc(wallpapers: &mut Vec<LocalWallpaper>) {
   wallpapers.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 }
 
-fn normalize_wallpapers_file(file: &mut WallpapersFile) {
+fn migrate_wallpaper_data_urls(app: &tauri::AppHandle, file: &mut WallpapersFile) -> Result<(), String> {
+  for wallpaper in file.wallpapers.iter_mut() {
+    let raw = wallpaper.url.trim();
+    if !raw.starts_with("data:") {
+      continue;
+    }
+
+    let (decoded_mime, bytes) = match data_url_decode(raw) {
+      Some(v) => v,
+      None => continue,
+    };
+
+    let mime_type = if wallpaper.mime_type.trim().is_empty() {
+      decoded_mime
+    } else {
+      wallpaper.mime_type.clone()
+    };
+
+    let path = match write_wallpaper_bytes(app, &wallpaper.id, &wallpaper.original_name, &mime_type, &bytes) {
+      Ok(p) => p,
+      Err(_) => continue,
+    };
+    wallpaper.url = path.to_string_lossy().to_string();
+    wallpaper.mime_type = mime_type;
+    wallpaper.size = bytes.len() as u64;
+  }
+
+  Ok(())
+}
+
+fn normalize_wallpapers_file(app: &tauri::AppHandle, file: &mut WallpapersFile) -> Result<(), String> {
+  migrate_wallpaper_data_urls(app, file)?;
   sort_wallpapers_desc(&mut file.wallpapers);
 
   if file.wallpapers.is_empty() {
     file.current_wallpaper_id = None;
-    return;
+    return Ok(());
   }
 
   let mut current_id = file.current_wallpaper_id.clone().unwrap_or_default();
@@ -325,6 +473,7 @@ fn normalize_wallpapers_file(file: &mut WallpapersFile) {
   }
 
   file.current_wallpaper_id = Some(current_id);
+  Ok(())
 }
 
 fn load_transparency(app: &tauri::AppHandle) -> Result<TransparencyFile, String> {
@@ -361,7 +510,7 @@ fn save_transparency(app: &tauri::AppHandle, file: &TransparencyFile) -> Result<
 #[tauri::command]
 pub fn pdh_wallpapers_list(app: tauri::AppHandle) -> Result<Vec<LocalWallpaper>, String> {
   let mut file = load_wallpapers(&app)?;
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
   Ok(file.wallpapers)
 }
@@ -369,7 +518,7 @@ pub fn pdh_wallpapers_list(app: tauri::AppHandle) -> Result<Vec<LocalWallpaper>,
 #[tauri::command]
 pub fn pdh_wallpapers_get_current(app: tauri::AppHandle) -> Result<Option<LocalWallpaper>, String> {
   let mut file = load_wallpapers(&app)?;
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
   Ok(file.wallpapers.into_iter().find(|item| item.is_current))
 }
@@ -378,21 +527,27 @@ pub fn pdh_wallpapers_get_current(app: tauri::AppHandle) -> Result<Option<LocalW
 pub fn pdh_wallpapers_create(
   app: tauri::AppHandle,
   original_name: String,
-  data_url: String,
+  bytes: Vec<u8>,
   mime_type: String,
-  size: u64,
   description: String,
   created_at: String,
   updated_at: String,
 ) -> Result<LocalWallpaper, String> {
   let mut file = load_wallpapers(&app)?;
 
+  if bytes.is_empty() {
+    return Err("wallpaper bytes is empty".to_string());
+  }
+
+  let id = generate_local_id("local");
+  let path = write_wallpaper_bytes(&app, &id, &original_name, &mime_type, &bytes)?;
+
   let mut next = LocalWallpaper {
-    id: generate_local_id("local"),
+    id,
     original_name: original_name.trim().to_string(),
-    url: data_url,
+    url: path.to_string_lossy().to_string(),
     mime_type,
-    size,
+    size: bytes.len() as u64,
     description: description.trim().to_string(),
     created_at,
     updated_at,
@@ -406,7 +561,7 @@ pub fn pdh_wallpapers_create(
   }
 
   file.wallpapers.insert(0, next.clone());
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
 
   let created = file
@@ -432,7 +587,7 @@ pub fn pdh_wallpapers_set_current(app: tauri::AppHandle, id: String) -> Result<L
   }
 
   file.current_wallpaper_id = Some(target.to_string());
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
 
   file
@@ -450,6 +605,12 @@ pub fn pdh_wallpapers_delete(app: tauri::AppHandle, id: String) -> Result<Wallpa
   }
 
   let mut file = load_wallpapers(&app)?;
+  let to_delete_url = file
+    .wallpapers
+    .iter()
+    .find(|item| item.id == target)
+    .map(|item| item.url.clone())
+    .unwrap_or_default();
   let before = file.wallpapers.len();
   file.wallpapers.retain(|item| item.id != target);
 
@@ -461,8 +622,10 @@ pub fn pdh_wallpapers_delete(app: tauri::AppHandle, id: String) -> Result<Wallpa
     file.current_wallpaper_id = file.wallpapers.first().map(|item| item.id.clone());
   }
 
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
+
+  let _ = maybe_delete_wallpaper_file(&app, &to_delete_url);
 
   let current_wallpaper = file.wallpapers.iter().find(|item| item.is_current).cloned();
 
@@ -501,7 +664,7 @@ pub fn pdh_wallpapers_update_description(
     return Err("wallpaper not found".to_string());
   }
 
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
 
   file
@@ -514,7 +677,7 @@ pub fn pdh_wallpapers_update_description(
 #[tauri::command]
 pub fn pdh_wallpapers_stats(app: tauri::AppHandle) -> Result<WallpaperStats, String> {
   let mut file = load_wallpapers(&app)?;
-  normalize_wallpapers_file(&mut file);
+  normalize_wallpapers_file(&app, &mut file)?;
   save_wallpapers(&app, &file)?;
 
   let total_wallpapers = file.wallpapers.len();

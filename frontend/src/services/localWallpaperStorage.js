@@ -1,4 +1,4 @@
-import { invoke, isTauri } from './tauriBridge';
+import { invoke, isTauri, convertFileSrc } from './tauriBridge';
 
 const nowIso = () => new Date().toISOString();
 
@@ -8,22 +8,37 @@ const ensureDesktop = () => {
   }
 };
 
-const readFileAsDataUrl = (file) => {
+const readFileAsBytes = async (file) => {
   if (!(file instanceof File)) {
     throw new Error('请选择有效的图片文件');
   }
 
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error('读取图片文件失败'));
-    reader.readAsDataURL(file);
-  });
+  try {
+    const buffer = await file.arrayBuffer();
+    return Array.from(new Uint8Array(buffer));
+  } catch (error) {
+    throw error || new Error('读取图片文件失败');
+  }
 };
 
-const normalizeWallpaper = (wallpaper) => {
+const resolveWallpaperUrl = async (url) => {
+  if (typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^(data:|blob:|https?:)/i.test(trimmed)) return trimmed;
+  if (!isTauri()) return trimmed;
+
+  try {
+    return await convertFileSrc(trimmed);
+  } catch (_) {
+    return trimmed;
+  }
+};
+
+const normalizeWallpaper = async (wallpaper) => {
   if (!wallpaper || typeof wallpaper !== 'object') return wallpaper;
   const mappedId = typeof wallpaper._id === 'string' ? wallpaper._id : String(wallpaper.id || '');
+  const rawUrl = wallpaper.url || '';
 
   return {
     ...wallpaper,
@@ -33,7 +48,9 @@ const normalizeWallpaper = (wallpaper) => {
     mimeType: wallpaper.mimeType || wallpaper.mime_type || '',
     createdAt: wallpaper.createdAt || wallpaper.created_at || '',
     updatedAt: wallpaper.updatedAt || wallpaper.updated_at || '',
-    source: wallpaper.source || 'local'
+    source: wallpaper.source || 'local',
+    filePath: rawUrl,
+    url: await resolveWallpaperUrl(rawUrl),
   };
 };
 
@@ -41,7 +58,8 @@ const localWallpaperStorage = {
   async listWallpapers() {
     ensureDesktop();
     const wallpapers = await invoke('pdh_wallpapers_list');
-    return (Array.isArray(wallpapers) ? wallpapers : []).map(normalizeWallpaper);
+    const list = Array.isArray(wallpapers) ? wallpapers : [];
+    return Promise.all(list.map((item) => normalizeWallpaper(item)));
   },
 
   async getCurrentWallpaper() {
@@ -52,12 +70,11 @@ const localWallpaperStorage = {
 
   async createWallpaper(file, description = '') {
     ensureDesktop();
-    const url = await readFileAsDataUrl(file);
+    const bytes = await readFileAsBytes(file);
     const created = await invoke('pdh_wallpapers_create', {
       originalName: file.name,
-      dataUrl: url,
+      bytes,
       mimeType: file.type || 'image/*',
-      size: file.size || 0,
       description: String(description || '').trim(),
       createdAt: nowIso(),
       updatedAt: nowIso()
@@ -77,7 +94,7 @@ const localWallpaperStorage = {
     const result = await invoke('pdh_wallpapers_delete', { id: wallpaperId });
     return {
       ...result,
-      currentWallpaper: normalizeWallpaper(result?.currentWallpaper || null)
+      currentWallpaper: await normalizeWallpaper(result?.currentWallpaper || null)
     };
   },
 

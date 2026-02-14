@@ -4,6 +4,7 @@ export const isTauri = () => {
 };
 
 let cachedModuleInvoke = null;
+let cachedModuleConvertFileSrc = null;
 
 const getGlobalInvoke = () => {
   if (typeof window === 'undefined') return null;
@@ -36,6 +37,39 @@ export const invoke = async (command, args) => {
   }
 
   throw new Error('tauri invoke not available');
+};
+
+const getGlobalConvertFileSrc = () => {
+  if (typeof window === 'undefined') return null;
+  const candidates = [
+    window.__TAURI__?.core?.convertFileSrc,
+    window.__TAURI__?.tauri?.convertFileSrc,
+    window.__TAURI_INTERNALS__?.core?.convertFileSrc,
+    window.__TAURI_INTERNALS__?.tauri?.convertFileSrc,
+  ];
+  for (const fn of candidates) {
+    if (typeof fn === 'function') return fn;
+  }
+  return null;
+};
+
+export const convertFileSrc = async (path, protocol) => {
+  const globalConvert = getGlobalConvertFileSrc();
+  if (globalConvert) return globalConvert(path, protocol);
+
+  if (cachedModuleConvertFileSrc) return cachedModuleConvertFileSrc(path, protocol);
+
+  try {
+    const mod = await import('@tauri-apps/api/core');
+    if (typeof mod.convertFileSrc === 'function') {
+      cachedModuleConvertFileSrc = mod.convertFileSrc;
+      return cachedModuleConvertFileSrc(path, protocol);
+    }
+  } catch (_) {
+    // ignore
+  }
+
+  throw new Error('tauri convertFileSrc not available');
 };
 
 export const getGatewayUrl = async () => invoke('pdh_gateway_url');

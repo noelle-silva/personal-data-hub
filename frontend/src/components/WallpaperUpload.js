@@ -63,13 +63,13 @@ const WallpaperUpload = ({ onUploadSuccess }) => {
       return '不支持的文件格式，请选择 JPEG、PNG 或 WebP 格式的图片';
     }
 
-    // 检查文件大小（10MB）
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      return '文件大小不能超过 10MB';
-    }
-
     return null;
+  };
+
+  const revokePreviewUrl = (url) => {
+    if (url && typeof url === 'string' && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
   };
 
   // 处理文件选择
@@ -82,12 +82,11 @@ const WallpaperUpload = ({ onUploadSuccess }) => {
 
     setSelectedFile(file);
     
-    // 创建预览URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreviewUrl(e.target.result);
-    };
-    reader.readAsDataURL(file);
+    // 创建预览URL（避免 base64）
+    setPreviewUrl((prev) => {
+      revokePreviewUrl(prev);
+      return URL.createObjectURL(file);
+    });
   }, []);
 
   // 处理文件输入变化
@@ -143,7 +142,10 @@ const WallpaperUpload = ({ onUploadSuccess }) => {
       // 重置表单
       setSelectedFile(null);
       setDescription('');
-      setPreviewUrl('');
+      setPreviewUrl((prev) => {
+        revokePreviewUrl(prev);
+        return '';
+      });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -161,7 +163,10 @@ const WallpaperUpload = ({ onUploadSuccess }) => {
   const handleReset = () => {
     setSelectedFile(null);
     setDescription('');
-    setPreviewUrl('');
+    setPreviewUrl((prev) => {
+      revokePreviewUrl(prev);
+      return '';
+    });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -199,7 +204,7 @@ const WallpaperUpload = ({ onUploadSuccess }) => {
             拖拽壁纸文件到此处或点击选择
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            支持 JPEG、PNG、WebP 格式，最大 10MB
+            支持 JPEG、PNG、WebP 格式，不限制大小
           </Typography>
           <HiddenInput
             ref={fileInputRef}
