@@ -4,7 +4,8 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Button
+  Button,
+  Pagination
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useSelector, useDispatch } from 'react-redux';
@@ -48,8 +49,10 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
   textAlign: 'center',
 }));
 
-// 样式化加载更多按钮
-const LoadMoreButton = styled(Button)(({ theme }) => ({
+// 分页容器
+const PaginationContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
   marginTop: theme.spacing(2),
   marginBottom: theme.spacing(4),
 }));
@@ -81,9 +84,6 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
   const error = useSelector(selectAttachmentsError);
   const pagination = useSelector(selectAttachmentsPagination);
   
-  const loadMoreRef = useRef(null);
-  const observerRef = useRef(null);
-  const loadingMoreRef = useRef(false);
   const statusRef = useRef(status);
 
   // 处理查看附件
@@ -104,7 +104,7 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
   }, [onDeleteAttachment]);
 
   // 加载附件列表
-  const loadAttachments = useCallback((page = 1, append = false) => {
+  const loadAttachments = useCallback((page = 1) => {
     // 使用 ref 获取最新状态，避免将 status 加入依赖
     if (statusRef.current === 'loading') return;
     
@@ -113,57 +113,14 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
       limit: 20,
       sort: '-createdAt',
       category,
-      append
+      append: false
     }));
   }, [dispatch, category]);
 
-  // 加载更多
-  const loadMore = useCallback(() => {
-    if (
-      status !== 'loading' &&
-      pagination.hasNext &&
-      !loadingMoreRef.current
-    ) {
-      loadingMoreRef.current = true;
-      loadAttachments(pagination.page + 1, true);
-      
-      // 重置加载更多标志
-      setTimeout(() => {
-        loadingMoreRef.current = false;
-      }, 1000);
-    }
-  }, [status, pagination, loadAttachments]);
-
   // 重试加载
   const handleRetry = useCallback(() => {
-    loadAttachments(1, false);
+    loadAttachments(1);
   }, [loadAttachments]);
-
-  // 设置 IntersectionObserver 监听滚动到底部
-  useEffect(() => {
-    if (!loadMoreRef.current) return;
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && pagination.hasNext && status !== 'loading') {
-          loadMore();
-        }
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '100px',
-      }
-    );
-
-    observerRef.current.observe(loadMoreRef.current);
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [loadMore, pagination.hasNext, status]);
 
   // 同步 status 到 ref
   useEffect(() => {
@@ -175,7 +132,7 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
     // 当组件初始化或类别变化时，加载数据
     // 使用 ref 检查当前状态，避免将 status 加入依赖
     if (statusRef.current === 'idle' || statusRef.current === 'succeeded') {
-      loadAttachments(1, false);
+      loadAttachments(1);
     }
   }, [category, loadAttachments]);
 
@@ -232,30 +189,28 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
     return null;
   };
 
-  // 渲染加载更多
-  const renderLoadMore = () => {
-    if (
-      status === 'succeeded' &&
-      attachments.length > 0 &&
-      pagination.hasNext
-    ) {
-      return (
-        <Box display="flex" justifyContent="center" mt={2} mb={4}>
-          {status === 'loading' ? (
-            <CircularProgress size={24} />
-          ) : (
-            <LoadMoreButton
-              variant="outlined"
-              onClick={loadMore}
-              disabled={status === 'loading'}
-            >
-              加载更多
-            </LoadMoreButton>
-          )}
-        </Box>
-      );
-    }
-    return null;
+  const handlePageChange = (_, nextPage) => {
+    if (!nextPage || nextPage === pagination.page) return;
+    loadAttachments(nextPage);
+  };
+
+  const renderPagination = () => {
+    if (status !== 'succeeded') return null;
+    if (!pagination?.pages || pagination.pages <= 1) return null;
+
+    return (
+      <PaginationContainer>
+        <Pagination
+          count={pagination.pages}
+          page={pagination.page || 1}
+          onChange={handlePageChange}
+          disabled={status === 'loading'}
+          color="primary"
+          showFirstButton
+          showLastButton
+        />
+      </PaginationContainer>
+    );
   };
 
   return (
@@ -278,10 +233,7 @@ const AttachmentGrid = ({ onViewAttachment, onDeleteAttachment, category = 'imag
       
       {renderLoading()}
       {renderEmpty()}
-      {renderLoadMore()}
-      
-      {/* 用于 IntersectionObserver 的隐藏元素 */}
-      <Box ref={loadMoreRef} sx={{ height: 1 }} />
+      {renderPagination()}
     </Container>
   );
 };

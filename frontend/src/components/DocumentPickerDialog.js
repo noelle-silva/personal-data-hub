@@ -18,6 +18,7 @@ import {
   ListItemText,
   ListItemIcon,
   Autocomplete,
+  Pagination,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -103,6 +104,12 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
+const PaginationContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  paddingTop: theme.spacing(1),
+}));
+
 // 格式化相对时间
 const formatRelativeTime = (dateString) => {
   const date = new Date(dateString);
@@ -135,7 +142,6 @@ const DocumentPickerDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
   
   // Refs
@@ -160,8 +166,8 @@ const DocumentPickerDialog = ({
     }
   }, []);
   
-  // 获取文档列表
-  const fetchDocuments = useCallback(async (isSearch = false, resetPage = false) => {
+  // 获取文档列表（分页切换：不做“滚动加载更多/追加”）
+  const fetchDocuments = useCallback(async (targetPage = 1, options = {}) => {
     if (loading) return;
     
     // 取消之前的请求
@@ -177,20 +183,22 @@ const DocumentPickerDialog = ({
     setError('');
     
     try {
-      const currentPage = resetPage ? 1 : page;
       const params = {
-        page: currentPage,
+        page: targetPage,
         limit: 20,
         sort: '-updatedAt'
       };
       
       let endpoint;
-      if (isSearch && searchQuery.trim()) {
-        params.q = searchQuery.trim();
+      const tagsForQuery = Array.isArray(options.tags) ? options.tags : selectedTags;
+      const queryForSearch = options.query !== undefined ? String(options.query) : searchQuery;
+      const trimmedQuery = queryForSearch.trim();
+      if (trimmedQuery) {
+        params.q = trimmedQuery;
         endpoint = '/documents/search';
-      } else if (selectedTags.length > 0 && !searchQuery.trim()) {
+      } else if (tagsForQuery.length > 0) {
         // 仅标签筛选
-        params.tags = selectedTags.join(',');
+        params.tags = tagsForQuery.join(',');
         params.mode = 'all';
         endpoint = '/documents/tags';
       } else {
@@ -206,15 +214,12 @@ const DocumentPickerDialog = ({
       const data = response.data;
       const newDocuments = data.data || data.items || [];
       
-      if (resetPage) {
-        setDocuments(newDocuments);
-        setPage(1);
-      } else {
-        setDocuments(prev => [...prev, ...newDocuments]);
-      }
+      setDocuments(newDocuments);
+      setPage(targetPage);
       
-      setTotal(data.pagination?.total || newDocuments.length);
-      setHasMore(data.pagination?.hasMore || newDocuments.length === 20);
+      const apiTotal = data.pagination?.total;
+      const nextTotal = Number.isFinite(apiTotal) ? apiTotal : newDocuments.length;
+      setTotal(nextTotal);
       
     } catch (err) {
       if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
@@ -223,7 +228,7 @@ const DocumentPickerDialog = ({
     } finally {
       setLoading(false);
     }
-  }, [loading, page, searchQuery, selectedTags]);
+  }, [loading, searchQuery, selectedTags]);
   
   // 处理搜索（防抖）
   const handleSearch = useCallback((query) => {
@@ -237,8 +242,7 @@ const DocumentPickerDialog = ({
     // 设置新的定时器
     debounceTimerRef.current = setTimeout(() => {
       setPage(1);
-      setHasMore(true);
-      fetchDocuments(query.trim().length > 0, true);
+      fetchDocuments(1, { query });
     }, 300); // 300ms防抖
   }, [fetchDocuments]);
   
@@ -247,8 +251,8 @@ const DocumentPickerDialog = ({
     const tagNames = newValue.map(tag => typeof tag === 'string' ? tag : tag.name);
     setSelectedTags(tagNames);
     setPage(1);
-    setHasMore(true);
-  }, []);
+    fetchDocuments(1, { tags: tagNames });
+  }, [fetchDocuments]);
   
   // 处理文档选择
   const handleDocumentToggle = useCallback((documentId) => {
@@ -261,17 +265,13 @@ const DocumentPickerDialog = ({
     });
   }, []);
   
-  // 处理滚动加载更多
-  const handleScroll = useCallback(() => {
-    if (!listRef.current || !hasMore || loading) return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    
-    // 当滚动到接近底部时加载更多
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
-      setPage(prev => prev + 1);
+  const handlePageChange = (_, nextPage) => {
+    if (!nextPage || nextPage === page) return;
+    fetchDocuments(nextPage);
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
     }
-  }, [hasMore, loading]);
+  };
   
   // 处理确认
   const handleConfirm = useCallback(() => {
@@ -286,7 +286,6 @@ const DocumentPickerDialog = ({
     setSelectedTags([]);
     setSelectedDocumentIds(initialSelectedIds);
     setPage(1);
-    setHasMore(true);
     setError('');
     
     handleClose();
@@ -296,23 +295,9 @@ const DocumentPickerDialog = ({
   useEffect(() => {
     if (open) {
       fetchAvailableTags();
-      fetchDocuments(false, true);
+      fetchDocuments(1);
     }
   }, [open, fetchAvailableTags, fetchDocuments]);
-  
-  // 搜索变化时重新加载
-  useEffect(() => {
-    if (open) {
-      fetchDocuments(searchQuery.trim().length > 0, true);
-    }
-  }, [selectedTags, open, fetchDocuments, searchQuery]);
-  
-  // 页面变化时加载更多
-  useEffect(() => {
-    if (open && page > 1) {
-      fetchDocuments(searchQuery.trim().length > 0);
-    }
-  }, [page, open, fetchDocuments, searchQuery]);
   
   // 清理
   useEffect(() => {
@@ -527,15 +512,32 @@ const DocumentPickerDialog = ({
             </Typography>
           </EmptyContainer>
         ) : (
-          <DocumentList ref={listRef} onScroll={handleScroll}>
-            {filteredDocuments.map(renderDocumentItem)}
-            
-            {loading && (
-              <LoadingContainer>
-                <CircularProgress size={24} />
-              </LoadingContainer>
+          <>
+            <DocumentList ref={listRef}>
+              {filteredDocuments.map(renderDocumentItem)}
+
+              {loading && (
+                <LoadingContainer>
+                  <CircularProgress size={24} />
+                </LoadingContainer>
+              )}
+            </DocumentList>
+
+            {total > 20 && (
+              <PaginationContainer>
+                <Pagination
+                  count={Math.ceil(total / 20)}
+                  page={page}
+                  onChange={handlePageChange}
+                  disabled={loading}
+                  color="primary"
+                  size="small"
+                  showFirstButton
+                  showLastButton
+                />
+              </PaginationContainer>
             )}
-          </DocumentList>
+          </>
         )}
       </StyledDialogContent>
       

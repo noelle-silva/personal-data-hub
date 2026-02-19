@@ -29,11 +29,10 @@ import {
   selectTagFilterError,
   selectTagFilterSort,
   selectTagFilterPagination,
-  selectTagFilterHasMore,
   setSelectedTags,
   setSort,
   setPage,
-  clearSelectedTags
+  resetFilter
 } from '../store/tagFilterSlice';
 
 // 样式化的页面标题
@@ -101,7 +100,6 @@ const TagFilter = () => {
   const error = useSelector(selectTagFilterError);
   const sort = useSelector(selectTagFilterSort);
   const pagination = useSelector(selectTagFilterPagination);
-  const hasMore = useSelector(selectTagFilterHasMore);
   
   // 本地状态
   const [showError, setShowError] = useState(false);
@@ -126,6 +124,7 @@ const TagFilter = () => {
   // 默认加载所有文档（当没有选择标签时）
   useEffect(() => {
     if (status === 'idle' && selectedTags.length === 0) {
+      dispatch(setPage(1));
       dispatch(fetchAllDocumentsPaged({
         page: 1,
         limit: 20,
@@ -148,6 +147,7 @@ const TagFilter = () => {
     
     // 设置新的定时器，300ms后执行搜索
     debounceTimerRef.current = setTimeout(() => {
+      dispatch(setPage(1));
       dispatch(fetchByTags({
         tags: selectedTags,
         mode: 'all',
@@ -167,56 +167,73 @@ const TagFilter = () => {
   
   // 处理排序变化
   const handleSortChange = (event) => {
-    dispatch(setSort(event.target.value));
+    const nextSort = event.target.value;
+    dispatch(setSort(nextSort));
+    dispatch(setPage(1));
+
+    if (selectedTags.length > 0) {
+      dispatch(fetchByTags({
+        tags: selectedTags,
+        mode: 'all',
+        page: 1,
+        limit: 20,
+        sort: nextSort
+      }));
+      return;
+    }
+
+    dispatch(fetchAllDocumentsPaged({
+      page: 1,
+      limit: 20,
+      sort: nextSort
+    }));
   };
   
   // 处理清空筛选
   const handleClearFilter = () => {
-    dispatch(clearSelectedTags());
+    dispatch(resetFilter());
   };
-  
-  // 处理加载更多
-  const handleLoadMore = (options = {}) => {
-    if (options.refresh) {
-      // 刷新当前页
-      if (selectedTags.length > 0) {
-        // 筛选模式
-        dispatch(fetchByTags({
-          tags: selectedTags,
-          mode: 'all',
-          page: pagination.page,
-          limit: 20,
-          sort
-        }));
-      } else {
-        // 默认模式
-        dispatch(fetchAllDocumentsPaged({
-          page: pagination.page,
-          limit: 20,
-          sort
-        }));
-      }
-    } else if (hasMore) {
-      // 加载下一页
-      dispatch(setPage(pagination.page + 1));
-      if (selectedTags.length > 0) {
-        // 筛选模式
-        dispatch(fetchByTags({
-          tags: selectedTags,
-          mode: 'all',
-          page: pagination.page + 1,
-          limit: 20,
-          sort
-        }));
-      } else {
-        // 默认模式
-        dispatch(fetchAllDocumentsPaged({
-          page: pagination.page + 1,
-          limit: 20,
-          sort
-        }));
-      }
+
+  const handleRefresh = () => {
+    const currentPage = pagination.page || 1;
+    if (selectedTags.length > 0) {
+      dispatch(fetchByTags({
+        tags: selectedTags,
+        mode: 'all',
+        page: currentPage,
+        limit: 20,
+        sort
+      }));
+      return;
     }
+
+    dispatch(fetchAllDocumentsPaged({
+      page: currentPage,
+      limit: 20,
+      sort
+    }));
+  };
+
+  const handlePageChange = (_, nextPage) => {
+    if (!nextPage || nextPage === pagination.page) return;
+    dispatch(setPage(nextPage));
+
+    if (selectedTags.length > 0) {
+      dispatch(fetchByTags({
+        tags: selectedTags,
+        mode: 'all',
+        page: nextPage,
+        limit: 20,
+        sort
+      }));
+      return;
+    }
+
+    dispatch(fetchAllDocumentsPaged({
+      page: nextPage,
+      limit: 20,
+      sort
+    }));
   };
   
   // 关闭错误提示
@@ -245,7 +262,7 @@ const TagFilter = () => {
       window.dispatchEvent(event);
 
       // 刷新当前筛选结果
-      handleLoadMore({ refresh: true });
+      handleRefresh();
 
     } catch (error) {
       console.error('创建文档失败:', error);
@@ -346,8 +363,9 @@ const TagFilter = () => {
         items={items}
         status={status}
         error={error}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onRefresh={handleRefresh}
         emptyMessage={selectedTags.length === 0 ? "暂无笔记" : "没有找到同时包含所有选中标签的笔记"}
       />
       

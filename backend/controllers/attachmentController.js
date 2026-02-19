@@ -10,6 +10,64 @@ const config = require('../config/config');
  * 附件控制器类
  */
 class AttachmentController {
+  parseThumbOptions(req) {
+    const wRaw = req.query?.w;
+    const hRaw = req.query?.h;
+    const qRaw = req.query?.q;
+    const fitRaw = req.query?.fit;
+    const formatRaw = req.query?.format;
+
+    const toIntOr = (value, fallback) => {
+      const n = Number.parseInt(String(value ?? ''), 10);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    const width = toIntOr(wRaw, 560);
+    const height = toIntOr(hRaw, 360);
+    const quality = toIntOr(qRaw, 75);
+
+    const fit = String(fitRaw || 'cover').trim().toLowerCase();
+    const format = String(formatRaw || 'webp').trim().toLowerCase();
+
+    if (width < 16 || width > 2048) {
+      const err = new Error('w 超出范围（16-2048）');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (height < 16 || height > 2048) {
+      const err = new Error('h 超出范围（16-2048）');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (quality < 20 || quality > 95) {
+      const err = new Error('q 超出范围（20-95）');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!['cover', 'contain'].includes(fit)) {
+      const err = new Error('fit 非法（仅支持 cover/contain）');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (!['webp', 'jpeg', 'jpg', 'png'].includes(format)) {
+      const err = new Error('format 非法（仅支持 webp/jpeg/png）');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return {
+      width,
+      height,
+      quality,
+      fit,
+      format: format === 'jpg' ? 'jpeg' : format
+    };
+  }
+
   /**
    * 通用上传附件方法
    * @param {Object} req - Express请求对象
@@ -219,33 +277,20 @@ class AttachmentController {
     try {
       const { id } = req.params;
       const rangeHeader = req.headers.range;
-      
-      // 诊断日志：记录请求信息
-      console.log(`[getFile] 请求附件 ID: ${id}, Range: ${rangeHeader || '无'}`);
-      
-      // 检查If-None-Match和If-Modified-Since头
+      const debug = config.nodeEnv === 'development' && process.env.PDH_ATTACHMENTS_DEBUG === '1';
+
+      // 条件请求：交由 service 处理，避免 304 时仍创建文件流
       const ifNoneMatch = req.headers['if-none-match'];
       const ifModifiedSince = req.headers['if-modified-since'];
 
-      const { stream, attachment, fileInfo, statusCode, rangeMeta } = await attachmentService.getAttachmentStream(id, rangeHeader);
+      const { stream, attachment, fileInfo, statusCode, rangeMeta } = await attachmentService.getAttachmentStream(
+        id,
+        rangeHeader,
+        { ifNoneMatch, ifModifiedSince }
+      );
 
-      // 诊断日志：记录文件信息
-      console.log(`[getFile] 文件路径: ${attachmentService.getAttachmentFilePath(attachment)}, 状态码: ${statusCode}`);
-
-      // 检查ETag
-      if (ifNoneMatch && ifNoneMatch === attachment.hash) {
-        console.log(`[getFile] ETag匹配，返回304`);
-        return res.status(304).end();
-      }
-
-      // 检查Last-Modified
-      if (ifModifiedSince) {
-        const lastModified = new Date(ifModifiedSince);
-        const fileModifiedTime = new Date(fileInfo.mtime);
-        if (fileModifiedTime <= lastModified) {
-          console.log(`[getFile] 文件未修改，返回304`);
-          return res.status(304).end();
-        }
+      if (debug) {
+        console.log(`[getFile] 请求附件 ID: ${id}, Range: ${rangeHeader || '无'}, 状态码: ${statusCode}`);
       }
 
       // 清洗文件名
@@ -256,15 +301,22 @@ class AttachmentController {
       const asciiFallback = sanitizedFilename.replace(/[^\x00-\x7F]/g, '_') || 'file';
       const encodedFilename = encodeURIComponent(sanitizedFilename);
       const contentDisposition = `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`;
+      const etag = `"${attachment.hash}"`;
 
       // 设置响应头
       const headers = {
         'Content-Type': attachment.mimeType,
-        'ETag': attachment.hash,
+        'ETag': etag,
         'Last-Modified': fileInfo.mtime.toUTCString(),
-        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}`,
+        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}, immutable`,
         'Content-Disposition': contentDisposition
       };
+
+      // 304：不返回 body，不需要/不应创建文件流
+      if (statusCode === 304) {
+        res.set(headers);
+        return res.status(304).end();
+      }
 
       // 处理Range请求
       if (statusCode === 206 && rangeMeta) {
@@ -272,7 +324,9 @@ class AttachmentController {
         headers['Content-Range'] = `${rangeMeta.unit} ${rangeMeta.start}-${rangeMeta.end}/${rangeMeta.total}`;
         headers['Content-Length'] = rangeMeta.length;
         res.status(206);
-        console.log(`[getFile] 返回Range响应: ${headers['Content-Range']}`);
+        if (debug) {
+          console.log(`[getFile] 返回Range响应: ${headers['Content-Range']}`);
+        }
       } else {
         headers['Content-Length'] = fileInfo.size;
         // 即使是200响应，如果启用了Range支持，也添加Accept-Ranges头
@@ -280,14 +334,18 @@ class AttachmentController {
           headers['Accept-Ranges'] = 'bytes';
         }
         res.status(200);
-        console.log(`[getFile] 返回完整文件响应，大小: ${fileInfo.size}`);
+        if (debug) {
+          console.log(`[getFile] 返回完整文件响应，大小: ${fileInfo.size}`);
+        }
       }
 
       res.set(headers);
 
       // 添加请求中止处理
       const cleanup = () => {
-        console.log(`[getFile] 请求已中止或连接已关闭，销毁文件流`);
+        if (debug) {
+          console.log(`[getFile] 请求已中止或连接已关闭，销毁文件流`);
+        }
         if (stream && !stream.destroyed) {
           stream.destroy();
         }
@@ -312,7 +370,9 @@ class AttachmentController {
 
       // 流完成处理
       stream.on('end', () => {
-        console.log(`[getFile] 文件流传输完成: ${id}`);
+        if (debug) {
+          console.log(`[getFile] 文件流传输完成: ${id}`);
+        }
       });
 
     } catch (error) {
@@ -322,6 +382,89 @@ class AttachmentController {
         error: error.message,
         stack: error.stack
       });
+      next(error);
+    }
+  }
+
+  /**
+   * 获取图片缩略图（列表预览用）
+   */
+  async getThumbnail(req, res, next) {
+    try {
+      const { id } = req.params;
+      const options = this.parseThumbOptions(req);
+      const ifNoneMatch = req.headers['if-none-match'];
+      const ifModifiedSince = req.headers['if-modified-since'];
+
+      const {
+        stream,
+        mimeType,
+        fileInfo,
+        etag,
+        statusCode
+      } = await attachmentService.getAttachmentThumbnailStream(id, options, { ifNoneMatch, ifModifiedSince });
+
+      const headers = {
+        'Content-Type': mimeType,
+        'ETag': etag,
+        'Last-Modified': fileInfo.mtime.toUTCString(),
+        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}, immutable`,
+        'Content-Disposition': 'inline'
+      };
+
+      if (statusCode === 304) {
+        res.set(headers);
+        return res.status(304).end();
+      }
+
+      headers['Content-Length'] = fileInfo.size;
+      res.set(headers);
+      res.status(200);
+
+      const cleanup = () => {
+        if (stream && !stream.destroyed) {
+          stream.destroy();
+        }
+      };
+
+      req.on('aborted', cleanup);
+      res.on('close', cleanup);
+
+      stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取图片缩略图头信息（用于缓存协商）
+   */
+  async headThumbnail(req, res, next) {
+    try {
+      const { id } = req.params;
+      const options = this.parseThumbOptions(req);
+      const ifNoneMatch = req.headers['if-none-match'];
+      const ifModifiedSince = req.headers['if-modified-since'];
+
+      const {
+        mimeType,
+        fileInfo,
+        etag,
+        statusCode
+      } = await attachmentService.getAttachmentThumbnailStream(id, options, { ifNoneMatch, ifModifiedSince, headOnly: true });
+
+      const headers = {
+        'Content-Type': mimeType,
+        'ETag': etag,
+        'Last-Modified': fileInfo.mtime.toUTCString(),
+        'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}, immutable`,
+        'Content-Disposition': 'inline',
+        'Content-Length': fileInfo.size
+      };
+
+      res.set(headers);
+      res.status(statusCode === 304 ? 304 : 200).end();
+    } catch (error) {
       next(error);
     }
   }
@@ -343,10 +486,24 @@ class AttachmentController {
       const attachment = await attachmentService.getAttachmentById(id);
       const filePath = attachmentService.getAttachmentFilePath(attachment);
       const fileInfo = await attachmentService.getAttachmentFileInfo(filePath);
+      const etag = `"${attachment.hash}"`;
 
       // 检查ETag
-      if (ifNoneMatch && ifNoneMatch === attachment.hash) {
-        return res.status(304).end();
+      if (ifNoneMatch) {
+        const hash = attachment.hash;
+        const candidates = String(ifNoneMatch)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+        const etagMatched = candidates.includes('*') ||
+          candidates.includes(etag) ||
+          candidates.includes(`W/${etag}`) ||
+          candidates.includes(hash) ||
+          candidates.includes(`W/"${hash}"`);
+
+        if (etagMatched) {
+          return res.status(304).end();
+        }
       }
 
       // 检查Last-Modified
@@ -371,7 +528,7 @@ class AttachmentController {
       const headers = {
         'Content-Type': attachment.mimeType,
         'Content-Length': fileInfo.size,
-        'ETag': attachment.hash,
+        'ETag': etag,
         'Last-Modified': fileInfo.mtime.toUTCString(),
         'Cache-Control': `private, max-age=${config.attachments.cacheTtl || 3600}`,
         'Content-Disposition': contentDisposition

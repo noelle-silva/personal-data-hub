@@ -139,9 +139,7 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
   const attachmentUrlCache = useSelector(state => state.attachments.attachmentUrlCache);
   const inflightUrlRequests = useSelector(state => state.attachments.inflightUrlRequests);
   
-  const cardRef = useRef(null);
   const imageRef = useRef(null);
-  const observerRef = useRef(null);
   const requestedRef = useRef(false); // 防止重复请求
 
   // 处理卡片点击
@@ -296,31 +294,9 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     });
   };
 
-  // 设置 IntersectionObserver
   useEffect(() => {
-    if (!cardRef.current) return;
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !imageUrl && !imageError) {
-            fetchAttachmentUrl();
-          }
-        });
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '50px',
-      }
-    );
-
-    observerRef.current.observe(cardRef.current);
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
+    if (imageUrl || imageError) return;
+    fetchAttachmentUrl();
   }, [attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
 
   // 监听 attachmentUrlCache 更新，确保当缓存中有有效URL时能够显示
@@ -336,46 +312,9 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
     }
   }, [attachmentUrlCache, attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
 
-  // 兜底方案：为不支持 IntersectionObserver 的环境添加一次性获取
-  // 以及处理首屏元素已在视口的情况
-  useEffect(() => {
-    // 如果已有 imageUrl 或已发生错误，则不需要处理
-    if (imageUrl || imageError) return;
-    
-    // 检查是否支持 IntersectionObserver
-    if (!window.IntersectionObserver) {
-      fetchAttachmentUrl();
-      return;
-    }
-    
-    // 支持 IntersectionObserver，检查元素是否已在视口内
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-      
-      // 修改视口判断逻辑：只要元素顶部进入视口或左侧进入视口就触发
-      const isInViewport = rect.top < viewportHeight && rect.left < viewportWidth;
-      
-      console.log(`[AttachmentCard] 视口检查 ${attachment._id}:`, {
-        rect: { top: rect.top, left: rect.left, bottom: rect.bottom, right: rect.right },
-        viewport: { height: viewportHeight, width: viewportWidth },
-        isInViewport
-      });
-      
-      // 如果元素已在视口内，直接获取附件URL
-      if (isInViewport) {
-        fetchAttachmentUrl();
-      }
-    }
-  }, [attachment._id, imageUrl, imageError, fetchAttachmentUrl]);
-
   // 清理
   useEffect(() => {
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
       // 组件卸载时重置请求标记
       requestedRef.current = false;
     };
@@ -570,7 +509,7 @@ const AttachmentCard = ({ attachment, onView, onDelete }) => {
   };
 
   return (
-    <StyledCard ref={cardRef}>
+    <StyledCard>
       {renderCardMedia()}
       
       <CardContent onClick={handleCardClick} sx={{ flexGrow: 1, pb: 2, minWidth: 0 }}>

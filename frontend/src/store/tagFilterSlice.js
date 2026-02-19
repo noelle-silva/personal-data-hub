@@ -167,10 +167,13 @@ const tagFilterSlice = createSlice({
   reducers: {
     setSelectedTags: (state, action) => {
       state.selectedTags = action.payload;
+      state.pagination.page = 1;
     },
     clearSelectedTags: (state) => {
       state.selectedTags = [];
       state.items = [];
+      state.status = 'idle';
+      state.error = null;
       state.pagination = {
         page: 1,
         limit: 20,
@@ -183,6 +186,7 @@ const tagFilterSlice = createSlice({
     },
     setSort: (state, action) => {
       state.sort = action.payload;
+      state.pagination.page = 1;
     },
     setPage: (state, action) => {
       state.pagination.page = action.payload;
@@ -232,16 +236,9 @@ const tagFilterSlice = createSlice({
       .addCase(fetchByTags.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.listLoading = false;
-        const { items, pagination, isFirstPage } = action.payload;
-        
-        if (isFirstPage) {
-          // 第一页，替换数据
-          state.items = items;
-        } else {
-          // 后续页面，追加数据
-          state.items = [...state.items, ...items];
-        }
-        
+        const { items, pagination } = action.payload;
+        // 分页切换模式：始终替换当前页数据（不做“加载更多/追加”）
+        state.items = items;
         state.pagination = pagination;
         state.error = null;
         // 清除最后请求参数，允许相同参数的下次请求
@@ -266,16 +263,9 @@ const tagFilterSlice = createSlice({
       .addCase(fetchAllDocumentsPaged.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.listLoading = false;
-        const { items, pagination, isFirstPage } = action.payload;
-        
-        if (isFirstPage) {
-          // 第一页，替换数据
-          state.items = items;
-        } else {
-          // 后续页面，追加数据
-          state.items = [...state.items, ...items];
-        }
-        
+        const { items, pagination } = action.payload;
+        // 分页切换模式：始终替换当前页数据（不做“加载更多/追加”）
+        state.items = items;
         state.pagination = pagination;
         state.error = null;
         // 清除最后请求参数，允许相同参数的下次请求

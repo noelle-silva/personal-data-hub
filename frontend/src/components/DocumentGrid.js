@@ -6,7 +6,7 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Button,
+  Pagination,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DocumentCard from './DocumentCard';
@@ -57,8 +57,8 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
   padding: (theme) => theme.spacing(4),
 }));
 
-// 加载更多按钮容器
-const LoadMoreContainer = styled(Box)(({ theme }) => ({
+// 分页容器
+const PaginationContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   justifyContent: 'center',
   marginTop: theme.spacing(3),
@@ -68,10 +68,10 @@ const DocumentGrid = ({
   items,
   status,
   error,
-  hasMore,
-  onLoadMore,
   emptyMessage = '暂无匹配的笔记',
-  showLoadMore = true
+  pagination,
+  onPageChange,
+  onRefresh,
 }) => {
   const dispatch = useDispatch();
   const selectedDocument = useSelector(selectSelectedDocument);
@@ -107,8 +107,8 @@ const DocumentGrid = ({
       dispatch(openDocumentModal(result.data));
       
       // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
+      if (onRefresh) {
+        onRefresh();
       }
     } catch (error) {
       console.error('更新文档失败:', error);
@@ -153,8 +153,8 @@ const DocumentGrid = ({
       dispatch(closeDocumentModal());
       
       // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
+      if (onRefresh) {
+        onRefresh();
       }
     } catch (error) {
       console.error('删除文档失败:', error);
@@ -232,39 +232,48 @@ const DocumentGrid = ({
     </Container>
   );
 
+  const renderPagination = () => {
+    if (!pagination?.pages || pagination.pages <= 1) return null;
+    if (status !== 'succeeded' && status !== 'idle') return null;
+
+    return (
+      <PaginationContainer>
+        <Pagination
+          count={pagination.pages}
+          page={pagination.page || 1}
+          onChange={onPageChange}
+          disabled={status === 'loading'}
+          color="primary"
+          showFirstButton
+          showLastButton
+        />
+      </PaginationContainer>
+    );
+  };
+
   // 渲染文档卡片
   const renderDocuments = () => {
     if (items.length === 0) {
-      return renderEmpty();
+      return (
+        <>
+          {renderEmpty()}
+          {renderPagination()}
+        </>
+      );
     }
 
     return (
-        <>
-          <CardsWrapper>
-            {items.map((document) => (
-              <DocumentCard
-                key={document._id}
-                document={document}
-                onViewDetail={handleViewDetail}
-              />
-            ))}
-          </CardsWrapper>
-          
-          {showLoadMore && hasMore && (
-            <LoadMoreContainer>
-              <Button
-              variant="outlined"
-              onClick={() => onLoadMore && onLoadMore()}
-              sx={{
-                borderRadius: 16,
-                px: 3,
-                py: 1,
-              }}
-            >
-              加载更多
-            </Button>
-          </LoadMoreContainer>
-        )}
+      <>
+        <CardsWrapper>
+          {items.map((document) => (
+            <DocumentCard
+              key={document._id}
+              document={document}
+              onViewDetail={handleViewDetail}
+            />
+          ))}
+        </CardsWrapper>
+        {renderPagination()}
       </>
     );
   };

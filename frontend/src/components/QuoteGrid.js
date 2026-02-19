@@ -6,7 +6,7 @@ import {
   Box,
   CircularProgress,
   Alert,
-  Button,
+  Pagination,
 } from '@mui/material';
 import apiClient from '../services/apiClient';
 import { styled } from '@mui/material/styles';
@@ -65,8 +65,8 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
   padding: (theme) => theme.spacing(4),
 }));
 
-// 加载更多按钮容器
-const LoadMoreContainer = styled(Box)(({ theme }) => ({
+// 分页容器
+const PaginationContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   justifyContent: 'center',
   marginTop: theme.spacing(3),
@@ -76,10 +76,10 @@ const QuoteGrid = ({
   items, 
   status, 
   error, 
-  hasMore, 
-  onLoadMore, 
   emptyMessage = '暂无匹配的收藏夹',
-  showLoadMore = true 
+  pagination,
+  onPageChange,
+  onRefresh,
 }) => {
   const dispatch = useDispatch();
   const selectedQuote = useSelector(selectSelectedQuote);
@@ -126,10 +126,7 @@ const QuoteGrid = ({
       // 更新选中的收藏夹
       dispatch(openQuoteModal(response.data));
       
-      // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
-      }
+      onRefresh && onRefresh();
     } catch (error) {
       console.error('更新收藏夹失败:', error);
       alert('更新收藏夹失败，请重试');
@@ -146,10 +143,7 @@ const QuoteGrid = ({
       // 关闭弹窗
       dispatch(closeQuoteModal());
       
-      // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
-      }
+      onRefresh && onRefresh();
     } catch (error) {
       console.error('删除收藏夹失败:', error);
       const errorMessage = error.response?.data?.message || error.message || '删除收藏夹失败，请重试';
@@ -168,10 +162,7 @@ const QuoteGrid = ({
       // 更新选中的收藏夹
       dispatch(openQuoteModal(result.data));
       
-      // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
-      }
+      onRefresh && onRefresh();
       
       return result.data;
     } catch (error) {
@@ -196,10 +187,7 @@ const QuoteGrid = ({
       // 更新选中的文档
       dispatch(openDocumentModal(result.data));
       
-      // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
-      }
+      onRefresh && onRefresh();
     } catch (error) {
       console.error('更新文档失败:', error);
       const errorMessage = error.response?.data?.message || error.message || '更新文档失败，请重试';
@@ -224,10 +212,7 @@ const QuoteGrid = ({
         });
       }
       
-      // 通知父组件刷新数据
-      if (onLoadMore) {
-        onLoadMore({ refresh: true });
-      }
+      onRefresh && onRefresh();
     } catch (error) {
       console.error('删除文档失败:', error);
       const errorMessage = error.response?.data?.message || error.message || '删除文档失败，请重试';
@@ -304,39 +289,48 @@ const QuoteGrid = ({
     </Container>
   );
 
+  const renderPagination = () => {
+    if (!pagination?.pages || pagination.pages <= 1) return null;
+    if (status !== 'succeeded' && status !== 'idle') return null;
+
+    return (
+      <PaginationContainer>
+        <Pagination
+          count={pagination.pages}
+          page={pagination.page || 1}
+          onChange={onPageChange}
+          disabled={status === 'loading'}
+          color="primary"
+          showFirstButton
+          showLastButton
+        />
+      </PaginationContainer>
+    );
+  };
+
   // 渲染收藏夹卡片
   const renderQuotes = () => {
     if (items.length === 0) {
-      return renderEmpty();
+      return (
+        <>
+          {renderEmpty()}
+          {renderPagination()}
+        </>
+      );
     }
 
     return (
-        <>
-          <CardsWrapper>
-            {items.map((quote) => (
-              <QuoteCard
-                key={quote._id}
-                quote={quote}
-                onViewDetail={handleViewDetail}
-              />
-            ))}
-          </CardsWrapper>
-          
-          {showLoadMore && hasMore && (
-            <LoadMoreContainer>
-              <Button
-              variant="outlined"
-              onClick={() => onLoadMore && onLoadMore()}
-              sx={{
-                borderRadius: 16,
-                px: 3,
-                py: 1,
-              }}
-            >
-              加载更多
-            </Button>
-          </LoadMoreContainer>
-        )}
+      <>
+        <CardsWrapper>
+          {items.map((quote) => (
+            <QuoteCard
+              key={quote._id}
+              quote={quote}
+              onViewDetail={handleViewDetail}
+            />
+          ))}
+        </CardsWrapper>
+        {renderPagination()}
       </>
     );
   };

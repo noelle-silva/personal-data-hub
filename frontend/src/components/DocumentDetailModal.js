@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Pagination,
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
@@ -681,13 +682,21 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
     setQuoteDetailOpen(true);
   };
 
-  // 处理加载更多收藏夹
-  const handleLoadMoreQuotes = async () => {
-    if (!document || !quotesPagination || !quotesPagination.hasNext || loadingQuotes) return;
-    
+  const getQuotesTotalPages = useCallback(() => {
+    if (!quotesPagination) return 0;
+    if (Number.isFinite(quotesPagination.pages)) return quotesPagination.pages;
+    if (Number.isFinite(quotesPagination.total) && Number.isFinite(quotesPagination.limit) && quotesPagination.limit > 0) {
+      return Math.ceil(quotesPagination.total / quotesPagination.limit);
+    }
+    return 0;
+  }, [quotesPagination]);
+
+  const handleQuotesPageChange = async (_, nextPage) => {
+    if (!document || !quotesPagination || loadingQuotes) return;
+    if (!nextPage || nextPage === quotesPagination.page) return;
+
     setLoadingQuotes(true);
     try {
-      const nextPage = quotesPagination.page + 1;
       const response = await apiClient.get(
         `/documents/${document._id}/referencing-quotes`,
         {
@@ -698,12 +707,12 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
           }
         }
       );
-      
+
       const data = response.data;
-      setReferencingQuotes(prev => [...prev, ...data.data]);
-      setQuotesPagination(data.pagination);
+      setReferencingQuotes(data.data || []);
+      setQuotesPagination(data.pagination || null);
     } catch (error) {
-      console.error('加载更多收藏夹失败:', error);
+      console.error('切换收藏夹分页失败:', error);
     } finally {
       setLoadingQuotes(false);
     }
@@ -987,18 +996,42 @@ const DocumentDetailModal = ({ open, handleClose, document, onSave, onDelete, on
                         </QuoteItem>
                       ))}
                     </QuotesListContainer>
-                    {quotesPagination && quotesPagination.hasNext && (
+                    {(getQuotesTotalPages() > 1 || quotesPagination?.hasPrev || quotesPagination?.hasNext) && (
                       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-                        <Button
-                          size="small"
-                          onClick={handleLoadMoreQuotes}
-                          disabled={loadingQuotes}
-                          sx={{
-                            borderRadius: 16,
-                          }}
-                        >
-                          {loadingQuotes ? '加载中...' : '加载更多'}
-                        </Button>
+                        {getQuotesTotalPages() > 1 ? (
+                          <Pagination
+                            count={getQuotesTotalPages()}
+                            page={quotesPagination?.page || 1}
+                            onChange={handleQuotesPageChange}
+                            disabled={loadingQuotes}
+                            color="primary"
+                            size="small"
+                            showFirstButton
+                            showLastButton
+                          />
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Button
+                              size="small"
+                              onClick={() => handleQuotesPageChange(null, Math.max(1, (quotesPagination?.page || 1) - 1))}
+                              disabled={loadingQuotes || !quotesPagination?.hasPrev}
+                              sx={{ borderRadius: 16 }}
+                            >
+                              上一页
+                            </Button>
+                            <Typography variant="caption" color="text.secondary">
+                              第 {quotesPagination?.page || 1} 页
+                            </Typography>
+                            <Button
+                              size="small"
+                              onClick={() => handleQuotesPageChange(null, (quotesPagination?.page || 1) + 1)}
+                              disabled={loadingQuotes || !quotesPagination?.hasNext}
+                              sx={{ borderRadius: 16 }}
+                            >
+                              下一页
+                            </Button>
+                          </Box>
+                        )}
                       </Box>
                     )}
                   </>

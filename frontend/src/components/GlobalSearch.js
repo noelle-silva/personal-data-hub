@@ -10,6 +10,7 @@ import {
   ListItemIcon,
   Chip,
   Box,
+  Button,
   CircularProgress,
   Typography,
   IconButton,
@@ -99,6 +100,16 @@ const LoadingContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
 }));
 
+const ResultsFooter = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: theme.spacing(1),
+  padding: theme.spacing(1),
+  borderTop: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.paper,
+}));
+
 // 样式化的错误容器
 const ErrorContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -166,7 +177,6 @@ const GlobalSearch = () => {
   // 本地状态
   const [inputValue, setInputValue] = useState('');
   const [isComposing, setIsComposing] = useState(false); // 处理中文输入法
-  const [abortController, setAbortController] = useState(null);
   
   // Refs
   const inputRef = useRef(null);
@@ -191,15 +201,6 @@ const GlobalSearch = () => {
     
     // 设置新的定时器
     debounceTimerRef.current = setTimeout(() => {
-      // 取消之前的请求
-      if (abortController) {
-        abortController.abort();
-      }
-      
-      // 创建新的AbortController
-      const controller = new AbortController();
-      setAbortController(controller);
-      
       // 执行搜索
       dispatch(searchDocuments({ 
         q: searchQuery, 
@@ -210,7 +211,7 @@ const GlobalSearch = () => {
       // 打开下拉
       dispatch(openDropdown());
     }, 300); // 300ms防抖
-  }, [dispatch, abortController]);
+  }, [dispatch]);
   
   // 处理输入变化
   const handleInputChange = (event) => {
@@ -298,30 +299,20 @@ const GlobalSearch = () => {
     dispatch(closeDropdown());
   };
   
-  // 处理滚动加载更多
-  const handleScroll = () => {
-    if (!listRef.current || !hasMore || status === 'loading') return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    
-    // 当滚动到接近底部时加载更多
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
-      // 取消之前的请求
-      if (abortController) {
-        abortController.abort();
-      }
-      
-      // 创建新的AbortController
-      const controller = new AbortController();
-      setAbortController(controller);
-      
-      // 加载更多
-      dispatch(searchDocuments({ 
-        q: query, 
-        page: page + 1, 
-        limit: 20 
-      }));
-    }
+  const handlePrevPage = () => {
+    if (status === 'loading') return;
+    if (page <= 1) return;
+    dispatch(setHighlightedIndex(-1));
+    dispatch(searchDocuments({ q: query, page: page - 1, limit: 20 }));
+    if (listRef.current) listRef.current.scrollTop = 0;
+  };
+
+  const handleNextPage = () => {
+    if (status === 'loading') return;
+    if (!hasMore) return;
+    dispatch(setHighlightedIndex(-1));
+    dispatch(searchDocuments({ q: query, page: page + 1, limit: 20 }));
+    if (listRef.current) listRef.current.scrollTop = 0;
   };
   
   // 处理点击外部关闭
@@ -329,17 +320,14 @@ const GlobalSearch = () => {
     dispatch(closeDropdown());
   };
   
-  // 清理定时器和请求
+  // 清理定时器
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      if (abortController) {
-        abortController.abort();
-      }
     };
-  }, [abortController]);
+  }, []);
   
   // 渲染加载状态
   const renderLoading = () => (
@@ -503,15 +491,42 @@ const GlobalSearch = () => {
             {status === 'loading' && page === 1 && renderLoading()}
             {status === 'failed' && renderError()}
             {status === 'succeeded' && items.length === 0 && renderEmpty()}
-            {status === 'succeeded' && items.length > 0 && (
-              <ResultsList
-                ref={listRef}
-                onScroll={handleScroll}
-                role="list"
-              >
-                {items.map((item, index) => renderItem(item, index))}
-                {status === 'loading' && page > 1 && renderLoading()}
-              </ResultsList>
+            {(items.length > 0 && (status === 'succeeded' || status === 'loading')) && (
+              <>
+                <ResultsList
+                  ref={listRef}
+                  role="list"
+                >
+                  {items.map((item, index) => renderItem(item, index))}
+                </ResultsList>
+
+                <ResultsFooter>
+                  <Button
+                    size="small"
+                    onClick={handlePrevPage}
+                    disabled={status === 'loading' || page <= 1}
+                    sx={{ borderRadius: 16 }}
+                  >
+                    上一页
+                  </Button>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      第 {page} 页
+                    </Typography>
+                    {status === 'loading' && <CircularProgress size={14} />}
+                  </Box>
+
+                  <Button
+                    size="small"
+                    onClick={handleNextPage}
+                    disabled={status === 'loading' || !hasMore}
+                    sx={{ borderRadius: 16 }}
+                  >
+                    下一页
+                  </Button>
+                </ResultsFooter>
+              </>
             )}
           </SearchResultsContainer>
         </Popper>

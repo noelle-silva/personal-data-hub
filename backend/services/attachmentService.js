@@ -4,6 +4,7 @@
  */
 
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
@@ -12,6 +13,9 @@ const config = require('../config/config');
 const Attachment = require('../models/Attachment');
 const Document = require('../models/Document');
 const Quote = require('../models/Quote');
+const sharp = require('sharp');
+
+const thumbnailInFlight = new Map();
 
 /**
  * 附件服务类
@@ -846,14 +850,19 @@ class AttachmentService {
    * @param {String} rangeHeader - Range请求头（可选）
    * @returns {Promise<Object>} 文件流和相关信息
    */
-  async getAttachmentStream(attachmentId, rangeHeader = null) {
+  async getAttachmentStream(attachmentId, rangeHeader = null, { ifNoneMatch, ifModifiedSince } = {}) {
     try {
-      console.log(`[getAttachmentStream] 开始处理请求: ID=${attachmentId}, Range=${rangeHeader || '无'}`);
+      const debug = config.nodeEnv === 'development' && process.env.PDH_ATTACHMENTS_DEBUG === '1';
+      if (debug) {
+        console.log(`[getAttachmentStream] 开始处理请求: ID=${attachmentId}, Range=${rangeHeader || '无'}`);
+      }
       
       const attachment = await this.getAttachmentById(attachmentId);
       const filePath = this.getAttachmentFilePath(attachment);
       
-      console.log(`[getAttachmentStream] 文件路径: ${filePath}`);
+      if (debug) {
+        console.log(`[getAttachmentStream] 文件路径: ${filePath}`);
+      }
       
       // 获取文件信息
       const fileInfo = await this.getAttachmentFileInfo(filePath);
@@ -864,14 +873,64 @@ class AttachmentService {
         error.statusCode = 404;
         throw error;
       }
+
+      // 条件请求：ETag / If-Modified-Since（命中则不创建文件流）
+      if (ifNoneMatch) {
+        const hash = attachment.hash;
+        const etag = `"${hash}"`;
+        const candidates = String(ifNoneMatch)
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        const etagMatched = candidates.includes('*') ||
+          candidates.includes(etag) ||
+          candidates.includes(`W/${etag}`) ||
+          candidates.includes(hash) ||
+          candidates.includes(`W/"${hash}"`);
+
+        if (etagMatched) {
+          if (debug) {
+            console.log(`[getAttachmentStream] ETag匹配，返回304（不创建流）`);
+          }
+          return {
+            stream: null,
+            attachment,
+            fileInfo,
+            statusCode: 304
+          };
+        }
+      }
+
+      if (ifModifiedSince) {
+        const lastModified = new Date(ifModifiedSince);
+        if (!Number.isNaN(lastModified.getTime())) {
+          const fileModifiedTime = new Date(fileInfo.mtime);
+          if (fileModifiedTime <= lastModified) {
+            if (debug) {
+              console.log(`[getAttachmentStream] 文件未修改，返回304（不创建流）`);
+            }
+            return {
+              stream: null,
+              attachment,
+              fileInfo,
+              statusCode: 304
+            };
+          }
+        }
+      }
       
       // 检查是否启用Range支持
       const enableRange = config.attachments.enableRange;
-      console.log(`[getAttachmentStream] Range支持: ${enableRange}`);
+      if (debug) {
+        console.log(`[getAttachmentStream] Range支持: ${enableRange}`);
+      }
       
       // 如果没有Range请求头或未启用Range支持，返回完整文件流
       if (!rangeHeader || !enableRange) {
-        console.log(`[getAttachmentStream] 返回完整文件流`);
+        if (debug) {
+          console.log(`[getAttachmentStream] 返回完整文件流`);
+        }
         const stream = require('fs').createReadStream(filePath);
         
         return {
@@ -883,7 +942,9 @@ class AttachmentService {
       }
       
       // 解析Range请求头
-      console.log(`[getAttachmentStream] 解析Range请求头: ${rangeHeader}`);
+      if (debug) {
+        console.log(`[getAttachmentStream] 解析Range请求头: ${rangeHeader}`);
+      }
       const range = this.parseRangeHeader(rangeHeader, fileInfo.size);
       
       if (!range) {
@@ -894,7 +955,9 @@ class AttachmentService {
         throw error;
       }
       
-      console.log(`[getAttachmentStream] 创建范围文件流: ${range.start}-${range.end}/${fileInfo.size}`);
+      if (debug) {
+        console.log(`[getAttachmentStream] 创建范围文件流: ${range.start}-${range.end}/${fileInfo.size}`);
+      }
       
       // 创建范围文件流
       const stream = require('fs').createReadStream(filePath, {
@@ -1210,6 +1273,161 @@ class AttachmentService {
         maxFiles: config.attachments.maxFiles.script
       }
     };
+  }
+
+  isEtagMatched(ifNoneMatch, etag) {
+    if (!ifNoneMatch) return false;
+    const candidates = String(ifNoneMatch)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    return candidates.includes('*') ||
+      candidates.includes(etag) ||
+      candidates.includes(`W/${etag}`);
+  }
+
+  getThumbnailDir() {
+    const baseDir = this.resolveStoragePath(config.attachments.baseDir);
+    return path.join(baseDir, 'thumbs');
+  }
+
+  buildThumbnailKey({ hash, width, height, fit, format, quality }) {
+    const raw = `thumb:${hash}:${width}x${height}:${fit}:${format}:q${quality}`;
+    const digest = crypto.createHash('sha1').update(raw).digest('hex');
+    return { raw, digest };
+  }
+
+  async ensureThumbnailFile(sourcePath, targetPath, { width, height, fit, format, quality }) {
+    const existing = await this.getAttachmentFileInfo(targetPath);
+    if (existing.exists) return;
+
+    const inflightKey = targetPath;
+    const inflight = thumbnailInFlight.get(inflightKey);
+    if (inflight) {
+      await inflight;
+      return;
+    }
+
+    const job = (async () => {
+      const dir = path.dirname(targetPath);
+      await this.ensureDirectoryExists(dir);
+
+      const tmpPath = `${targetPath}.tmp-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const resizeFit = fit === 'contain' ? 'contain' : 'cover';
+
+      await sharp(sourcePath, { failOnError: false })
+        .rotate()
+        .resize(width, height, {
+          fit: resizeFit,
+          withoutEnlargement: true,
+          position: 'centre',
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .toFormat(format, { quality })
+        .toFile(tmpPath);
+
+      await fs.rename(tmpPath, targetPath);
+    })();
+
+    thumbnailInFlight.set(inflightKey, job);
+    try {
+      await job;
+    } finally {
+      thumbnailInFlight.delete(inflightKey);
+    }
+  }
+
+  /**
+   * 获取图片附件缩略图（生成并磁盘缓存）
+   * @param {String} attachmentId
+   * @param {Object} options - width/height/fit/format/quality
+   * @param {Object} cond - ifNoneMatch/ifModifiedSince/headOnly
+   */
+  async getAttachmentThumbnailStream(attachmentId, options, cond = {}) {
+    const { ifNoneMatch, ifModifiedSince, headOnly } = cond || {};
+
+    const attachment = await this.getAttachmentById(attachmentId);
+    if (!attachment) {
+      const error = new Error('附件不存在');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const isImage = attachment.category === 'image' || String(attachment.mimeType || '').startsWith('image/');
+    if (!isImage) {
+      const error = new Error('该附件不是图片，无法生成缩略图');
+      error.statusCode = 415;
+      throw error;
+    }
+
+    const sourcePath = this.getAttachmentFilePath(attachment);
+    const sourceInfo = await this.getAttachmentFileInfo(sourcePath);
+    if (!sourceInfo.exists) {
+      const error = new Error('附件文件不存在');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { raw, digest } = this.buildThumbnailKey({
+      hash: attachment.hash,
+      width: options.width,
+      height: options.height,
+      fit: options.fit,
+      format: options.format,
+      quality: options.quality
+    });
+
+    const etag = `"${digest}"`;
+
+    // ETag 协商：命中则直接 304（不创建缩略图也不读磁盘）
+    const ext = options.format === 'jpeg' ? 'jpg' : options.format;
+
+    if (this.isEtagMatched(ifNoneMatch, etag)) {
+      return {
+        stream: null,
+        mimeType: mime.lookup(ext) || `image/${options.format}`,
+        fileInfo: { size: 0, mtime: sourceInfo.mtime, exists: true },
+        etag,
+        statusCode: 304
+      };
+    }
+
+    const thumbDir = this.getThumbnailDir();
+    const thumbPath = path.join(thumbDir, `${digest}.${ext}`);
+
+    await this.ensureThumbnailFile(sourcePath, thumbPath, options);
+
+    const fileInfo = await this.getAttachmentFileInfo(thumbPath);
+    if (!fileInfo.exists) {
+      const error = new Error('缩略图生成失败');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    // If-Modified-Since 协商（基于缩略图文件 mtime）
+    if (ifModifiedSince) {
+      const lastModified = new Date(ifModifiedSince);
+      if (!Number.isNaN(lastModified.getTime())) {
+        const fileModifiedTime = new Date(fileInfo.mtime);
+        if (fileModifiedTime <= lastModified) {
+          return {
+            stream: null,
+            mimeType: mime.lookup(ext) || `image/${options.format}`,
+            fileInfo,
+            etag,
+            statusCode: 304
+          };
+        }
+      }
+    }
+
+    const mimeType = mime.lookup(ext) || `image/${options.format}`;
+    if (headOnly) {
+      return { stream: null, mimeType, fileInfo, etag, statusCode: 200 };
+    }
+
+    const stream = fsSync.createReadStream(thumbPath);
+    return { stream, mimeType, fileInfo, etag, statusCode: 200, key: raw };
   }
 }
 

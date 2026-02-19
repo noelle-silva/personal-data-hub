@@ -86,24 +86,18 @@ const searchSlice = createSlice({
     builder
       // 搜索文档
       .addCase(searchDocuments.pending, (state, action) => {
-        const { isFirstPage } = action.meta.arg;
+        const isFirstPage = action.meta.arg?.page === 1;
+        state.status = 'loading';
+        state.error = null;
         if (isFirstPage) {
-          state.status = 'loading';
           state.items = [];
-          state.error = null;
         }
       })
       .addCase(searchDocuments.fulfilled, (state, action) => {
-        const { items, page, hasMore, isFirstPage } = action.payload;
+        const { items, page, hasMore } = action.payload;
         state.status = 'succeeded';
-        
-        if (isFirstPage) {
-          state.items = items;
-        } else {
-          // 追加新结果
-          state.items = [...state.items, ...items];
-        }
-        
+        // 分页切换模式：始终替换当前页结果（不做“滚动加载更多/追加”）
+        state.items = items;
         state.page = page;
         state.hasMore = hasMore;
         state.error = null;

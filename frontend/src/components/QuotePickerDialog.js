@@ -18,6 +18,7 @@ import {
   ListItemText,
   ListItemIcon,
   Autocomplete,
+  Pagination,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -103,6 +104,12 @@ const EmptyContainer = styled(Box)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
+const PaginationContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  paddingTop: theme.spacing(1),
+}));
+
 // 格式化相对时间
 const formatRelativeTime = (dateString) => {
   const date = new Date(dateString);
@@ -135,7 +142,6 @@ const QuotePickerDialog = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
   
   // Refs
@@ -160,8 +166,8 @@ const QuotePickerDialog = ({
     }
   }, []);
   
-  // 获取收藏夹列表
-  const fetchQuotes = useCallback(async (isSearch = false, resetPage = false) => {
+  // 获取收藏夹列表（分页切换：不做“滚动加载更多/追加”）
+  const fetchQuotes = useCallback(async (targetPage = 1, options = {}) => {
     if (loading) return;
     
     // 取消之前的请求
@@ -177,20 +183,22 @@ const QuotePickerDialog = ({
     setError('');
     
     try {
-      const currentPage = resetPage ? 1 : page;
       const params = {
-        page: currentPage,
+        page: targetPage,
         limit: 20,
         sort: '-updatedAt'
       };
       
       let endpoint;
-      if (isSearch && searchQuery.trim()) {
-        params.q = searchQuery.trim();
+      const tagsForQuery = Array.isArray(options.tags) ? options.tags : selectedTags;
+      const queryForSearch = options.query !== undefined ? String(options.query) : searchQuery;
+      const trimmedQuery = queryForSearch.trim();
+      if (trimmedQuery) {
+        params.q = trimmedQuery;
         endpoint = '/quotes/search';
-      } else if (selectedTags.length > 0 && !searchQuery.trim()) {
+      } else if (tagsForQuery.length > 0) {
         // 仅标签筛选
-        params.tags = selectedTags.join(',');
+        params.tags = tagsForQuery.join(',');
         params.mode = 'all';
         endpoint = '/quotes/tags';
       } else {
@@ -206,15 +214,12 @@ const QuotePickerDialog = ({
       const data = response.data;
       const newQuotes = data.data || data.items || [];
       
-      if (resetPage) {
-        setQuotes(newQuotes);
-        setPage(1);
-      } else {
-        setQuotes(prev => [...prev, ...newQuotes]);
-      }
+      setQuotes(newQuotes);
+      setPage(targetPage);
       
-      setTotal(data.pagination?.total || newQuotes.length);
-      setHasMore(data.pagination?.hasMore || newQuotes.length === 20);
+      const apiTotal = data.pagination?.total;
+      const nextTotal = Number.isFinite(apiTotal) ? apiTotal : newQuotes.length;
+      setTotal(nextTotal);
       
     } catch (err) {
       if (err.name !== 'AbortError' && err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
@@ -223,7 +228,7 @@ const QuotePickerDialog = ({
     } finally {
       setLoading(false);
     }
-  }, [loading, page, searchQuery, selectedTags]);
+  }, [loading, searchQuery, selectedTags]);
   
   // 处理搜索（防抖）
   const handleSearch = useCallback((query) => {
@@ -237,8 +242,7 @@ const QuotePickerDialog = ({
     // 设置新的定时器
     debounceTimerRef.current = setTimeout(() => {
       setPage(1);
-      setHasMore(true);
-      fetchQuotes(query.trim().length > 0, true);
+      fetchQuotes(1, { query });
     }, 300); // 300ms防抖
   }, [fetchQuotes]);
   
@@ -247,8 +251,8 @@ const QuotePickerDialog = ({
     const tagNames = newValue.map(tag => typeof tag === 'string' ? tag : tag.name);
     setSelectedTags(tagNames);
     setPage(1);
-    setHasMore(true);
-  }, []);
+    fetchQuotes(1, { tags: tagNames });
+  }, [fetchQuotes]);
   
   // 处理收藏夹选择
   const handleQuoteToggle = useCallback((quoteId) => {
@@ -261,17 +265,13 @@ const QuotePickerDialog = ({
     });
   }, []);
   
-  // 处理滚动加载更多
-  const handleScroll = useCallback(() => {
-    if (!listRef.current || !hasMore || loading) return;
-    
-    const { scrollTop, scrollHeight, clientHeight } = listRef.current;
-    
-    // 当滚动到接近底部时加载更多
-    if (scrollTop + clientHeight >= scrollHeight - 100) {
-      setPage(prev => prev + 1);
+  const handlePageChange = (_, nextPage) => {
+    if (!nextPage || nextPage === page) return;
+    fetchQuotes(nextPage);
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
     }
-  }, [hasMore, loading]);
+  };
   
   // 处理确认
   const handleConfirm = useCallback(() => {
@@ -286,7 +286,6 @@ const QuotePickerDialog = ({
     setSelectedTags([]);
     setSelectedQuoteIds(initialSelectedIds);
     setPage(1);
-    setHasMore(true);
     setError('');
     
     handleClose();
@@ -296,23 +295,9 @@ const QuotePickerDialog = ({
   useEffect(() => {
     if (open) {
       fetchAvailableTags();
-      fetchQuotes(false, true);
+      fetchQuotes(1);
     }
   }, [open, fetchAvailableTags, fetchQuotes]);
-  
-  // 搜索变化时重新加载
-  useEffect(() => {
-    if (open) {
-      fetchQuotes(searchQuery.trim().length > 0, true);
-    }
-  }, [selectedTags, open, fetchQuotes, searchQuery]);
-  
-  // 页面变化时加载更多
-  useEffect(() => {
-    if (open && page > 1) {
-      fetchQuotes(searchQuery.trim().length > 0);
-    }
-  }, [page, open, fetchQuotes, searchQuery]);
   
   // 清理
   useEffect(() => {
@@ -527,15 +512,32 @@ const QuotePickerDialog = ({
             </Typography>
           </EmptyContainer>
         ) : (
-          <QuoteList ref={listRef} onScroll={handleScroll}>
-            {filteredQuotes.map(renderQuoteItem)}
-            
-            {loading && (
-              <LoadingContainer>
-                <CircularProgress size={24} />
-              </LoadingContainer>
+          <>
+            <QuoteList ref={listRef}>
+              {filteredQuotes.map(renderQuoteItem)}
+
+              {loading && (
+                <LoadingContainer>
+                  <CircularProgress size={24} />
+                </LoadingContainer>
+              )}
+            </QuoteList>
+
+            {total > 20 && (
+              <PaginationContainer>
+                <Pagination
+                  count={Math.ceil(total / 20)}
+                  page={page}
+                  onChange={handlePageChange}
+                  disabled={loading}
+                  color="primary"
+                  size="small"
+                  showFirstButton
+                  showLastButton
+                />
+              </PaginationContainer>
             )}
-          </QuoteList>
+          </>
         )}
       </StyledDialogContent>
       

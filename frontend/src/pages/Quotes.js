@@ -34,7 +34,6 @@ import {
   selectQuoteFilterQuery,
   selectQuoteFilterSort,
   selectQuoteFilterPagination,
-  selectQuoteFilterHasMore,
   setQuery,
   setSelectedTags,
   setSort,
@@ -116,7 +115,6 @@ const Quotes = () => {
   const query = useSelector(selectQuoteFilterQuery);
   const sort = useSelector(selectQuoteFilterSort);
   const pagination = useSelector(selectQuoteFilterPagination);
-  const hasMore = useSelector(selectQuoteFilterHasMore);
   
   // 本地状态
   const [showError, setShowError] = useState(false);
@@ -135,6 +133,7 @@ const Quotes = () => {
   // 默认加载所有收藏夹（当没有搜索条件和标签时）
   useEffect(() => {
     if (status === 'idle' && !query && selectedTags.length === 0) {
+      dispatch(setPage(1));
       dispatch(fetchAllQuotesPaged({
         page: 1,
         limit: 20,
@@ -157,6 +156,7 @@ const Quotes = () => {
     
     // 设置新的定时器，300ms后执行搜索
     debounceTimerRef.current = setTimeout(() => {
+      dispatch(setPage(1));
       dispatch(fetchQuotesByFilter({
         query,
         tags: selectedTags,
@@ -182,58 +182,76 @@ const Quotes = () => {
   
   // 处理排序变化
   const handleSortChange = (event) => {
-    dispatch(setSort(event.target.value));
+    const nextSort = event.target.value;
+    dispatch(setSort(nextSort));
+    dispatch(setPage(1));
+
+    if (query || selectedTags.length > 0) {
+      dispatch(fetchQuotesByFilter({
+        query,
+        tags: selectedTags,
+        mode: 'all',
+        page: 1,
+        limit: 20,
+        sort: nextSort
+      }));
+      return;
+    }
+
+    dispatch(fetchAllQuotesPaged({
+      page: 1,
+      limit: 20,
+      sort: nextSort
+    }));
   };
   
   // 处理清空筛选
   const handleClearFilter = () => {
     dispatch(resetFilter());
   };
-  
-  // 处理加载更多
-  const handleLoadMore = (options = {}) => {
-    if (options.refresh) {
-      // 刷新当前页
-      if (query || selectedTags.length > 0) {
-        // 筛选模式
-        dispatch(fetchQuotesByFilter({
-          query,
-          tags: selectedTags,
-          mode: 'all',
-          page: pagination.page,
-          limit: 20,
-          sort
-        }));
-      } else {
-        // 默认模式
-        dispatch(fetchAllQuotesPaged({
-          page: pagination.page,
-          limit: 20,
-          sort
-        }));
-      }
-    } else if (hasMore) {
-      // 加载下一页
-      dispatch(setPage(pagination.page + 1));
-      if (query || selectedTags.length > 0) {
-        // 筛选模式
-        dispatch(fetchQuotesByFilter({
-          query,
-          tags: selectedTags,
-          mode: 'all',
-          page: pagination.page + 1,
-          limit: 20,
-          sort
-        }));
-      } else {
-        // 默认模式
-        dispatch(fetchAllQuotesPaged({
-          page: pagination.page + 1,
-          limit: 20,
-          sort
-        }));
-      }
+
+  const handleRefresh = () => {
+    const currentPage = pagination.page || 1;
+    if (query || selectedTags.length > 0) {
+      dispatch(fetchQuotesByFilter({
+        query,
+        tags: selectedTags,
+        mode: 'all',
+        page: currentPage,
+        limit: 20,
+        sort
+      }));
+      return;
     }
+
+    dispatch(fetchAllQuotesPaged({
+      page: currentPage,
+      limit: 20,
+      sort
+    }));
+  };
+
+  const handlePageChange = (_, nextPage) => {
+    if (!nextPage || nextPage === pagination.page) return;
+    dispatch(setPage(nextPage));
+
+    if (query || selectedTags.length > 0) {
+      dispatch(fetchQuotesByFilter({
+        query,
+        tags: selectedTags,
+        mode: 'all',
+        page: nextPage,
+        limit: 20,
+        sort
+      }));
+      return;
+    }
+
+    dispatch(fetchAllQuotesPaged({
+      page: nextPage,
+      limit: 20,
+      sort
+    }));
   };
   
   // 关闭错误提示
@@ -408,8 +426,9 @@ const Quotes = () => {
         items={items}
         status={status}
         error={error}
-        hasMore={hasMore}
-        onLoadMore={handleLoadMore}
+        pagination={pagination}
+        onPageChange={handlePageChange}
+        onRefresh={handleRefresh}
         emptyMessage={(!query && selectedTags.length === 0) ? "暂无收藏夹" : "没有找到匹配的收藏夹"}
       />
       

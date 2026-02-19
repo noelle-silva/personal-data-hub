@@ -253,16 +253,30 @@ router.get('/stats', attachmentController.getAttachmentStats);
  * @route   GET /api/attachments/config
  * @desc    获取附件配置信息
  * @access  Private (需要登录态鉴权)
- */
-router.get('/config', attachmentController.getConfig);
+  */
+  router.get('/config', attachmentController.getConfig);
 
-/**
- * @route   GET /api/attachments/:id
- * @desc    获取附件文件
- * @access  Private (需要登录态鉴权)
- * @param   id - 附件ID
- */
-router.get('/:id', attachmentController.getFile);
+  /**
+   * @route   GET /api/attachments/:id/thumb
+   * @desc    获取图片附件缩略图（用于列表预览）
+   * @access  Private (需要登录态鉴权)
+   * @param   id - 附件ID
+   * @query   w - 宽度（默认 560）
+   * @query   h - 高度（默认 360）
+   * @query   fit - 裁剪方式（默认 cover）
+   * @query   format - 输出格式（默认 webp）
+   * @query   q - 质量（默认 75）
+   */
+  router.get('/:id/thumb', attachmentController.getThumbnail);
+  router.head('/:id/thumb', attachmentController.headThumbnail);
+
+  /**
+   * @route   GET /api/attachments/:id
+   * @desc    获取附件文件
+   * @access  Private (需要登录态鉴权)
+   * @param   id - 附件ID
+   */
+  router.get('/:id', attachmentController.getFile);
 
 /**
  * @route   HEAD /api/attachments/:id
